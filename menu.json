@@ -1,0 +1,53 @@
+[
+  {
+    "day": "Monday",
+    "breakfast": [
+      {
+        "id": "1",
+        "name": "Idly",
+        "description": "",
+        "isVeg": true,
+        "image": "data:image/jpeg;base64,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"
+      },
+      {
+        "id": "2",
+        "name": "Omelette",
+        "description": "Two eggs with spices",
+        "isVeg": false,
+        "image": "https://link-to-image.com/egg.jpg"
+      },
+      {
+        "id": "2",
+        "name": "Omelette",
+        "description": "Two eggs with spices",
+        "isVeg": false,
+        "image": "https://link-to-image.com/egg.jpg"
+      }
+    ],
+    "lunch": [
+      {
+        "id": "3",
+        "name": "Veg Biryani",
+        "description": "Basmati rice with veggies",
+        "isVeg": true,
+        "image": "https://link-to-image.com/biryani.jpg"
+      },
+      {
+        "id": "2",
+        "name": "Omelette",
+        "description": "Two eggs with spices",
+        "isVeg": false,
+        "image": "https://link-to-image.com/egg.jpg"
+      }
+    ],
+    "snacks": [],
+    "dinner": []
+  },
+  {
+    "day": "Tuesday",
+    "breakfast": [],
+    "lunch": [],
+    "snacks": [],
+    "dinner": []
+  }
+]
