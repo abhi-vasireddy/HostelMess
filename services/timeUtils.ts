@@ -27,7 +27,7 @@ export const isFeedbackUnlocked = (mealType: MealType): boolean => {
 
   switch (mealType) {
     case MealType.BREAKFAST: return timeVal >= 8.0;
-    case MealType.LUNCH: return timeVal >= 13.0;
+    case MealType.LUNCH: return timeVal >= 12.30;
     case MealType.SNACKS: return timeVal >= 16.75;
     case MealType.DINNER: return timeVal >= 19.5;
     default: return false;

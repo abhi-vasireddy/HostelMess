@@ -1525,8 +1525,13 @@ export const AdminDashboard: React.FC = () => {
                      </div>
 
                      <div className="space-y-4">
-                        {currentDayMenu[meal].length === 0 && <p className="text-slate-400 text-sm italic">No dishes added yet.</p>}
-                        {currentDayMenu[meal].map(dish => (
+                        {/* 👇 SAFE CHECK: Use ( ... || [] ) to prevent crash */}
+                        {(currentDayMenu[meal] || []).length === 0 && (
+                           <p className="text-slate-400 text-sm italic">No dishes added yet.</p>
+                        )}
+                        
+                        {/* 👇 SAFE MAP: Use ( ... || [] ) here too */}
+                        {(currentDayMenu[meal] || []).map(dish => (
                            <div key={dish.id} className="flex gap-4 p-3 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800">
                               <img src={dish.image} alt={dish.name} className="w-16 h-16 rounded-lg object-cover bg-slate-200" />
                               <div className="flex-1">

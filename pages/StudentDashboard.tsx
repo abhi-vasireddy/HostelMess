@@ -56,6 +56,87 @@ export const StudentDashboard: React.FC<Props> = ({ user }) => {
     fetchData();
   }, [user.uid]);
 
+  // ... (Your existing data fetching useEffect is above here) ...
+
+  // --- NEW: SYSTEM NOTIFICATION LOGIC ---
+  useEffect(() => {
+    // 1. Helper to send the notification
+    const sendSystemNotification = (title: string, body: string) => {
+      // Only send if browser supports it and permission is granted
+      if (!("Notification" in window)) return;
+      
+      if (Notification.permission === 'granted') {
+        new Notification(title, {
+          body: body,
+          icon: '/pwa-192x192.png', // Uses your PWA icon
+          // @ts-ignore
+          vibrate: [200, 100, 200],
+          tag: 'meal-notification' // Prevents duplicate notifications on Android
+        });
+      }
+    };
+
+    // 2. Main Logic: Check time & meal status
+    const checkAndNotify = () => {
+      // Basic checks
+      if (!("Notification" in window)) return;
+      if (Notification.permission !== 'granted') return;
+      if (menu.length === 0) return; // Wait for menu to load
+
+      const hour = new Date().getHours();
+      const todayDate = getTodayDateString();
+      
+      // Determine current meal time
+      let currentMeal: MealType | null = null;
+      if (hour >= 7 && hour < 10) currentMeal = MealType.BREAKFAST;
+      else if (hour >= 12 && hour < 15) currentMeal = MealType.LUNCH;
+      else if (hour >= 16 && hour < 18) currentMeal = MealType.SNACKS;
+      else if (hour >= 19 && hour < 22) currentMeal = MealType.DINNER;
+
+      // If it is meal time AND feedback is allowed
+      if (currentMeal && isFeedbackUnlocked(currentMeal)) {
+        
+        // Find today's menu
+        const todayDayName = getCurrentDayName(); 
+        const todayMenu = menu.find(m => m.day === todayDayName);
+        
+        if (todayMenu) {
+          const mealDishes = todayMenu[currentMeal] || [];
+          
+          // Check if there are dishes that user hasn't rated yet
+          const hasUnratedDishes = mealDishes.some(dish => !feedbackMap[dish.id]);
+
+          // Prevent spam: Check if we already notified for this specific meal today
+          const notifKey = `notif-${todayDate}-${currentMeal}`;
+          const alreadySent = localStorage.getItem(notifKey);
+
+          if (hasUnratedDishes && !alreadySent) {
+            sendSystemNotification(
+              `Time for ${currentMeal}! 🍽️`,
+              `The menu is live. Rate your food now!`
+            );
+            // Mark as sent so we don't annoy the user again for this meal
+            localStorage.setItem(notifKey, 'true');
+          }
+        }
+      }
+    };
+
+    // 3. Ask for permission automatically (Optional)
+    if ("Notification" in window && Notification.permission === 'default') {
+      Notification.requestPermission();
+    }
+
+    // 4. Run immediately when data loads
+    checkAndNotify();
+
+    // 5. Also check periodically (e.g., every 5 minutes) in case the tab stays open
+    const interval = setInterval(checkAndNotify, 5 * 60 * 1000);
+    
+    return () => clearInterval(interval);
+
+  }, [menu, feedbackMap, user.uid]); // This runs whenever menu or feedback data updates
+
   const handleSuggestionSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!suggestionText.trim()) return;
@@ -201,16 +282,18 @@ export const StudentDashboard: React.FC<Props> = ({ user }) => {
                     </div>
                     
                     <div className="p-5">
-                    {currentDayMenu[meal].length === 0 ? (
-                       <div className="text-center py-6">
-                         <p className="text-slate-400 dark:text-slate-600 text-sm italic">Nothing on the menu.</p>
-                       </div>
+                    {/* 👇 FIXED: Added ( || [] ) to prevent crash if data is undefined */}
+                    {(currentDayMenu[meal] || []).length === 0 ? (
+                        <div className="text-center py-6">
+                          <p className="text-slate-400 dark:text-slate-600 text-sm italic">Nothing on the menu.</p>
+                        </div>
                     ) : (
                       <div className="space-y-6">
-                        {currentDayMenu[meal].map(dish => (
+                        {/* 👇 FIXED: Added ( || [] ) here as well */}
+                        {(currentDayMenu[meal] || []).map(dish => (
                           <div key={dish.id} className="flex gap-4 items-start">
-                             <img src={dish.image} alt={dish.name} className="w-20 h-20 rounded-xl object-cover bg-slate-100 dark:bg-slate-800 shadow-inner flex-shrink-0" />
-                             <div className="flex-1 min-w-0">
+                              <img src={dish.image} alt={dish.name} className="w-20 h-20 rounded-xl object-cover bg-slate-100 dark:bg-slate-800 shadow-inner flex-shrink-0" />
+                              <div className="flex-1 min-w-0">
                                 <div className="flex justify-between items-start gap-2">
                                   <h5 className="font-semibold text-slate-900 dark:text-white truncate">{dish.name}</h5>
                                   {dish.isVeg ? (
@@ -236,22 +319,22 @@ export const StudentDashboard: React.FC<Props> = ({ user }) => {
                                     </button>
                                   )}
                                   {feedbackMap[dish.id] && (
-                                     <span className="text-xs font-medium text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5">
-                                       <CheckCircle2 className="w-3.5 h-3.5"/> Feedback Submitted
-                                     </span>
+                                      <span className="text-xs font-medium text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5">
+                                        <CheckCircle2 className="w-3.5 h-3.5"/> Feedback Submitted
+                                      </span>
                                   )}
                                   {(!isToday || !isFeedbackUnlocked(meal)) && !feedbackMap[dish.id] && (
-                                     <span className="text-xs text-slate-400 dark:text-slate-600 flex items-center gap-1 cursor-not-allowed">
-                                       <Star className="w-3.5 h-3.5" /> Locked
-                                     </span>
+                                      <span className="text-xs text-slate-400 dark:text-slate-600 flex items-center gap-1 cursor-not-allowed">
+                                        <Star className="w-3.5 h-3.5" /> Locked
+                                      </span>
                                   )}
                                 </div>
-                             </div>
+                              </div>
                           </div>
                         ))}
                       </div>
                     )}
-                    </div>
+                  </div>
                   </div>
                 ))}
              </div>
