@@ -78,30 +78,25 @@ export const MockDB = {
 
   logout: async () => { localStorage.removeItem('hft_current_user'); },
 
-// --- 2. MENU (Duplicate-Proof Version) ---
+// --- 2. MENU (Clean Version - No Auto-Fill) ---
   
   getWeeklyMenu: async (): Promise<DailyMenu[]> => {
     try {
       const col = collection(db, 'dailyMenus');
       const snapshot = await getDocs(col);
 
-      // 1. SEEDING: If empty, create docs with IDs like "Monday", "Tuesday"
-      if (snapshot.empty) {
-        console.log("Seeding Menu with Fixed IDs...");
-        const batch = writeBatch(db);
-        INITIAL_MENU.forEach(m => {
-          // KEY FIX: Use m.day as the ID (e.g., 'dailyMenus/Monday')
-          const dayDoc = doc(db, 'dailyMenus', m.day); 
-          batch.set(dayDoc, m);
-        });
-        await batch.commit();
-        return INITIAL_MENU;
-      }
-      
+      // ❌ DELETED: The "Seeding" / "INITIAL_MENU" block is removed from here.
+      // Now, if the database is empty, it will simply return an empty list.
+
       const menu = snapshot.docs.map(d => d.data() as DailyMenu);
+      
+      // Sort days correctly
       const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
       return menu.sort((a, b) => days.indexOf(a.day) - days.indexOf(b.day));
-    } catch (e) { console.error(e); return []; }
+    } catch (e) { 
+      console.error(e); 
+      return []; 
+    }
   },
 
   updateMenu: async (updatedMenu: DailyMenu[]): Promise<void> => {
