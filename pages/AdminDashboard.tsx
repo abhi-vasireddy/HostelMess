@@ -18,6 +18,8 @@ export const AdminDashboard: React.FC = () => {
   const [canteenMenu, setCanteenMenu] = useState<CanteenItem[]>([]);
   const [settings, setSettings] = useState<AppSettings>({canteenEnabled: false});
   const [newAnnouncement, setNewAnnouncement] = useState({ title: '', message: '', type: AnnouncementType.INFO, expiresOn: '' });
+  const [isUserModalOpen, setIsUserModalOpen] = useState(false);
+  const [newUser, setNewUser] = useState({ email: '', displayName: '', password: 'password123', role: 'STUDENT' });
 
   // Todo & Notes State
   const [todos, setTodos] = useState<TodoTask[]>([]);
@@ -212,6 +214,24 @@ export const AdminDashboard: React.FC = () => {
       if (fileInputRef.current) fileInputRef.current.value = '';
     };
     reader.readAsText(file);
+  };
+
+  const handleCreateUser = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newUser.email || !newUser.displayName) return;
+    
+    // We reuse the existing import function to create a single user
+    await MockDB.importUsers([{
+        email: newUser.email,
+        displayName: newUser.displayName,
+        password: newUser.password,
+        role: newUser.role
+    }]);
+    
+    setIsUserModalOpen(false);
+    setNewUser({ email: '', displayName: '', password: 'password123', role: 'STUDENT' });
+    alert("User created successfully!");
+    loadData();
   };
 
   const openDeactivateModal = (user: User) => {
@@ -716,9 +736,27 @@ export const AdminDashboard: React.FC = () => {
                    accept=".csv" 
                    className="hidden" 
                  />
+                 <Button onClick={() => setIsUserModalOpen(true)} className="flex items-center gap-2">
+                     <Plus size={18}/> Add User
+                  </Button>
+                  {/* TEMP FIX BUTTON */}
+                  <Button 
+                  variant="outline" 
+                  className="border-red-200 text-red-600 hover:bg-red-50"
+                  onClick={async () => {
+                     if(confirm("Delete all duplicate users?")) {
+                        await MockDB.cleanupDuplicateUsers();
+                        loadData(); // Refresh list
+                        alert("Duplicates removed!");
+                     }
+                  }}
+                  >
+                  <Trash2 size={16} className="mr-2"/> Fix Duplicates
+                  </Button>
                  <Button onClick={() => fileInputRef.current?.click()} className="flex items-center gap-2">
                    <Upload size={18}/> Import CSV
                  </Button>
+                 
                  {/* Tooltip or Helper for CSV Format */}
                  <div className="relative group">
                     <div className="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-500 cursor-help">?</div>
@@ -1304,40 +1342,79 @@ export const AdminDashboard: React.FC = () => {
               </div>
 
               <div className="grid gap-4">
-                {announcements.map(ann => (
-                  <div key={ann.id} className={`p-4 rounded-xl border flex justify-between items-center ${ann.isActive ? 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800' : 'bg-slate-50 dark:bg-slate-900/50 border-slate-100 dark:border-slate-800 opacity-60'}`}>
-                     <div className="flex items-start gap-3">
-                        {ann.type === AnnouncementType.WARNING ? <AlertTriangle className="text-amber-500" /> : 
-                         ann.type === AnnouncementType.SUCCESS ? <CheckCircle2 className="text-emerald-500" /> :
-                         <Info className="text-blue-500" />}
-                        <div>
-                           <h4 className="font-bold text-slate-900 dark:text-white">{ann.title}</h4>
-                           <p className="text-sm text-slate-500 dark:text-slate-400">{ann.message}</p>
-                           <p className="text-xs text-slate-400 mt-1">Expires: {new Date(ann.expiresOn).toLocaleString()}</p>
-                        </div>
-                     </div>
-                     <div className="flex items-center gap-2">
-                        <span className={`px-2 py-1 rounded text-xs font-bold ${ann.isActive ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-200 text-slate-600'}`}>
-                           {ann.isActive ? 'Active' : 'Inactive'}
-                        </span>
-                        <button 
-                           onClick={() => toggleAnnouncement(ann)}
-                           className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg text-slate-500"
-                           title={ann.isActive ? 'Deactivate' : 'Activate'}
-                        >
-                           {ann.isActive ? 'Deactivate' : 'Activate'}
-                        </button>
-                        <button
-                           onClick={(e) => handleDeleteAnnouncement(ann.id, e)}
-                           className="p-2 hover:bg-red-50 dark:hover:bg-red-900/20 text-slate-300 hover:text-red-500 rounded-lg transition-colors"
-                           title="Delete"
-                           type="button"
-                        >
-                           <Trash2 size={16}/>
-                        </button>
-                     </div>
-                  </div>
-                ))}
+                {announcements.map(ann => {
+                  // 1. Calculate Status
+                  const isExpired = new Date(ann.expiresOn).getTime() <= Date.now();
+                  
+                  return (
+                    <div 
+                      key={ann.id} 
+                      className={`p-4 rounded-xl border flex justify-between items-center transition-all ${
+                         !ann.isActive 
+                           ? 'bg-slate-50 dark:bg-slate-900/50 border-slate-100 dark:border-slate-800 opacity-60' // Inactive
+                           : isExpired 
+                             ? 'bg-red-50 dark:bg-red-900/10 border-red-100 dark:border-red-900/30' // Expired
+                             : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800' // Active
+                      }`}
+                    >
+                       <div className="flex items-start gap-3">
+                          {/* Icon Color Logic */}
+                          {ann.type === AnnouncementType.WARNING ? <AlertTriangle className={isExpired ? "text-slate-400" : "text-amber-500"} /> : 
+                           ann.type === AnnouncementType.SUCCESS ? <CheckCircle2 className={isExpired ? "text-slate-400" : "text-emerald-500"} /> :
+                           <Info className={isExpired ? "text-slate-400" : "text-blue-500"} />}
+                          
+                          <div>
+                             <h4 className={`font-bold ${isExpired ? 'text-slate-500 dark:text-slate-400 line-through' : 'text-slate-900 dark:text-white'}`}>
+                               {ann.title}
+                             </h4>
+                             <p className="text-sm text-slate-500 dark:text-slate-400">{ann.message}</p>
+                             
+                             {/* Date Display */}
+                             <p className={`text-xs mt-1 font-medium ${isExpired ? 'text-red-500' : 'text-slate-400'}`}>
+                               {isExpired ? 'Expired on: ' : 'Expires: '} 
+                               {new Date(ann.expiresOn).toLocaleString()}
+                             </p>
+                          </div>
+                       </div>
+
+                       <div className="flex items-center gap-2">
+                          {/* STATUS BADGE */}
+                          {isExpired ? (
+                             <span className="px-2 py-1 rounded text-xs font-bold bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 border border-red-200 dark:border-red-800">
+                                Expired
+                             </span>
+                          ) : (
+                             <span className={`px-2 py-1 rounded text-xs font-bold ${
+                                ann.isActive 
+                                ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400' 
+                                : 'bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300'
+                             }`}>
+                                {ann.isActive ? 'Active' : 'Inactive'}
+                             </span>
+                          )}
+
+                          {/* Toggle Button */}
+                          <button 
+                             onClick={() => toggleAnnouncement(ann)}
+                             className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg text-slate-500 transition-colors"
+                             title={ann.isActive ? 'Deactivate' : 'Activate'}
+                          >
+                             {ann.isActive ? 'Deactivate' : 'Activate'}
+                          </button>
+                          
+                          {/* Delete Button */}
+                          <button
+                             onClick={(e) => handleDeleteAnnouncement(ann.id, e)}
+                             className="p-2 hover:bg-red-50 dark:hover:bg-red-900/20 text-slate-300 hover:text-red-500 rounded-lg transition-colors"
+                             title="Delete"
+                             type="button"
+                          >
+                             <Trash2 size={16}/>
+                          </button>
+                       </div>
+                    </div>
+                  );
+                })}
               </div>
            </div>
         )}
@@ -1659,13 +1736,66 @@ export const AdminDashboard: React.FC = () => {
             </div>
          </div>
       )}
-
+      {/* ADD USER MODAL */}
+      {isUserModalOpen && (
+         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
+            <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl w-full max-w-sm p-6 border border-slate-200 dark:border-slate-800">
+               <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-4">Add New User</h3>
+               <form onSubmit={handleCreateUser} className="space-y-4">
+                  <div>
+                    <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Email</label>
+                    <input 
+                       className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-3 outline-none dark:text-white"
+                       required type="email"
+                       value={newUser.email}
+                       onChange={e => setNewUser({...newUser, email: e.target.value})}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Name</label>
+                    <input 
+                       className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-3 outline-none dark:text-white"
+                       required
+                       value={newUser.displayName}
+                       onChange={e => setNewUser({...newUser, displayName: e.target.value})}
+                    />
+                  </div>
+                  <div className="flex gap-4">
+                     <div className="flex-1">
+                        <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Role</label>
+                        <select 
+                           className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-3 outline-none dark:text-white"
+                           value={newUser.role}
+                           onChange={e => setNewUser({...newUser, role: e.target.value})}
+                        >
+                           <option value="STUDENT">Student</option>
+                           <option value="ADMIN">Admin</option>
+                        </select>
+                     </div>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Password</label>
+                    <input 
+                       className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-3 outline-none dark:text-white"
+                       value={newUser.password}
+                       onChange={e => setNewUser({...newUser, password: e.target.value})}
+                    />
+                  </div>
+                  <div className="flex gap-3 pt-2">
+                     <Button type="button" variant="outline" fullWidth onClick={() => setIsUserModalOpen(false)}>Cancel</Button>
+                     <Button type="submit" fullWidth>Create Account</Button>
+                  </div>
+               </form>
+            </div>
+         </div>
+      )}
     </div>
   );
 };
 
 // Helper component for Star
-const StarIcon = ({ filled, size = 14 }: { filled: boolean, size?: number }) => (
+// FIX: Added ': React.FC<{...}>' to properly allow 'key' and other standard props
+const StarIcon: React.FC<{ filled: boolean, size?: number }> = ({ filled, size = 14 }) => (
   <svg 
     width={size} 
     height={size} 

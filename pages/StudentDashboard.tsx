@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { User, DailyMenu, MealType, Announcement, Feedback, AppSettings, CanteenItem, AnnouncementType } from '../types';
 import { MockDB } from '../services/mockDb';
@@ -133,7 +132,7 @@ export const StudentDashboard: React.FC<Props> = ({ user }) => {
         </div>
       </div>
 
-      {/* Announcements */}
+      {/* Announcements Section (UPDATED) */}
       {announcements.length > 0 && (
         <div className="grid gap-3">
             {announcements.map(a => (
@@ -152,9 +151,10 @@ export const StudentDashboard: React.FC<Props> = ({ user }) => {
                 ) : (
                   <Info className="w-5 h-5 flex-shrink-0 mt-0.5" />
                 )}
-                <div>
+                <div className="flex-1">
                   <h4 className="font-bold text-sm">{a.title}</h4>
-                  <p className="text-sm opacity-90">{a.message}</p>
+                  {/* FIX: Use FormattedText here instead of <p> */}
+                  <FormattedText text={a.message} />
                 </div>
               </div>
             ))}
@@ -165,7 +165,7 @@ export const StudentDashboard: React.FC<Props> = ({ user }) => {
       <div className="min-h-[400px]">
       {activeTab === 'menu' && (
         <div className="space-y-6">
-           {/* Day Selector - Solid Background (No Transparency) */}
+           {/* Day Selector */}
            <div className="sticky top-16 md:top-0 z-10 bg-orange-50 dark:bg-slate-950 py-2 -mx-4 px-4 md:mx-0 md:px-0 transition-colors duration-200">
              <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
                {days.map(day => (
@@ -354,7 +354,6 @@ export const StudentDashboard: React.FC<Props> = ({ user }) => {
                             <span className="text-[10px] bg-slate-100 dark:bg-slate-800 text-slate-500 px-2 py-0.5 rounded-full">{item.category}</span>
                             <div className="mt-2 flex items-center justify-between">
                                <p className="text-lg font-bold text-orange-600 dark:text-orange-400">₹{item.price}</p>
-                               {/* Placeholder for order button - functionality can be added later */}
                                <button className="text-xs bg-orange-50 dark:bg-orange-900/20 text-orange-600 dark:text-orange-400 px-3 py-1.5 rounded-lg font-bold hover:bg-orange-100 dark:hover:bg-orange-900/40 transition-colors">
                                   View
                                </button>
@@ -455,6 +454,28 @@ export const StudentDashboard: React.FC<Props> = ({ user }) => {
         </div>
       )}
 
+    </div>
+    
+  );
+};
+
+// --- HELPER COMPONENT: Render Bold Text & New Lines ---
+const FormattedText = ({ text }: { text: string }) => {
+  if (!text) return null;
+  
+  return (
+    <div className="text-sm opacity-90">
+      {text.split('\n').map((line, i) => (
+        <p key={i} className={`min-h-[1.25em] ${i > 0 ? 'mt-1' : ''}`}>
+          {line.split(/(\*\*.*?\*\*)/g).map((part, j) => {
+            // Check for **bold** markers
+            if (part.startsWith('**') && part.endsWith('**')) {
+              return <strong key={j} className="font-bold text-slate-900 dark:text-white">{part.slice(2, -2)}</strong>;
+            }
+            return <span key={j}>{part}</span>;
+          })}
+        </p>
+      ))}
     </div>
   );
 };

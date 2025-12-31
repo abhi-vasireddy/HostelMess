@@ -1,17 +1,14 @@
-
 import React, { useState } from 'react';
+import { useAuth } from '../App';
+import { UserRole } from '../types';
+import { UtensilsCrossed, Mail, Lock, Eye, EyeOff, ShieldCheck, User } from 'lucide-react';
 import { Button } from '../components/Button';
-import { MockDB } from '../services/mockDb';
-import { User } from '../types';
-import { Utensils, Lock, Mail } from 'lucide-react';
 
-interface LoginProps {
-  onLogin: (user: User) => void;
-}
-
-export const Login: React.FC<LoginProps> = ({ onLogin }) => {
+export const Login: React.FC = () => {
+  const { login } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false); // <--- NEW STATE
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -19,87 +16,125 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
     e.preventDefault();
     setError('');
     setLoading(true);
-
     try {
-      // Simulate network delay
-      await new Promise(r => setTimeout(r, 800));
-      const user = await MockDB.login(email, password);
-      onLogin(user);
+      await login(email, password);
     } catch (err: any) {
-      setError(err.message || 'Login failed');
+      setError(err.message || 'Failed to login');
     } finally {
       setLoading(false);
     }
   };
 
-  const fillCredentials = (type: 'student' | 'admin') => {
-    setEmail(type === 'student' ? 'student@hostel.com' : 'admin@hostel.com');
-    setPassword('password');
+  // Helper to fill demo credentials
+  const fillDemo = (role: UserRole) => {
+    if (role === UserRole.ADMIN) {
+      setEmail('admin@hostel.com');
+      setPassword('password');
+    } else {
+      setEmail('student@hostel.com');
+      setPassword('password');
+    }
   };
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center p-4 bg-orange-50 dark:bg-slate-950 transition-colors duration-200">
-      
-      <div className="mb-8 text-center">
-        <div className="w-12 h-12 bg-gradient-to-br from-orange-500 to-yellow-500 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-orange-500/30 mx-auto mb-4">
-           <Utensils className="w-6 h-6" />
-        </div>
-        <h1 className="text-3xl font-bold text-slate-900 dark:text-white tracking-tight">HostelMess Connect</h1>
-        <p className="text-slate-500 dark:text-slate-400 mt-2">Manage meals, feedback, and more.</p>
-      </div>
-
-      <div className="bg-white dark:bg-slate-900 p-8 rounded-2xl shadow-xl border border-orange-100 dark:border-slate-800 w-full max-w-md backdrop-blur-sm">
-        <h2 className="text-xl font-bold text-slate-900 dark:text-white mb-6 text-center">Welcome Back</h2>
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex items-center justify-center p-4">
+      <div className="max-w-md w-full bg-white dark:bg-slate-900 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-800 p-8 space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
         
-        {error && (
-          <div className="bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 p-3 rounded-lg text-sm mb-6 border border-red-100 dark:border-red-900/30">
-            {error}
+        {/* Logo Section */}
+        <div className="text-center space-y-2">
+          <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-500 mb-4 animate-bounce-slow">
+            <UtensilsCrossed size={32} />
           </div>
-        )}
+          <h1 className="text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">HostelMess</h1>
+          <p className="text-slate-500 dark:text-slate-400">Welcome back! Please sign in.</p>
+        </div>
 
-        <form onSubmit={handleSubmit} className="space-y-5">
-          <div>
-            <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 mb-1.5 uppercase tracking-wide">Email Address</label>
-            <div className="relative">
-              <Mail className="absolute left-3 top-3 text-slate-400 w-5 h-5" />
-              <input 
-                type="email" 
-                required
-                className="w-full pl-10 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl shadow-sm focus:ring-2 focus:ring-orange-500 focus:border-orange-500 p-3 outline-none dark:text-white transition-all"
-                placeholder="you@hostel.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-              />
+        {/* Login Form */}
+        <form onSubmit={handleSubmit} className="space-y-6">
+          {error && (
+            <div className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800/50 rounded-xl text-red-600 dark:text-red-400 text-sm font-medium animate-shake">
+              {error}
+            </div>
+          )}
+
+          <div className="space-y-4">
+            {/* Email Field */}
+            <div className="space-y-1">
+              <label className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider ml-1">Email Address</label>
+              <div className="relative group">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400 group-focus-within:text-orange-500 transition-colors">
+                  <Mail size={18} />
+                </div>
+                <input
+                  type="email"
+                  required
+                  className="w-full pl-10 pr-4 py-3 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-transparent outline-none transition-all dark:text-white"
+                  placeholder="name@hostel.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                />
+              </div>
+            </div>
+
+            {/* Password Field with Eye Icon */}
+            <div className="space-y-1">
+              <label className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider ml-1">Password</label>
+              <div className="relative group">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400 group-focus-within:text-orange-500 transition-colors">
+                  <Lock size={18} />
+                </div>
+                
+                {/* 1. Toggle Type: password <-> text */}
+                <input
+                  type={showPassword ? "text" : "password"} 
+                  required
+                  className="w-full pl-10 pr-12 py-3 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-transparent outline-none transition-all dark:text-white"
+                  placeholder="••••••••"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                />
+
+                {/* 2. Eye Icon Button */}
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors cursor-pointer"
+                  tabIndex={-1} // Prevents tabbing to this button
+                >
+                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                </button>
+              </div>
             </div>
           </div>
-          
-          <div>
-            <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 mb-1.5 uppercase tracking-wide">Password</label>
-            <div className="relative">
-              <Lock className="absolute left-3 top-3 text-slate-400 w-5 h-5" />
-              <input 
-                type="password" 
-                required
-                className="w-full pl-10 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl shadow-sm focus:ring-2 focus:ring-orange-500 focus:border-orange-500 p-3 outline-none dark:text-white transition-all"
-                placeholder="••••••••"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-              />
-            </div>
-          </div>
 
-          <Button type="submit" fullWidth disabled={loading} size="lg" className="rounded-xl font-semibold shadow-lg shadow-orange-500/20 mt-2">
-            {loading ? 'Logging in...' : 'Sign In'}
+          <Button type="submit" fullWidth isLoading={loading} className="py-3 text-base shadow-lg shadow-orange-500/20">
+            Sign In
           </Button>
         </form>
 
-        <div className="mt-8 pt-6 border-t border-slate-100 dark:border-slate-800">
-           <p className="text-xs text-slate-400 dark:text-slate-500 text-center mb-3 font-medium uppercase tracking-wider">Demo Credentials</p>
-           <div className="flex gap-3 justify-center">
-             <button onClick={() => fillCredentials('student')} className="text-xs font-medium text-orange-600 dark:text-orange-400 hover:underline bg-orange-50 dark:bg-orange-900/20 px-3 py-1.5 rounded-full transition-colors">Student Demo</button>
-             <button onClick={() => fillCredentials('admin')} className="text-xs font-medium text-orange-600 dark:text-orange-400 hover:underline bg-orange-50 dark:bg-orange-900/20 px-3 py-1.5 rounded-full transition-colors">Admin Demo</button>
-           </div>
+        {/* Demo Credentials (Optional Helper) */}
+        <div className="pt-6 border-t border-slate-100 dark:border-slate-800">
+          <p className="text-xs text-center text-slate-400 mb-4 uppercase font-bold tracking-widest">Demo Accounts</p>
+          <div className="grid grid-cols-2 gap-3">
+            <button
+              type="button"
+              onClick={() => fillDemo(UserRole.ADMIN)}
+              className="flex flex-col items-center justify-center p-3 rounded-xl border border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all group"
+            >
+              <ShieldCheck className="w-6 h-6 text-slate-400 group-hover:text-purple-500 mb-2 transition-colors" />
+              <span className="text-xs font-medium text-slate-600 dark:text-slate-400">Admin</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => fillDemo(UserRole.STUDENT)}
+              className="flex flex-col items-center justify-center p-3 rounded-xl border border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all group"
+            >
+              <User className="w-6 h-6 text-slate-400 group-hover:text-emerald-500 mb-2 transition-colors" />
+              <span className="text-xs font-medium text-slate-600 dark:text-slate-400">Student</span>
+            </button>
+          </div>
         </div>
+
       </div>
     </div>
   );
