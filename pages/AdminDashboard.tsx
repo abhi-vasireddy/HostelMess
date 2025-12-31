@@ -1419,10 +1419,81 @@ export const AdminDashboard: React.FC = () => {
            </div>
         )}
 
-        {/* ... (Menu and Canteen tabs remain same) ... */}
         {activeTab === 'menu' && (
            <div className="space-y-6">
-              {/* Day Selector */}
+              
+              {/* --- NEW HEADER & BULK UPLOAD SECTION --- */}
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <h3 className="text-xl font-bold text-slate-800 dark:text-white flex items-center gap-2">
+                  <Calendar className="text-orange-500"/> Weekly Menu
+                </h3>
+                
+                <div className="flex gap-2">
+                   {/* Hidden File Input */}
+                   <input
+                     type="file"
+                     accept=".json"
+                     id="menu-upload"
+                     className="hidden"
+                     onChange={async (e) => {
+                       const file = e.target.files?.[0];
+                       if (!file) return;
+
+                       try {
+                         const text = await file.text();
+                         const jsonData = JSON.parse(text);
+                         
+                         // Basic Validation
+                         if (!Array.isArray(jsonData)) {
+                           alert("Invalid format: File must be an array of days.");
+                           return;
+                         }
+                         
+                         if (confirm(`Upload menu for ${jsonData.length} days? This will overwrite existing data.`)) {
+                           await MockDB.bulkUploadMenu(jsonData);
+                           loadData(); // Refresh UI
+                           alert("Menu updated successfully!");
+                         }
+                       } catch (err) {
+                         alert("Error reading file. Please check the JSON format.");
+                         console.error(err);
+                       }
+                       // Reset input
+                       e.target.value = '';
+                     }}
+                   />
+                   
+                   {/* Download Sample Button */}
+                   <Button 
+                     variant="outline"
+                     onClick={() => {
+                       const sample = [
+                         {
+                           "day": "Monday",
+                           "breakfast": [{ "id": "101", "name": "Idly", "description": "With chutney", "isVeg": true, "image": "https://images.unsplash.com/photo-1589301760014-d929f3979dbc" }],
+                           "lunch": [], "snacks": [], "dinner": []
+                         },
+                         { "day": "Tuesday", "breakfast": [], "lunch": [], "snacks": [], "dinner": [] }
+                       ];
+                       const blob = new Blob([JSON.stringify(sample, null, 2)], { type: 'application/json' });
+                       const url = URL.createObjectURL(blob);
+                       const a = document.createElement('a');
+                       a.href = url;
+                       a.download = 'menu_sample.json';
+                       a.click();
+                     }}
+                   >
+                     <span className="text-xs">Download Sample</span>
+                   </Button>
+
+                   {/* Upload Button */}
+                   <Button onClick={() => document.getElementById('menu-upload')?.click()}>
+                     Upload JSON
+                   </Button>
+                </div>
+              </div>
+
+              {/* --- EXISTING DAY SELECTOR --- */}
                <div className="flex gap-2 overflow-x-auto pb-2">
                  {days.map(day => (
                    <button
@@ -1440,7 +1511,7 @@ export const AdminDashboard: React.FC = () => {
                  ))}
                </div>
 
-               {/* Meal Sections */}
+               {/* --- EXISTING MEAL SECTIONS --- */}
                {currentDayMenu && [MealType.BREAKFAST, MealType.LUNCH, MealType.SNACKS, MealType.DINNER].map(meal => (
                   <div key={meal} className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 p-5">
                      <div className="flex justify-between items-center mb-4">

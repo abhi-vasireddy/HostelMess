@@ -119,6 +119,21 @@ export const MockDB = {
     }
   },
 
+  // 3. BULK UPLOAD MENU
+  bulkUploadMenu: async (fullMenu: DailyMenu[]): Promise<void> => {
+    const batch = writeBatch(db);
+    
+    fullMenu.forEach(dayMenu => {
+      // Create a reference for each day (e.g., "Monday", "Tuesday")
+      // We use the day name as the ID so it overwrites easily
+      const docRef = doc(db, 'dailyMenus', dayMenu.day);
+      batch.set(docRef, dayMenu);
+    });
+
+    await batch.commit();
+    console.log("Bulk menu upload complete!");
+  },
+
   // --- 3. FEEDBACK ---
   getAllFeedback: async (): Promise<Feedback[]> => {
     try {
