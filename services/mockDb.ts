@@ -1,306 +1,395 @@
-import { User, UserRole, DailyMenu, MealType, Announcement, AnnouncementType, Feedback, Suggestion, AppSettings, CanteenItem, TodoTask, AdminNote, TaskPriority } from '../types';
+import { db } from './firebase';
+import { 
+  collection, 
+  addDoc, 
+  getDocs, 
+  writeBatch, 
+  doc,
+  query,
+  where,
+  updateDoc,
+  deleteDoc,
+  orderBy,
+  setDoc
+} from 'firebase/firestore'; 
+import { 
+  User, 
+  UserRole, 
+  DailyMenu, 
+  Feedback,
+  Announcement,
+  AppSettings,
+  CanteenItem,
+  Suggestion,
+  TodoTask,
+  AdminNote
+} from '../types';
 
-// Initial Mock Data
-// Extended with passwords for demo purposes
-const MOCK_USERS = [
-  { uid: 'admin1', email: 'admin@hostel.com', displayName: 'Warden Smith', role: UserRole.ADMIN, password: 'password' },
-  { uid: 'student1', email: 'student@hostel.com', displayName: 'John Doe', role: UserRole.STUDENT, password: 'password' },
-  { uid: 'student2', email: 'jane@hostel.com', displayName: 'Jane Roe', role: UserRole.STUDENT, deactivatedUntil: '2025-01-01', password: 'password' },
-];
-
+// --- INITIAL DATA (For Seeding) ---
 const INITIAL_MENU: DailyMenu[] = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'].map(day => ({
   day,
-  [MealType.BREAKFAST]: [{ id: `${day}-b-1`, name: 'Idli Sambar', description: 'Steamed rice cakes with lentil soup', isVeg: true, image: 'https://picsum.photos/100/100' }],
-  [MealType.LUNCH]: [{ id: `${day}-l-1`, name: 'Rice & Curry', description: 'Steamed rice with seasonal veg curry', isVeg: true, image: 'https://picsum.photos/100/101' }],
-  [MealType.SNACKS]: day === 'Sunday' ? [] : [{ id: `${day}-s-1`, name: 'Samosa', description: 'Fried pastry', isVeg: true, image: 'https://picsum.photos/100/102' }],
-  [MealType.DINNER]: [{ id: `${day}-d-1`, name: 'Chapati & Dal', description: 'Wheat flatbread with lentils', isVeg: true, image: 'https://picsum.photos/100/103' }]
+  Breakfast: [{ id: `${day}-b-1`, name: 'Idli Sambar', description: 'Steamed rice cakes', isVeg: true, image: 'https://picsum.photos/100/100' }],
+  Lunch: [{ id: `${day}-l-1`, name: 'Rice & Curry', description: 'Steamed rice with curry', isVeg: true, image: 'https://picsum.photos/100/101' }],
+  Snacks: day === 'Sunday' ? [] : [{ id: `${day}-s-1`, name: 'Samosa', description: 'Fried pastry', isVeg: true, image: 'https://picsum.photos/100/102' }],
+  Dinner: [{ id: `${day}-d-1`, name: 'Chapati', description: 'Wheat flatbread', isVeg: true, image: 'https://picsum.photos/100/103' }]
 }));
 
-const INITIAL_ANNOUNCEMENTS: Announcement[] = [
-  {
-    id: '1',
-    title: 'Welcome!',
-    message: 'Welcome to the new Hostel Food Tracker app.',
-    type: AnnouncementType.INFO,
-    isActive: true,
-    expiresOn: '2026-01-01',
-    createdAt: Date.now()
-  }
-];
-
-const INITIAL_CANTEEN_MENU: CanteenItem[] = [
-  { id: 'c1', name: 'Veg Burger', price: 45, category: 'Snacks', isAvailable: true, image: 'https://picsum.photos/200/200?random=1' },
-  { id: 'c2', name: 'Chicken Sandwich', price: 60, category: 'Snacks', isAvailable: true, image: 'https://picsum.photos/200/200?random=2' },
-  { id: 'c3', name: 'Cold Coffee', price: 30, category: 'Drinks', isAvailable: true, image: 'https://picsum.photos/200/200?random=3' },
-  { id: 'c4', name: 'Fruit Salad', price: 40, category: 'Healthy', isAvailable: false, image: 'https://picsum.photos/200/200?random=4' },
-];
-
-const INITIAL_TODOS: TodoTask[] = [
-  { id: 't1', text: 'Review next week menu', description: 'Check nutrition balance for the lunch menu.', isCompleted: false, priority: TaskPriority.HIGH, dueDate: '2024-12-31', createdAt: Date.now() },
-  { id: 't2', text: 'Call vendor for rice supply', description: 'Need 50kg basmati rice by Monday.', isCompleted: true, priority: TaskPriority.MEDIUM, dueDate: '2024-12-30', createdAt: Date.now() }
-];
-
-const INITIAL_NOTES: AdminNote[] = [
-  { id: 'n1', title: 'Vendor Contacts', content: 'Vegetables: +91-9876543210\nMilk: +91-1234567890', createdAt: Date.now() }
-];
-
-// Mock Feedback to ensure "My Feedback" isn't empty for demo
-const INITIAL_FEEDBACK: Feedback[] = [
-  {
-    id: 'f1',
-    dishId: 'Monday-b-1',
-    dishName: 'Idli Sambar',
-    userId: 'student1',
-    userName: 'John Doe',
-    rating: 5,
-    comment: 'Delicious breakfast!',
-    mealType: MealType.BREAKFAST,
-    date: '2024-01-01', // Old date, just for history
-    timestamp: Date.now() - 86400000
-  }
-];
-
-// Local Storage Keys
-const KEYS = {
-  USERS: 'hft_users',
-  MENU: 'hft_menu',
-  FEEDBACK: 'hft_feedback',
-  ANNOUNCEMENTS: 'hft_announcements',
-  SUGGESTIONS: 'hft_suggestions',
-  SETTINGS: 'hft_settings',
-  CURRENT_USER: 'hft_current_user',
-  CANTEEN_MENU: 'hft_canteen_menu',
-  TODOS: 'hft_todos',
-  NOTES: 'hft_notes'
-};
-
-// Helpers
-const getStorage = <T>(key: string, defaultVal: T): T => {
-  const stored = localStorage.getItem(key);
-  return stored ? JSON.parse(stored) : defaultVal;
-};
-
-const setStorage = (key: string, val: any) => {
-  localStorage.setItem(key, JSON.stringify(val));
-};
-
 export const MockDB = {
-  // Auth
+  
+  // --- 1. AUTHENTICATION ---
   login: async (email: string, password?: string): Promise<User> => {
-    // We type cast to any here because 'password' isn't on the public User interface
-    const users = getStorage<any[]>(KEYS.USERS, MOCK_USERS);
-    const user = users.find(u => u.email.toLowerCase() === email.toLowerCase());
-    
-    if (!user) throw new Error('User not found');
-    
-    // Check Password
-    if (password && user.password && user.password !== password) {
-      throw new Error('Invalid credentials');
-    }
-    
-    // Check deactivation
-    if (user.deactivatedUntil) {
-      const now = new Date();
-      const deactivationEnd = new Date(user.deactivatedUntil);
-      if (now < deactivationEnd) {
-        throw new Error(`Account deactivated until ${deactivationEnd.toLocaleDateString()}`);
-      }
+    const usersRef = collection(db, 'users');
+    const q = query(usersRef, where('email', '==', email));
+    const snapshot = await getDocs(q);
+
+    // Seed default users if DB is empty
+    if (snapshot.empty) {
+       const allUsers = await getDocs(usersRef);
+       if (allUsers.empty) {
+         console.log("Creating default Admin & Student...");
+         await MockDB.importUsers([
+            { email: 'admin@hostel.com', displayName: 'Warden Smith', role: 'ADMIN', password: 'password' },
+            { email: 'student@hostel.com', displayName: 'John Doe', role: 'STUDENT', password: 'password' }
+         ]);
+         return MockDB.login(email, password);
+       }
+       throw new Error("User not found.");
     }
 
-    // Remove password before returning/storing session
-    const { password: _, ...userSession } = user;
-    setStorage(KEYS.CURRENT_USER, userSession);
-    return userSession as User;
+    const userDoc = snapshot.docs[0];
+    const userData = userDoc.data();
+    
+    if (userData.password !== password) throw new Error("Incorrect password");
+    
+    if (userData.deactivatedUntil) {
+      const banDate = new Date(userData.deactivatedUntil);
+      if (new Date() < banDate) throw new Error(`Account Deactivated until ${banDate.toLocaleDateString()}`);
+    }
+
+    const userSession = { ...userData, uid: userDoc.id } as User;
+    localStorage.setItem('hft_current_user', JSON.stringify(userSession));
+    return userSession;
   },
 
   getCurrentUser: (): User | null => {
-    return getStorage<User | null>(KEYS.CURRENT_USER, null);
+    const stored = localStorage.getItem('hft_current_user');
+    return stored ? JSON.parse(stored) : null;
   },
 
-  logout: async () => {
-    localStorage.removeItem(KEYS.CURRENT_USER);
-  },
+  logout: async () => { localStorage.removeItem('hft_current_user'); },
 
-  // Menu
+// --- 2. MENU (Duplicate-Proof Version) ---
+  
   getWeeklyMenu: async (): Promise<DailyMenu[]> => {
-    return getStorage<DailyMenu[]>(KEYS.MENU, INITIAL_MENU);
+    try {
+      const col = collection(db, 'dailyMenus');
+      const snapshot = await getDocs(col);
+
+      // 1. SEEDING: If empty, create docs with IDs like "Monday", "Tuesday"
+      if (snapshot.empty) {
+        console.log("Seeding Menu with Fixed IDs...");
+        const batch = writeBatch(db);
+        INITIAL_MENU.forEach(m => {
+          // KEY FIX: Use m.day as the ID (e.g., 'dailyMenus/Monday')
+          const dayDoc = doc(db, 'dailyMenus', m.day); 
+          batch.set(dayDoc, m);
+        });
+        await batch.commit();
+        return INITIAL_MENU;
+      }
+      
+      const menu = snapshot.docs.map(d => d.data() as DailyMenu);
+      const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+      return menu.sort((a, b) => days.indexOf(a.day) - days.indexOf(b.day));
+    } catch (e) { console.error(e); return []; }
   },
 
   updateMenu: async (updatedMenu: DailyMenu[]): Promise<void> => {
-    setStorage(KEYS.MENU, updatedMenu);
-  },
+    try {
+      console.log("Saving menu updates...");
+      const batch = writeBatch(db);
+      
+      // KEY FIX: No need to delete anymore! Just overwrite the specific ID.
+      updatedMenu.forEach(dayMenu => {
+        // This ensures we always update 'dailyMenus/Monday' directly
+        const dayDoc = doc(db, 'dailyMenus', dayMenu.day);
+        batch.set(dayDoc, dayMenu);
+      });
 
-  // Canteen
-  getCanteenMenu: async (): Promise<CanteenItem[]> => {
-    return getStorage<CanteenItem[]>(KEYS.CANTEEN_MENU, INITIAL_CANTEEN_MENU);
-  },
-
-  saveCanteenItem: async (item: CanteenItem): Promise<void> => {
-    const list = getStorage<CanteenItem[]>(KEYS.CANTEEN_MENU, INITIAL_CANTEEN_MENU);
-    const index = list.findIndex(i => i.id === item.id);
-    if (index >= 0) {
-      list[index] = item;
-    } else {
-      list.push(item);
+      await batch.commit();
+      console.log("✅ Menu saved successfully!");
+    } catch (e) {
+      console.error("❌ Error updating menu:", e);
+      throw e;
     }
-    setStorage(KEYS.CANTEEN_MENU, list);
   },
 
-  deleteCanteenItem: async (id: string): Promise<void> => {
-    let list = getStorage<CanteenItem[]>(KEYS.CANTEEN_MENU, INITIAL_CANTEEN_MENU);
-    list = list.filter(i => i.id !== id);
-    setStorage(KEYS.CANTEEN_MENU, list);
-  },
-
-  // Feedback
-  submitFeedback: async (feedback: Feedback): Promise<void> => {
-    const allFeedback = getStorage<Feedback[]>(KEYS.FEEDBACK, INITIAL_FEEDBACK);
-    allFeedback.push(feedback);
-    setStorage(KEYS.FEEDBACK, allFeedback);
-  },
-
+  // --- 3. FEEDBACK ---
   getAllFeedback: async (): Promise<Feedback[]> => {
-    return getStorage<Feedback[]>(KEYS.FEEDBACK, INITIAL_FEEDBACK);
+    try {
+      // Sort: Newest First
+      const q = query(collection(db, 'feedbacks'), orderBy('timestamp', 'desc'));
+      const snapshot = await getDocs(q);
+      return snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id }) as Feedback);
+    } catch (e) { return []; }
   },
 
-  getFeedbackForDish: async (dishId: string): Promise<Feedback[]> => {
-    const all = getStorage<Feedback[]>(KEYS.FEEDBACK, INITIAL_FEEDBACK);
-    return all.filter(f => f.dishId === dishId);
+  submitFeedback: async (feedback: Feedback): Promise<void> => {
+    await addDoc(collection(db, 'feedbacks'), { ...feedback, timestamp: Date.now() });
   },
 
   deleteFeedback: async (id: string): Promise<void> => {
-    let all = getStorage<Feedback[]>(KEYS.FEEDBACK, INITIAL_FEEDBACK);
-    all = all.filter(f => f.id !== id);
-    setStorage(KEYS.FEEDBACK, all);
+    await deleteDoc(doc(db, 'feedbacks', id));
   },
 
-  // Announcements
+// --- 4. ANNOUNCEMENTS ---
+  
+  // Student View: Only show Active & Future announcements
   getAnnouncements: async (): Promise<Announcement[]> => {
-    let announcements = getStorage<Announcement[]>(KEYS.ANNOUNCEMENTS, INITIAL_ANNOUNCEMENTS);
-    const now = new Date().toISOString();
-    return announcements.filter(a => a.isActive && a.expiresOn > now);
-  },
+    try {
+      // 1. Ask Firebase for only "isActive == true" items
+      const q = query(collection(db, 'announcements'), where('isActive', '==', true));
+      const snapshot = await getDocs(q);
+      
+      const list = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id }) as Announcement);
 
+      // 2. Filter out expired ones (FIXED DATE LOGIC)
+      const now = Date.now(); // Current time as a number
+      
+      return list.filter(a => {
+         if (!a.expiresOn) return true; // If no date set, show it
+         
+         // Convert the "Local String" from the database into a real Timestamp number
+         const expiryTime = new Date(a.expiresOn).getTime();
+         
+         // Only show if the Expiry Time is in the future
+         return expiryTime > now;
+      });
+    } catch (e) { 
+      console.error("Error fetching announcements:", e);
+      return []; 
+    }
+  },
+  
+  // Admin View: Show EVERYTHING (Active, Inactive, Expired)
   getAllAnnouncementsAdmin: async (): Promise<Announcement[]> => {
-    return getStorage<Announcement[]>(KEYS.ANNOUNCEMENTS, INITIAL_ANNOUNCEMENTS);
+    try {
+      // No filter - fetch all
+      const snapshot = await getDocs(collection(db, 'announcements'));
+      return snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id }) as Announcement);
+    } catch (e) { return []; }
   },
 
   saveAnnouncement: async (announcement: Announcement): Promise<void> => {
-    const list = getStorage<Announcement[]>(KEYS.ANNOUNCEMENTS, INITIAL_ANNOUNCEMENTS);
-    const index = list.findIndex(a => a.id === announcement.id);
-    if (index >= 0) {
-      list[index] = announcement;
-    } else {
-      list.unshift(announcement);
+    const { id, ...data } = announcement;
+    
+    // If it has a long Firebase ID, it's an update
+    if (id && id.length > 20) {
+       try {
+         await updateDoc(doc(db, 'announcements', id), data);
+         return;
+       } catch (e) { /* Fallback to add if not found */ }
     }
-    setStorage(KEYS.ANNOUNCEMENTS, list);
+    
+    // Otherwise, create new
+    await addDoc(collection(db, 'announcements'), data);
   },
 
   deleteAnnouncement: async (id: string): Promise<void> => {
-    let list = getStorage<Announcement[]>(KEYS.ANNOUNCEMENTS, INITIAL_ANNOUNCEMENTS);
-    list = list.filter(a => a.id !== id);
-    setStorage(KEYS.ANNOUNCEMENTS, list);
+    await deleteDoc(doc(db, 'announcements', id));
   },
 
-  // Users (Admin)
-  getAllUsers: async (): Promise<User[]> => {
-    const users = getStorage<any[]>(KEYS.USERS, MOCK_USERS);
-    return users.map(({ password, ...u }) => u as User);
-  },
-
-  updateUserStatus: async (uid: string, deactivatedUntil: string | null): Promise<void> => {
-    const users = getStorage<User[]>(KEYS.USERS, MOCK_USERS);
-    const updatedUsers = users.map(u => u.uid === uid ? { ...u, deactivatedUntil } : u);
-    setStorage(KEYS.USERS, updatedUsers);
-  },
-
-  updateUserRole: async (uid: string, newRole: UserRole): Promise<void> => {
-    const users = getStorage<any[]>(KEYS.USERS, MOCK_USERS);
-    const updatedUsers = users.map(u => u.uid === uid ? { ...u, role: newRole } : u);
-    setStorage(KEYS.USERS, updatedUsers);
-  },
-
-  importUsers: async (newUsers: {email: string, displayName: string, password?: string, role?: string}[]): Promise<void> => {
-     const currentUsers = getStorage<any[]>(KEYS.USERS, MOCK_USERS);
-     const existingEmails = new Set(currentUsers.map(u => u.email));
-     const uniqueNewUsers = newUsers.filter(u => !existingEmails.has(u.email));
-     
-     const usersToAdd = uniqueNewUsers.map(u => ({
-         uid: `user-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-         email: u.email,
-         displayName: u.displayName,
-         role: u.role === 'ADMIN' ? UserRole.ADMIN : UserRole.STUDENT,
-         password: u.password || 'password123' 
-     }));
-
-     setStorage(KEYS.USERS, [...currentUsers, ...usersToAdd]);
-  },
-
-  // Suggestions
-  submitSuggestion: async (suggestion: Suggestion): Promise<void> => {
-    const list = getStorage<Suggestion[]>(KEYS.SUGGESTIONS, []);
-    list.unshift(suggestion);
-    setStorage(KEYS.SUGGESTIONS, list);
-  },
-
-  getSuggestions: async (): Promise<Suggestion[]> => {
-    return getStorage<Suggestion[]>(KEYS.SUGGESTIONS, []);
-  },
-
-  deleteSuggestion: async (id: string): Promise<void> => {
-    let list = getStorage<Suggestion[]>(KEYS.SUGGESTIONS, []);
-    list = list.filter(s => s.id !== id);
-    setStorage(KEYS.SUGGESTIONS, list);
-  },
-
-  // Settings
+  // --- 5. SETTINGS & CANTEEN ---
   getSettings: async (): Promise<AppSettings> => {
-    return getStorage<AppSettings>(KEYS.SETTINGS, { canteenEnabled: false });
+    try {
+       const snapshot = await getDocs(collection(db, 'settings'));
+       if (!snapshot.empty) return snapshot.docs[0].data() as AppSettings;
+    } catch(e) {}
+    return { canteenEnabled: false };
   },
 
   updateSettings: async (settings: AppSettings): Promise<void> => {
-    setStorage(KEYS.SETTINGS, settings);
+    const snapshot = await getDocs(collection(db, 'settings'));
+    if (snapshot.empty) {
+      await addDoc(collection(db, 'settings'), settings);
+    } else {
+      const docId = snapshot.docs[0].id;
+      await updateDoc(doc(db, 'settings', docId), { ...settings });
+    }
   },
 
-  // Todos
+  getCanteenMenu: async (): Promise<CanteenItem[]> => {
+    try {
+      const snapshot = await getDocs(collection(db, 'canteen'));
+      return snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id }) as CanteenItem);
+    } catch (e) { return []; }
+  },
+
+  saveCanteenItem: async (item: CanteenItem): Promise<void> => {
+     const { id, ...data } = item;
+     // Simple check: if ID looks like a timestamp (short), it's new. 
+     // If it's a long Firebase ID, it's an update.
+     if (id && id.length > 15 && !id.startsWith('c')) {
+        await updateDoc(doc(db, 'canteen', id), data);
+     } else {
+        await addDoc(collection(db, 'canteen'), data);
+     }
+  },
+
+  deleteCanteenItem: async (id: string): Promise<void> => {
+    await deleteDoc(doc(db, 'canteen', id));
+  },
+
+  // --- 6. SUGGESTIONS ---
+  submitSuggestion: async (sug: Suggestion) => {
+     const { id, ...data } = sug; 
+     await addDoc(collection(db, 'suggestions'), data);
+  },
+  
+  getSuggestions: async (): Promise<Suggestion[]> => {
+    try {
+      const q = query(collection(db, 'suggestions'), orderBy('timestamp', 'desc'));
+      const snapshot = await getDocs(q);
+      return snapshot.docs.map(doc => ({
+        ...doc.data(),
+        id: doc.id,
+        userId: doc.data().userId || 'anon',
+        userName: doc.data().userName || 'Anonymous',
+        text: doc.data().text || '',
+        timestamp: doc.data().timestamp || Date.now()
+      }) as Suggestion);
+    } catch (e) { return []; }
+  },
+
+  deleteSuggestion: async (id: string): Promise<void> => {
+    await deleteDoc(doc(db, 'suggestions', id));
+  },
+
+  // --- 7. USER MANAGEMENT ---
+  getAllUsers: async (): Promise<User[]> => {
+    try {
+      const snapshot = await getDocs(collection(db, 'users'));
+      return snapshot.docs.map(doc => ({ ...doc.data(), uid: doc.id }) as User);
+    } catch (e) { return []; }
+  },
+
+  // ... inside MockDB object ...
+
+  // 1. NEW CLEANUP FUNCTION
+  cleanupDuplicateUsers: async (): Promise<void> => {
+    console.log("Starting user cleanup...");
+    const snapshot = await getDocs(collection(db, 'users'));
+    const users = snapshot.docs;
+    
+    // Map to track emails we have seen: Map<Email, DocID>
+    const seenEmails = new Map<string, string>();
+    const batch = writeBatch(db);
+    let deleteCount = 0;
+
+    users.forEach(docSnap => {
+      const data = docSnap.data();
+      const email = data.email;
+
+      if (seenEmails.has(email)) {
+        // We already saw this email! This current doc is a duplicate. DELETE IT.
+        console.log(`Deleting duplicate user: ${email} (ID: ${docSnap.id})`);
+        batch.delete(docSnap.ref);
+        deleteCount++;
+      } else {
+        // First time seeing this email. Keep it.
+        seenEmails.set(email, docSnap.id);
+      }
+    });
+
+    if (deleteCount > 0) {
+      await batch.commit();
+      console.log(`✅ Cleanup Complete: Removed ${deleteCount} duplicate users.`);
+    } else {
+      console.log("✅ No duplicates found.");
+    }
+  },
+
+  // 2. UPDATED IMPORT FUNCTION (Prevents future duplicates)
+  importUsers: async (newUsers: any[]): Promise<void> => {
+    const batch = writeBatch(db);
+    const usersRef = collection(db, 'users');
+    
+    // Get all existing emails first to avoid duplicates
+    const existingSnap = await getDocs(usersRef);
+    const existingEmails = new Set(existingSnap.docs.map(d => d.data().email));
+
+    newUsers.forEach(u => {
+      if (!existingEmails.has(u.email)) {
+        // Only add if email doesn't exist
+        const newDocRef = doc(usersRef); // Random ID
+        batch.set(newDocRef, {
+          email: u.email,
+          displayName: u.displayName,
+          role: u.role || 'STUDENT',
+          password: u.password || 'password123', 
+          createdAt: Date.now()
+        });
+      }
+    });
+    
+    await batch.commit();
+  },
+
+  updateUserStatus: async (uid: string, deactivatedUntil: string | null): Promise<void> => {
+    await updateDoc(doc(db, 'users', uid), { deactivatedUntil });
+  },
+
+  updateUserRole: async (uid: string, newRole: UserRole): Promise<void> => {
+    await updateDoc(doc(db, 'users', uid), { role: newRole });
+  },
+
+// --- 8. TASKS & NOTES ---
+  
   getTodos: async (): Promise<TodoTask[]> => {
-    return getStorage<TodoTask[]>(KEYS.TODOS, INITIAL_TODOS);
+    try {
+      // FIX: Sort by 'createdAt' so tasks don't jump around
+      const q = query(collection(db, 'todos'), orderBy('createdAt', 'desc'));
+      const snapshot = await getDocs(q);
+      return snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id }) as TodoTask);
+    } catch (e) { return []; }
   },
 
-  saveTodo: async (task: TodoTask): Promise<void> => {
-    const list = getStorage<TodoTask[]>(KEYS.TODOS, INITIAL_TODOS);
-    const index = list.findIndex(t => t.id === task.id);
-    if (index >= 0) list[index] = task;
-    else list.unshift(task);
-    setStorage(KEYS.TODOS, list);
+  saveTodo: async (t: TodoTask) => {
+    // FIX: Use setDoc with {merge: true}
+    // This ensures we use the EXACT ID generated by the UI, preventing "Cannot Delete" bugs.
+    const { id, ...data } = t;
+    await setDoc(doc(db, 'todos', id), data, { merge: true });
   },
 
-  updateAllTodos: async (todos: TodoTask[]): Promise<void> => {
-    setStorage(KEYS.TODOS, todos);
+  updateAllTodos: async (t: TodoTask[]) => { 
+      // Note: Full drag-and-drop reordering persistence requires an 'order' field 
+      // which we are skipping to keep the database simple. 
+      // For now, tasks will strictly follow 'createdAt' order on refresh.
+      console.log("Reordering is local-only for this session.");
   },
 
-  deleteTodo: async (id: string): Promise<void> => {
-    let list = getStorage<TodoTask[]>(KEYS.TODOS, INITIAL_TODOS);
-    list = list.filter(t => t.id !== id);
-    setStorage(KEYS.TODOS, list);
+  deleteTodo: async (id: string) => { 
+    await deleteDoc(doc(db, 'todos', id)); 
   },
 
-  // Notes
+  // --- NOTES ---
+
   getNotes: async (): Promise<AdminNote[]> => {
-    return getStorage<AdminNote[]>(KEYS.NOTES, INITIAL_NOTES);
+    try {
+      // FIX: Sort notes by newest first
+      const q = query(collection(db, 'notes'), orderBy('createdAt', 'desc'));
+      const snapshot = await getDocs(q);
+      return snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id }) as AdminNote);
+    } catch (e) { return []; }
   },
 
-  saveNote: async (note: AdminNote): Promise<void> => {
-    const list = getStorage<AdminNote[]>(KEYS.NOTES, INITIAL_NOTES);
-    const index = list.findIndex(n => n.id === note.id);
-    if (index >= 0) list[index] = note;
-    else list.unshift(note);
-    setStorage(KEYS.NOTES, list);
+  saveNote: async (n: AdminNote) => {
+    // FIX: Use setDoc to match UI ID with Database ID
+    const { id, ...data } = n;
+    await setDoc(doc(db, 'notes', id), data, { merge: true });
   },
 
-  deleteNote: async (id: string): Promise<void> => {
-    let list = getStorage<AdminNote[]>(KEYS.NOTES, INITIAL_NOTES);
-    list = list.filter(n => n.id !== id);
-    setStorage(KEYS.NOTES, list);
+  deleteNote: async (id: string) => { 
+    await deleteDoc(doc(db, 'notes', id)); 
   }
 };
