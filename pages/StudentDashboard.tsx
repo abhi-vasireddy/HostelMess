@@ -28,115 +28,110 @@ export const StudentDashboard: React.FC<Props> = ({ user }) => {
   const [comment, setComment] = useState('');
   const [activeFeedbackDish, setActiveFeedbackDish] = useState<{id: string, name: string, meal: MealType} | null>(null);
 
+  // --- DATA LOADING ---
   useEffect(() => {
     const fetchData = async () => {
-      const [m, a, s, allF, c] = await Promise.all([
-        MockDB.getWeeklyMenu(),
-        MockDB.getAnnouncements(),
-        MockDB.getSettings(),
-        MockDB.getAllFeedback(),
-        MockDB.getCanteenMenu()
-      ]);
-      setMenu(m);
-      setAnnouncements(a);
-      setSettings(s);
-      setCanteenMenu(c);
+      try {
+        const [m, a, s, allF, c] = await Promise.all([
+          MockDB.getWeeklyMenu(),
+          MockDB.getAnnouncements(),
+          MockDB.getSettings(),
+          MockDB.getAllFeedback(),
+          MockDB.getCanteenMenu()
+        ]);
+        setMenu(m || []);
+        setAnnouncements(a || []);
+        setSettings(s || { canteenEnabled: false });
+        setCanteenMenu(c || []);
 
-      const today = getTodayDateString();
-      // Store all user feedbacks for history tab
-      const userFeedbackHistory = allF.filter(f => f.userId === user.uid).sort((a, b) => b.timestamp - a.timestamp);
-      setMyFeedbacks(userFeedbackHistory);
+        const today = getTodayDateString();
+        const userFeedbackHistory = (allF || [])
+          .filter(f => f.userId === user.uid)
+          .sort((a, b) => b.timestamp - a.timestamp);
+        
+        setMyFeedbacks(userFeedbackHistory);
 
-      // Map today's feedback for locking UI
-      const myTodayFeedback = userFeedbackHistory.filter(f => f.date === today);
-      const map: Record<string, boolean> = {};
-      myTodayFeedback.forEach(f => map[f.dishId] = true);
-      setFeedbackMap(map);
+        const myTodayFeedback = userFeedbackHistory.filter(f => f.date === today);
+        const map: Record<string, boolean> = {};
+        myTodayFeedback.forEach(f => map[f.dishId] = true);
+        setFeedbackMap(map);
+      } catch (err) {
+        console.error("Error loading dashboard data:", err);
+      }
     };
     fetchData();
   }, [user.uid]);
 
-  // ... (Your existing data fetching useEffect is above here) ...
-
-  // --- NEW: SYSTEM NOTIFICATION LOGIC ---
+  // --- SYSTEM NOTIFICATION LOGIC (CRASH PROOF) ---
   useEffect(() => {
-    // 1. Helper to send the notification
     const sendSystemNotification = (title: string, body: string) => {
-      // Only send if browser supports it and permission is granted
       if (!("Notification" in window)) return;
-      
       if (Notification.permission === 'granted') {
-        new Notification(title, {
-          body: body,
-          icon: '/pwa-192x192.png', // Uses your PWA icon
-          // @ts-ignore
-          vibrate: [200, 100, 200],
-          tag: 'meal-notification' // Prevents duplicate notifications on Android
-        });
+        try {
+          new Notification(title, {
+            body: body,
+            icon: '/pwa-192x192.png',
+            // @ts-ignore
+            vibrate: [200, 100, 200],
+            tag: 'meal-notification'
+          });
+        } catch (e) {
+          console.error("Notification failed:", e);
+        }
       }
     };
 
-    // 2. Main Logic: Check time & meal status
     const checkAndNotify = () => {
-      // Basic checks
       if (!("Notification" in window)) return;
       if (Notification.permission !== 'granted') return;
-      if (menu.length === 0) return; // Wait for menu to load
+      if (!menu || menu.length === 0) return;
 
       const hour = new Date().getHours();
       const todayDate = getTodayDateString();
       
-      // Determine current meal time
       let currentMeal: MealType | null = null;
       if (hour >= 7 && hour < 10) currentMeal = MealType.BREAKFAST;
       else if (hour >= 12 && hour < 15) currentMeal = MealType.LUNCH;
       else if (hour >= 16 && hour < 18) currentMeal = MealType.SNACKS;
       else if (hour >= 19 && hour < 22) currentMeal = MealType.DINNER;
 
-      // If it is meal time AND feedback is allowed
       if (currentMeal && isFeedbackUnlocked(currentMeal)) {
-        
-        // Find today's menu
         const todayDayName = getCurrentDayName(); 
         const todayMenu = menu.find(m => m.day === todayDayName);
         
         if (todayMenu) {
+          // SAFE ACCESS: Check if array exists
           const mealDishes = todayMenu[currentMeal] || [];
           
-          // Check if there are dishes that user hasn't rated yet
-          const hasUnratedDishes = mealDishes.some(dish => !feedbackMap[dish.id]);
+          if (mealDishes.length > 0) {
+             const hasUnratedDishes = mealDishes.some(dish => !feedbackMap[dish.id]);
+             const notifKey = `notif-${todayDate}-${currentMeal}`;
+             const alreadySent = localStorage.getItem(notifKey);
 
-          // Prevent spam: Check if we already notified for this specific meal today
-          const notifKey = `notif-${todayDate}-${currentMeal}`;
-          const alreadySent = localStorage.getItem(notifKey);
-
-          if (hasUnratedDishes && !alreadySent) {
-            sendSystemNotification(
-              `Time for ${currentMeal}! 🍽️`,
-              `The menu is live. Rate your food now!`
-            );
-            // Mark as sent so we don't annoy the user again for this meal
-            localStorage.setItem(notifKey, 'true');
+             if (hasUnratedDishes && !alreadySent) {
+               sendSystemNotification(
+                 `Time for ${currentMeal}! 🍽️`,
+                 `The menu is live. Rate your food now!`
+               );
+               localStorage.setItem(notifKey, 'true');
+             }
           }
         }
       }
     };
 
-    // 3. Ask for permission automatically (Optional)
     if ("Notification" in window && Notification.permission === 'default') {
-      Notification.requestPermission();
+      Notification.requestPermission().catch(e => console.log("Perm request failed", e));
     }
 
-    // 4. Run immediately when data loads
     checkAndNotify();
-
-    // 5. Also check periodically (e.g., every 5 minutes) in case the tab stays open
     const interval = setInterval(checkAndNotify, 5 * 60 * 1000);
-    
     return () => clearInterval(interval);
 
-  }, [menu, feedbackMap, user.uid]); // This runs whenever menu or feedback data updates
+  }, [menu, feedbackMap, user.uid]);
 
+
+  // --- HANDLERS ---
   const handleSuggestionSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!suggestionText.trim()) return;
@@ -144,7 +139,7 @@ export const StudentDashboard: React.FC<Props> = ({ user }) => {
     await MockDB.submitSuggestion({
       id: Date.now().toString(),
       userId: user.uid,
-      userName: user.displayName,
+      userName: user.displayName || 'Student',
       text: suggestionText,
       timestamp: Date.now()
     });
@@ -162,7 +157,7 @@ export const StudentDashboard: React.FC<Props> = ({ user }) => {
       dishName: activeFeedbackDish.name,
       mealType: activeFeedbackDish.meal,
       userId: user.uid,
-      userName: user.displayName,
+      userName: user.displayName || 'Student',
       rating,
       comment,
       date: getTodayDateString(),
@@ -171,7 +166,6 @@ export const StudentDashboard: React.FC<Props> = ({ user }) => {
 
     await MockDB.submitFeedback(feedback);
     setFeedbackMap(prev => ({ ...prev, [activeFeedbackDish.id]: true }));
-    // Update local history immediately
     setMyFeedbacks(prev => [feedback, ...prev]);
     
     setActiveFeedbackDish(null);
@@ -185,6 +179,9 @@ export const StudentDashboard: React.FC<Props> = ({ user }) => {
     if (hour < 18) return 'Good Afternoon';
     return 'Good Evening';
   };
+
+  // Safe Name Access
+  const firstName = user.displayName ? user.displayName.split(' ')[0] : 'Student';
 
   const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
   const currentDayMenu = menu.find(m => m.day === selectedDay);
@@ -204,7 +201,7 @@ export const StudentDashboard: React.FC<Props> = ({ user }) => {
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
         <div>
           <h2 className="text-3xl font-bold text-slate-800 dark:text-white tracking-tight">
-            {getGreeting()}, <span className="text-orange-500 dark:text-orange-400">{user.displayName.split(' ')[0]}</span>
+            {getGreeting()}, <span className="text-orange-500 dark:text-orange-400">{firstName}</span>
           </h2>
           <p className="text-slate-500 dark:text-slate-400 mt-1">Check out today's menu and share your thoughts.</p>
         </div>
@@ -213,7 +210,7 @@ export const StudentDashboard: React.FC<Props> = ({ user }) => {
         </div>
       </div>
 
-      {/* Announcements Section (UPDATED) */}
+      {/* Announcements */}
       {announcements.length > 0 && (
         <div className="grid gap-3">
             {announcements.map(a => (
@@ -234,7 +231,6 @@ export const StudentDashboard: React.FC<Props> = ({ user }) => {
                 )}
                 <div className="flex-1">
                   <h4 className="font-bold text-sm">{a.title}</h4>
-                  {/* FIX: Use FormattedText here instead of <p> */}
                   <FormattedText text={a.message} />
                 </div>
               </div>
@@ -282,18 +278,18 @@ export const StudentDashboard: React.FC<Props> = ({ user }) => {
                     </div>
                     
                     <div className="p-5">
-                    {/* 👇 FIXED: Added ( || [] ) to prevent crash if data is undefined */}
+                    {/* CRASH PROOF CHECK: ( ... || [] ) */}
                     {(currentDayMenu[meal] || []).length === 0 ? (
-                        <div className="text-center py-6">
-                          <p className="text-slate-400 dark:text-slate-600 text-sm italic">Nothing on the menu.</p>
-                        </div>
+                       <div className="text-center py-6">
+                         <p className="text-slate-400 dark:text-slate-600 text-sm italic">Nothing on the menu.</p>
+                       </div>
                     ) : (
                       <div className="space-y-6">
-                        {/* 👇 FIXED: Added ( || [] ) here as well */}
+                        {/* CRASH PROOF MAP: ( ... || [] ) */}
                         {(currentDayMenu[meal] || []).map(dish => (
                           <div key={dish.id} className="flex gap-4 items-start">
-                              <img src={dish.image} alt={dish.name} className="w-20 h-20 rounded-xl object-cover bg-slate-100 dark:bg-slate-800 shadow-inner flex-shrink-0" />
-                              <div className="flex-1 min-w-0">
+                             <img src={dish.image} alt={dish.name} className="w-20 h-20 rounded-xl object-cover bg-slate-100 dark:bg-slate-800 shadow-inner flex-shrink-0" />
+                             <div className="flex-1 min-w-0">
                                 <div className="flex justify-between items-start gap-2">
                                   <h5 className="font-semibold text-slate-900 dark:text-white truncate">{dish.name}</h5>
                                   {dish.isVeg ? (
@@ -308,7 +304,6 @@ export const StudentDashboard: React.FC<Props> = ({ user }) => {
                                 </div>
                                 <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 line-clamp-2">{dish.description}</p>
                                 
-                                {/* Rate Button Logic */}
                                 <div className="mt-3">
                                   {isToday && isFeedbackUnlocked(meal) && !feedbackMap[dish.id] && (
                                     <button 
@@ -319,22 +314,22 @@ export const StudentDashboard: React.FC<Props> = ({ user }) => {
                                     </button>
                                   )}
                                   {feedbackMap[dish.id] && (
-                                      <span className="text-xs font-medium text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5">
-                                        <CheckCircle2 className="w-3.5 h-3.5"/> Feedback Submitted
-                                      </span>
+                                     <span className="text-xs font-medium text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5">
+                                       <CheckCircle2 className="w-3.5 h-3.5"/> Feedback Submitted
+                                     </span>
                                   )}
                                   {(!isToday || !isFeedbackUnlocked(meal)) && !feedbackMap[dish.id] && (
-                                      <span className="text-xs text-slate-400 dark:text-slate-600 flex items-center gap-1 cursor-not-allowed">
-                                        <Star className="w-3.5 h-3.5" /> Locked
-                                      </span>
+                                     <span className="text-xs text-slate-400 dark:text-slate-600 flex items-center gap-1 cursor-not-allowed">
+                                       <Star className="w-3.5 h-3.5" /> Locked
+                                     </span>
                                   )}
                                 </div>
-                              </div>
+                             </div>
                           </div>
                         ))}
                       </div>
                     )}
-                  </div>
+                    </div>
                   </div>
                 ))}
              </div>
@@ -346,6 +341,7 @@ export const StudentDashboard: React.FC<Props> = ({ user }) => {
         </div>
       )}
 
+      {/* Other Tabs (Feedback, Suggestions, Canteen) */}
       {activeTab === 'feedback' && (
         <div className="max-w-2xl mx-auto space-y-6">
            <div className="flex items-center gap-3 bg-white dark:bg-slate-900 p-6 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800">
@@ -542,7 +538,7 @@ export const StudentDashboard: React.FC<Props> = ({ user }) => {
   );
 };
 
-// --- HELPER COMPONENT: Render Bold Text & New Lines ---
+// --- Helper to render Bold text and Newlines ---
 const FormattedText = ({ text }: { text: string }) => {
   if (!text) return null;
   
