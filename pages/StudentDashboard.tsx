@@ -11,7 +11,81 @@ interface Props {
 
 export const StudentDashboard: React.FC<Props> = ({ user }) => {
   const [activeTab, setActiveTab] = useState<'menu' | 'feedback' | 'suggestions' | 'canteen'>('menu');
-  const [loading, setLoading] = useState(true); // 👈 NEW: Loading State
+  // ... existing state ...
+  const [loading, setLoading] = useState(true);
+  
+  // ... inside StudentDashboard component ...
+
+  // 👇 1. UPDATED STATE: Video starts HIDDEN (false) until we check settings
+  const [showSplash, setShowSplash] = useState(false);
+  const [canSkip, setCanSkip] = useState(false);
+  
+  // 👇 Video Links
+  const desktopVideoUrl = "https://files.catbox.moe/camisw.mp4";
+  const mobileVideoUrl = "https://files.catbox.moe/zv8gqr.mp4";
+
+  // 👇 2. UPDATED DATA LOADING & VIDEO CHECK
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+        // Fetch all data including settings
+        const [m, a, s, allF, c] = await Promise.all([
+          MockDB.getWeeklyMenu(),
+          MockDB.getAnnouncements(),
+          MockDB.getSettings(), // 👈 Fetching Admin Settings
+          MockDB.getAllFeedback(),
+          MockDB.getCanteenMenu()
+        ]);
+        
+        setMenu(m || []);
+        setAnnouncements(a || []);
+        setSettings(s || { canteenEnabled: false, splashVideoEnabled: false });
+        setCanteenMenu(c || []);
+
+        // 👇 CHECK: Turn ON video only if Admin enabled it
+        if (s?.splashVideoEnabled) {
+           setShowSplash(true); 
+        } else {
+           setShowSplash(false);
+        }
+
+        // Handle User Feedback History
+        const today = getTodayDateString();
+        const userFeedbackHistory = (allF || [])
+          .filter(f => f.userId === user.uid)
+          .sort((a, b) => b.timestamp - a.timestamp);
+        
+        setMyFeedbacks(userFeedbackHistory);
+
+        const myTodayFeedback = userFeedbackHistory.filter(f => f.date === today);
+        const map: Record<string, boolean> = {};
+        myTodayFeedback.forEach(f => map[f.dishId] = true);
+        setFeedbackMap(map);
+
+      } catch (err) {
+        console.error("Error loading dashboard data:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    // 👇 Check Skip Permission (Run immediately)
+    const hasSeen = localStorage.getItem('introVideoSeen');
+    if (hasSeen) {
+      setCanSkip(true);
+    } else {
+      setCanSkip(false);
+    }
+
+    fetchData();
+  }, [user.uid]);
+
+  // 👇 Helper to close video
+  const handleVideoEnd = () => {
+    localStorage.setItem('introVideoSeen', 'true'); 
+    setShowSplash(false); 
+  };
   const [menu, setMenu] = useState<DailyMenu[]>([]);
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   const [selectedDay, setSelectedDay] = useState<string>(getCurrentDayName());
@@ -183,6 +257,41 @@ export const StudentDashboard: React.FC<Props> = ({ user }) => {
     { id: 'suggestions', label: 'Suggestions', icon: MessageSquare },
     { id: 'canteen', label: 'Canteen', icon: UtensilsCrossed }
   ];
+
+  // 👇 3. RENDER VIDEO PLAYER (High Priority)
+  if (showSplash) {
+    return (
+      // Changed background to white briefly so the fade-out is smoother against light theme, but black is fine too
+      <div className="fixed inset-0 z-[100] bg-black flex items-center justify-center animate-in fade-in duration-700">
+        
+        {/* 👇 UPDATED SKIP BUTTON (Black Theme) */}
+        {canSkip && (
+          <button 
+            onClick={handleVideoEnd}
+            // New styling: Dark text, semi-transparent black background
+            className="absolute top-8 right-8 z-[110] bg-black/20 backdrop-blur-md text-slate-900 px-6 py-2 rounded-full text-sm font-bold border border-black/10 hover:bg-black/30 transition-all flex items-center gap-2 shadow-sm"
+          >
+            Skip Intro <span className="text-lg">→</span>
+          </button>
+        )}
+        
+        <video 
+          autoPlay 
+          muted 
+          playsInline 
+          onEnded={handleVideoEnd}
+          className="w-full h-full object-cover"
+        >
+          {/* 👇 RESPONSIVE VIDEO SOURCES */}
+          {/* 1. Mobile Source (Browser checks this first. Runs if screen is narrower than 768px) */}
+          <source src={mobileVideoUrl} type="video/mp4" media="(max-width: 768px)" />
+          
+          {/* 2. Desktop Source (Fallback for larger screens) */}
+          <source src={desktopVideoUrl} type="video/mp4" />
+        </video>
+      </div>
+    );
+  }
 
   // --- RENDER LOADING SKELETON ---
   if (loading) {

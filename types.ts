@@ -85,6 +85,7 @@ export interface CanteenItem {
 
 export interface AppSettings {
   canteenEnabled: boolean;
+  splashVideoEnabled: boolean; // 👈 ADD THIS LINE
 }
 
 export enum TaskPriority {
