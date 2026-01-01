@@ -215,7 +215,7 @@ export const MockDB = {
        const snapshot = await getDocs(collection(db, 'settings'));
        if (!snapshot.empty) return snapshot.docs[0].data() as AppSettings;
     } catch(e) {}
-    return { canteenEnabled: false };
+    return { canteenEnabled: false, splashVideoEnabled: false };
   },
 
   updateSettings: async (settings: AppSettings): Promise<void> => {
@@ -244,6 +244,16 @@ export const MockDB = {
      } else {
         await addDoc(collection(db, 'canteen'), data);
      }
+  },
+
+  // 👇 PASTE THIS INSIDE MockDB object
+  updateCanteenItem: async (updatedItem: CanteenItem): Promise<void> => {
+    const items = await MockDB.getCanteenMenu();
+    const index = items.findIndex(i => i.id === updatedItem.id);
+    if (index !== -1) {
+      items[index] = updatedItem;
+      localStorage.setItem('canteen_menu', JSON.stringify(items));
+    }
   },
 
   deleteCanteenItem: async (id: string): Promise<void> => {

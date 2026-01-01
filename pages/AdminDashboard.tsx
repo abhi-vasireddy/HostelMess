@@ -4,19 +4,40 @@ import { MockDB } from '../services/mockDb';
 import { generateAIInsights } from '../services/geminiService';
 import { Button } from '../components/Button';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Cell, PieChart, Pie } from 'recharts';
-import { AlertTriangle, TrendingUp, Users, Menu as MenuIcon, Settings, Lock, Sparkles, Trash2, Plus, CheckCircle2, Pencil, X, Image as ImageIcon, Save, MessageSquare, Search, UtensilsCrossed, FileUp, Calendar, Upload, CheckSquare, StickyNote, Clock, Check, Filter, Info, Download, Lightbulb, ChevronDown, GripVertical, Bold, Italic, List } from 'lucide-react';
+import { AlertTriangle, TrendingUp, Users, Menu as MenuIcon, Settings, Lock, Sparkles, Trash2, Plus, CheckCircle2, Pencil, X, Image as ImageIcon, Save, MessageSquare, Search, UtensilsCrossed, FileUp, Calendar, Upload, CheckSquare, StickyNote, Clock, Check, Filter, Info, Download, Lightbulb, ChevronDown, GripVertical, Bold, Italic, List, Video } from 'lucide-react';
 import { getTodayDateString, getCurrentDayName } from '../services/timeUtils';
 
 export const AdminDashboard: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'dashboard' | 'menu' | 'users' | 'announcements' | 'feedback' | 'canteen' | 'todos' | 'notes' | 'suggestions'>('dashboard');
   const [users, setUsers] = useState<User[]>([]);
   const [menu, setMenu] = useState<DailyMenu[]>([]);
+  const [showAddCanteenModal, setShowAddCanteenModal] = useState(false);
   const [feedback, setFeedback] = useState<Feedback[]>([]);
   const [aiInsights, setAiInsights] = useState<{summary: string, suggestions: string[]} | null>(null);
   const [aiLoading, setAiLoading] = useState(false);
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   const [canteenMenu, setCanteenMenu] = useState<CanteenItem[]>([]);
   const [settings, setSettings] = useState<AppSettings>({canteenEnabled: false});
+  // 👇 PASTE THIS RIGHT AFTER YOUR 'useState' LINES 👇
+  const handleUpdateSettings = async (newSettings: AppSettings) => {
+    try {
+      await MockDB.updateSettings(newSettings);
+      setSettings(newSettings);
+    } catch (error) {
+      console.error("Failed to update settings:", error);
+      alert("Error saving settings.");
+    }
+  };
+  // 👆 END OF NEW CODE 👆
+  // 👇 PASTE THIS RIGHT AFTER 'handleUpdateSettings'
+  const handleToggleCanteenAvailability = async (item: CanteenItem) => {
+    try {
+      await MockDB.updateCanteenItem({ ...item, isAvailable: !item.isAvailable });
+      const updated = await MockDB.getCanteenMenu();
+      setCanteenMenu(updated);
+    } catch (error) { console.error(error); }
+  };
+  
   const [newAnnouncement, setNewAnnouncement] = useState({ title: '', message: '', type: AnnouncementType.INFO, expiresOn: '' });
   const [isUserModalOpen, setIsUserModalOpen] = useState(false);
   const [newUser, setNewUser] = useState({ email: '', displayName: '', password: 'password123', role: 'STUDENT' });
@@ -157,6 +178,28 @@ export const AdminDashboard: React.FC = () => {
     const newS = { ...settings, canteenEnabled: !settings.canteenEnabled };
     await MockDB.updateSettings(newS);
     setSettings(newS);
+    {/* --- SPLASH VIDEO TOGGLE --- */}
+          <div className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700">
+             <div>
+                <h4 className="font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                   {/* You can import VideoIcon from lucide-react */}
+                   <Video size={18} className="text-purple-500" /> Splash Video
+                </h4>
+                <p className="text-sm text-slate-500 dark:text-slate-400">
+                   Play the intro/celebration video on app launch.
+                </p>
+             </div>
+             
+             <label className="relative inline-flex items-center cursor-pointer">
+                <input 
+                  type="checkbox" 
+                  className="sr-only peer"
+                  checked={settings.splashVideoEnabled || false} // Defaults to false if undefined
+                  onChange={(e) => handleUpdateSettings({ ...settings, splashVideoEnabled: e.target.checked })}
+                />
+                <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-purple-300 dark:peer-focus:ring-purple-800 rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-purple-600"></div>
+             </label>
+          </div>
   };
 
   const handleDeleteFeedback = async (id: string, e?: React.MouseEvent) => {
@@ -1566,38 +1609,91 @@ export const AdminDashboard: React.FC = () => {
         )}
 
         {activeTab === 'canteen' && (
-           <div className="space-y-6">
-              <div className="flex justify-between items-center">
-                 <h3 className="text-lg font-bold text-slate-900 dark:text-white">Canteen Menu</h3>
-                 <Button onClick={handleOpenAddCanteenItem} className="flex items-center gap-2"><Plus size={18}/> Add Item</Button>
+        <div className="max-w-4xl mx-auto space-y-4">
+           
+           {/* --- 1. CANTEEN TOGGLE (Existing) --- */}
+           <div className="flex items-center justify-between p-4 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
+              <div>
+                 <h4 className="font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                    <UtensilsCrossed size={18} className="text-orange-500" /> Enable Canteen
+                 </h4>
+                 <p className="text-sm text-slate-500 dark:text-slate-400">
+                    Allow students to see and order from the canteen.
+                 </p>
               </div>
+              <label className="relative inline-flex items-center cursor-pointer">
+                 <input 
+                   type="checkbox" 
+                   className="sr-only peer"
+                   checked={settings.canteenEnabled} 
+                   onChange={(e) => handleUpdateSettings({ ...settings, canteenEnabled: e.target.checked })}
+                 />
+                 <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-orange-300 dark:peer-focus:ring-orange-800 rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-orange-500"></div>
+              </label>
+           </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                 {canteenMenu.map(item => (
-                    <div key={item.id} className={`bg-white dark:bg-slate-900 p-4 rounded-xl border ${item.isAvailable ? 'border-slate-200 dark:border-slate-800' : 'border-slate-200 dark:border-slate-800 opacity-60 bg-slate-50'} shadow-sm relative group`}>
-                       <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <button onClick={() => handleOpenEditCanteenItem(item)} className="p-1.5 bg-white dark:bg-slate-800 rounded-full shadow text-blue-500 hover:bg-blue-50"><Pencil size={14}/></button>
-                          <button onClick={() => handleDeleteCanteenItem(item.id)} className="p-1.5 bg-white dark:bg-slate-800 rounded-full shadow text-red-500 hover:bg-red-50"><Trash2 size={14}/></button>
-                       </div>
-                       
-                       <div className="flex gap-3 items-center">
-                          <div className="w-14 h-14 rounded-lg bg-slate-100 dark:bg-slate-800 overflow-hidden flex-shrink-0">
-                             {item.image ? <img src={item.image} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center"><UtensilsCrossed size={16} className="text-slate-300"/></div>}
-                          </div>
+           {/* --- 2. NEW SPLASH VIDEO TOGGLE (Added Here) --- */}
+           <div className="flex items-center justify-between p-4 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
+              <div>
+                 <h4 className="font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                    <Video size={18} className="text-purple-500" /> Splash Video
+                 </h4>
+                 <p className="text-sm text-slate-500 dark:text-slate-400">
+                    Play the intro/celebration video on app launch.
+                 </p>
+              </div>
+              <label className="relative inline-flex items-center cursor-pointer">
+                 <input 
+                   type="checkbox" 
+                   className="sr-only peer"
+                   checked={settings.splashVideoEnabled || false} 
+                   onChange={(e) => handleUpdateSettings({ ...settings, splashVideoEnabled: e.target.checked })}
+                 />
+                 <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-purple-300 dark:peer-focus:ring-purple-800 rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-purple-600"></div>
+              </label>
+           </div>
+
+           {/* --- 3. CANTEEN ITEMS HEADER --- */}
+           <div className="flex justify-between items-center pt-4">
+              <h3 className="text-xl font-bold text-slate-800 dark:text-white">Canteen Menu</h3>
+              <Button onClick={() => setShowAddCanteenModal(true)} icon={<Plus size={18}/>}>Add Item</Button>
+           </div>
+
+           {/* --- 4. CANTEEN ITEMS LIST --- */}
+           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {canteenMenu.map(item => (
+                 <div key={item.id} className="bg-white dark:bg-slate-900 p-3 rounded-xl border border-slate-200 dark:border-slate-800 flex gap-4">
+                    <img src={item.image} alt={item.name} className="w-16 h-16 rounded-lg object-cover bg-slate-100" />
+                    <div className="flex-1">
+                       <div className="flex justify-between items-start">
                           <div>
-                             <h4 className="font-bold text-slate-900 dark:text-white text-sm">{item.name}</h4>
-                             <p className="text-orange-600 dark:text-orange-400 font-bold text-sm">₹{item.price}</p>
-                             <div className="flex items-center gap-2 mt-1">
-                                <span className="text-[10px] bg-slate-100 dark:bg-slate-800 text-slate-500 px-1.5 py-0.5 rounded">{item.category}</span>
-                                {!item.isAvailable && <span className="text-[10px] bg-red-100 text-red-600 px-1.5 py-0.5 rounded font-bold">Sold Out</span>}
-                             </div>
+                             <h4 className="font-bold text-slate-900 dark:text-white">{item.name}</h4>
+                             <p className="text-xs text-slate-500">{item.category}</p>
                           </div>
+                          <div className="flex gap-1">
+                             <button onClick={() => handleDeleteCanteenItem(item.id)} className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"><Trash2 size={16}/></button>
+                          </div>
+                       </div>
+                       <div className="flex justify-between items-end mt-2">
+                          <span className="font-bold text-slate-900 dark:text-white">₹{item.price}</span>
+                          <button 
+                             onClick={() => handleToggleCanteenAvailability(item)}
+                             className={`text-[10px] font-bold px-2 py-1 rounded-md border ${item.isAvailable ? 'bg-green-50 text-green-600 border-green-200' : 'bg-slate-50 text-slate-500 border-slate-200'}`}
+                          >
+                             {item.isAvailable ? 'AVAILABLE' : 'SOLD OUT'}
+                          </button>
                        </div>
                     </div>
-                 ))}
-              </div>
+                 </div>
+              ))}
+              {canteenMenu.length === 0 && (
+                 <div className="col-span-full text-center py-10 border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-xl">
+                    <p className="text-slate-400">No items in canteen menu.</p>
+                 </div>
+              )}
            </div>
-        )}
+        </div>
+      )}
       </main>
 
       {/* --- Modals --- */}
