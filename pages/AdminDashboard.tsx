@@ -1531,28 +1531,34 @@ export const AdminDashboard: React.FC = () => {
                         )}
                         
                         {/* 👇 SAFE MAP: Use ( ... || [] ) here too */}
-                        {(currentDayMenu[meal] || []).map(dish => (
-                           <div key={dish.id} className="flex gap-4 p-3 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800">
-                              <img src={dish.image} alt={dish.name} className="w-16 h-16 rounded-lg object-cover bg-slate-200" />
-                              <div className="flex-1">
-                                 <div className="flex justify-between">
-                                    <h5 className="font-bold text-slate-900 dark:text-white">{dish.name}</h5>
-                                    <div className="flex gap-2">
-                                       <button onClick={() => handleOpenEditDish(dish, meal)} className="text-slate-400 hover:text-blue-500"><Pencil size={16}/></button>
-                                       <button onClick={() => handleDeleteDish(dish.id, meal)} className="text-slate-400 hover:text-red-500"><Trash2 size={16}/></button>
+                        {(currentDayMenu[meal] || []).map(dish => {
+                           // 👇 FIX: Check both "isVeg" and "isveg" to handle JSON casing errors
+                           const isDishVeg = dish.isVeg !== undefined ? dish.isVeg : (dish as any).isveg;
+
+                           return (
+                              <div key={dish.id} className="flex gap-4 p-3 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800">
+                                 <img src={dish.image} alt={dish.name} className="w-16 h-16 rounded-lg object-cover bg-slate-200" />
+                                 <div className="flex-1">
+                                    <div className="flex justify-between">
+                                       <h5 className="font-bold text-slate-900 dark:text-white">{dish.name}</h5>
+                                       <div className="flex gap-2">
+                                          <button onClick={() => handleOpenEditDish(dish, meal)} className="text-slate-400 hover:text-blue-500"><Pencil size={16}/></button>
+                                          <button onClick={() => handleDeleteDish(dish.id, meal)} className="text-slate-400 hover:text-red-500"><Trash2 size={16}/></button>
+                                       </div>
+                                    </div>
+                                    <p className="text-xs text-slate-500 dark:text-slate-400 line-clamp-1">{dish.description}</p>
+                                    <div className="mt-1">
+                                       {/* 👇 UPDATED CHECK: Uses the safe 'isDishVeg' variable */}
+                                       {isDishVeg ? (
+                                          <span className="text-[10px] font-bold text-green-600 border border-green-200 px-1 rounded bg-green-50">VEG</span>
+                                       ) : (
+                                          <span className="text-[10px] font-bold text-red-600 border border-red-200 px-1 rounded bg-red-50">NON-VEG</span>
+                                       )}
                                     </div>
                                  </div>
-                                 <p className="text-xs text-slate-500 dark:text-slate-400 line-clamp-1">{dish.description}</p>
-                                 <div className="mt-1">
-                                    {dish.isVeg ? (
-                                       <span className="text-[10px] font-bold text-green-600 border border-green-200 px-1 rounded bg-green-50">VEG</span>
-                                    ) : (
-                                       <span className="text-[10px] font-bold text-red-600 border border-red-200 px-1 rounded bg-red-50">NON-VEG</span>
-                                    )}
-                                 </div>
                               </div>
-                           </div>
-                        ))}
+                           );
+                        })}
                      </div>
                   </div>
                ))}
