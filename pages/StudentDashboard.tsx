@@ -11,6 +11,7 @@ interface Props {
 
 export const StudentDashboard: React.FC<Props> = ({ user }) => {
   const [activeTab, setActiveTab] = useState<'menu' | 'feedback' | 'suggestions' | 'canteen'>('menu');
+  const [loading, setLoading] = useState(true); // 👈 NEW: Loading State
   const [menu, setMenu] = useState<DailyMenu[]>([]);
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   const [selectedDay, setSelectedDay] = useState<string>(getCurrentDayName());
@@ -32,6 +33,7 @@ export const StudentDashboard: React.FC<Props> = ({ user }) => {
   useEffect(() => {
     const fetchData = async () => {
       try {
+        setLoading(true); // Start Loading
         const [m, a, s, allF, c] = await Promise.all([
           MockDB.getWeeklyMenu(),
           MockDB.getAnnouncements(),
@@ -57,12 +59,15 @@ export const StudentDashboard: React.FC<Props> = ({ user }) => {
         setFeedbackMap(map);
       } catch (err) {
         console.error("Error loading dashboard data:", err);
+      } finally {
+        // Stop Loading after a small delay to make it look smooth (optional)
+        setTimeout(() => setLoading(false), 500);
       }
     };
     fetchData();
   }, [user.uid]);
 
-  // --- SYSTEM NOTIFICATION LOGIC (CRASH PROOF) ---
+  // --- SYSTEM NOTIFICATION LOGIC ---
   useEffect(() => {
     const sendSystemNotification = (title: string, body: string) => {
       if (!("Notification" in window)) return;
@@ -75,9 +80,7 @@ export const StudentDashboard: React.FC<Props> = ({ user }) => {
             vibrate: [200, 100, 200],
             tag: 'meal-notification'
           });
-        } catch (e) {
-          console.error("Notification failed:", e);
-        }
+        } catch (e) { console.error(e); }
       }
     };
 
@@ -98,21 +101,15 @@ export const StudentDashboard: React.FC<Props> = ({ user }) => {
       if (currentMeal && isFeedbackUnlocked(currentMeal)) {
         const todayDayName = getCurrentDayName(); 
         const todayMenu = menu.find(m => m.day === todayDayName);
-        
         if (todayMenu) {
-          // SAFE ACCESS: Check if array exists
           const mealDishes = todayMenu[currentMeal] || [];
-          
           if (mealDishes.length > 0) {
              const hasUnratedDishes = mealDishes.some(dish => !feedbackMap[dish.id]);
              const notifKey = `notif-${todayDate}-${currentMeal}`;
              const alreadySent = localStorage.getItem(notifKey);
 
              if (hasUnratedDishes && !alreadySent) {
-               sendSystemNotification(
-                 `Time for ${currentMeal}! 🍽️`,
-                 `The menu is live. Rate your food now!`
-               );
+               sendSystemNotification(`Time for ${currentMeal}! 🍽️`, `The menu is live. Rate your food now!`);
                localStorage.setItem(notifKey, 'true');
              }
           }
@@ -121,13 +118,12 @@ export const StudentDashboard: React.FC<Props> = ({ user }) => {
     };
 
     if ("Notification" in window && Notification.permission === 'default') {
-      Notification.requestPermission().catch(e => console.log("Perm request failed", e));
+      Notification.requestPermission().catch(e => console.log(e));
     }
 
     checkAndNotify();
     const interval = setInterval(checkAndNotify, 5 * 60 * 1000);
     return () => clearInterval(interval);
-
   }, [menu, feedbackMap, user.uid]);
 
 
@@ -135,7 +131,6 @@ export const StudentDashboard: React.FC<Props> = ({ user }) => {
   const handleSuggestionSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!suggestionText.trim()) return;
-    
     await MockDB.submitSuggestion({
       id: Date.now().toString(),
       userId: user.uid,
@@ -150,7 +145,6 @@ export const StudentDashboard: React.FC<Props> = ({ user }) => {
 
   const handleSubmitFeedback = async () => {
     if (!activeFeedbackDish) return;
-    
     const feedback: Feedback = {
       id: Date.now().toString(),
       dishId: activeFeedbackDish.id,
@@ -163,11 +157,9 @@ export const StudentDashboard: React.FC<Props> = ({ user }) => {
       date: getTodayDateString(),
       timestamp: Date.now()
     };
-
     await MockDB.submitFeedback(feedback);
     setFeedbackMap(prev => ({ ...prev, [activeFeedbackDish.id]: true }));
     setMyFeedbacks(prev => [feedback, ...prev]);
-    
     setActiveFeedbackDish(null);
     setRating(5);
     setComment('');
@@ -180,9 +172,7 @@ export const StudentDashboard: React.FC<Props> = ({ user }) => {
     return 'Good Evening';
   };
 
-  // Safe Name Access
   const firstName = user.displayName ? user.displayName.split(' ')[0] : 'Student';
-
   const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
   const currentDayMenu = menu.find(m => m.day === selectedDay);
   const isToday = selectedDay === getCurrentDayName();
@@ -194,6 +184,12 @@ export const StudentDashboard: React.FC<Props> = ({ user }) => {
     { id: 'canteen', label: 'Canteen', icon: UtensilsCrossed }
   ];
 
+  // --- RENDER LOADING SKELETON ---
+  if (loading) {
+    return <LoadingSkeleton navItems={navItems} activeTab={activeTab} setActiveTab={setActiveTab} />;
+  }
+
+  // --- MAIN RENDER ---
   return (
     <div className="space-y-6 pb-28 animate-in fade-in duration-500">
       
@@ -278,56 +274,61 @@ export const StudentDashboard: React.FC<Props> = ({ user }) => {
                     </div>
                     
                     <div className="p-5">
-                    {/* CRASH PROOF CHECK: ( ... || [] ) */}
                     {(currentDayMenu[meal] || []).length === 0 ? (
                        <div className="text-center py-6">
                          <p className="text-slate-400 dark:text-slate-600 text-sm italic">Nothing on the menu.</p>
                        </div>
                     ) : (
                       <div className="space-y-6">
-                        {/* CRASH PROOF MAP: ( ... || [] ) */}
-                        {(currentDayMenu[meal] || []).map(dish => (
-                          <div key={dish.id} className="flex gap-4 items-start">
-                             <img src={dish.image} alt={dish.name} className="w-20 h-20 rounded-xl object-cover bg-slate-100 dark:bg-slate-800 shadow-inner flex-shrink-0" />
-                             <div className="flex-1 min-w-0">
-                                <div className="flex justify-between items-start gap-2">
-                                  <h5 className="font-semibold text-slate-900 dark:text-white truncate">{dish.name}</h5>
-                                  {dish.isVeg ? (
-                                    <div className="w-4 h-4 rounded border border-green-500 flex items-center justify-center flex-shrink-0" title="Veg">
-                                      <div className="w-2 h-2 rounded-full bg-green-500"></div>
-                                    </div>
-                                  ) : (
-                                    <div className="w-4 h-4 rounded border border-red-500 flex items-center justify-center flex-shrink-0" title="Non-Veg">
-                                      <div className="w-2 h-2 rounded-full bg-red-500"></div>
-                                    </div>
-                                  )}
-                                </div>
-                                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 line-clamp-2">{dish.description}</p>
+                    {(currentDayMenu[meal] || []).map(dish => {
+                      // 👇 FIX: Check both "isVeg" and "isveg" to handle JSON casing errors
+                      const isDishVeg = dish.isVeg !== undefined ? dish.isVeg : (dish as any).isveg;
+
+                      return (
+                        <div key={dish.id} className="flex gap-4 items-start">
+                            <img src={dish.image} alt={dish.name} className="w-20 h-20 rounded-xl object-cover bg-slate-100 dark:bg-slate-800 shadow-inner flex-shrink-0" />
+                            <div className="flex-1 min-w-0">
+                              <div className="flex justify-between items-start gap-2">
+                                <h5 className="font-semibold text-slate-900 dark:text-white truncate">{dish.name}</h5>
                                 
-                                <div className="mt-3">
-                                  {isToday && isFeedbackUnlocked(meal) && !feedbackMap[dish.id] && (
-                                    <button 
-                                      onClick={() => setActiveFeedbackDish({ id: dish.id, name: dish.name, meal })}
-                                      className="text-xs font-semibold text-orange-600 dark:text-orange-400 hover:text-orange-700 dark:hover:text-orange-300 flex items-center gap-1 transition-colors"
-                                    >
-                                      <Star className="w-3.5 h-3.5" /> Rate Dish
-                                    </button>
-                                  )}
-                                  {feedbackMap[dish.id] && (
-                                     <span className="text-xs font-medium text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5">
-                                       <CheckCircle2 className="w-3.5 h-3.5"/> Feedback Submitted
-                                     </span>
-                                  )}
-                                  {(!isToday || !isFeedbackUnlocked(meal)) && !feedbackMap[dish.id] && (
-                                     <span className="text-xs text-slate-400 dark:text-slate-600 flex items-center gap-1 cursor-not-allowed">
-                                       <Star className="w-3.5 h-3.5" /> Locked
-                                     </span>
-                                  )}
-                                </div>
-                             </div>
-                          </div>
-                        ))}
-                      </div>
+                                {/* 👇 UPDATED CHECK: Uses the safe 'isDishVeg' variable */}
+                                {isDishVeg ? (
+                                  <div className="w-4 h-4 rounded border border-green-500 flex items-center justify-center flex-shrink-0" title="Veg">
+                                    <div className="w-2 h-2 rounded-full bg-green-500"></div>
+                                  </div>
+                                ) : (
+                                  <div className="w-4 h-4 rounded border border-red-500 flex items-center justify-center flex-shrink-0" title="Non-Veg">
+                                    <div className="w-2 h-2 rounded-full bg-red-500"></div>
+                                  </div>
+                                )}
+                              </div>
+                              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 line-clamp-2">{dish.description}</p>
+                              
+                              <div className="mt-3">
+                                {isToday && isFeedbackUnlocked(meal) && !feedbackMap[dish.id] && (
+                                  <button 
+                                    onClick={() => setActiveFeedbackDish({ id: dish.id, name: dish.name, meal })}
+                                    className="text-xs font-semibold text-orange-600 dark:text-orange-400 hover:text-orange-700 dark:hover:text-orange-300 flex items-center gap-1 transition-colors"
+                                  >
+                                    <Star className="w-3.5 h-3.5" /> Rate Dish
+                                  </button>
+                                )}
+                                {feedbackMap[dish.id] && (
+                                    <span className="text-xs font-medium text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5">
+                                      <CheckCircle2 className="w-3.5 h-3.5"/> Feedback Submitted
+                                    </span>
+                                )}
+                                {(!isToday || !isFeedbackUnlocked(meal)) && !feedbackMap[dish.id] && (
+                                    <span className="text-xs text-slate-400 dark:text-slate-600 flex items-center gap-1 cursor-not-allowed">
+                                      <Star className="w-3.5 h-3.5" /> Locked
+                                    </span>
+                                )}
+                              </div>
+                            </div>
+                        </div>
+                      );
+                    })}
+                  </div>
                     )}
                     </div>
                   </div>
@@ -341,7 +342,7 @@ export const StudentDashboard: React.FC<Props> = ({ user }) => {
         </div>
       )}
 
-      {/* Other Tabs (Feedback, Suggestions, Canteen) */}
+      {/* Other Tabs */}
       {activeTab === 'feedback' && (
         <div className="max-w-2xl mx-auto space-y-6">
            <div className="flex items-center gap-3 bg-white dark:bg-slate-900 p-6 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800">
@@ -534,20 +535,17 @@ export const StudentDashboard: React.FC<Props> = ({ user }) => {
       )}
 
     </div>
-    
   );
 };
 
-// --- Helper to render Bold text and Newlines ---
+// --- HELPER 1: BOLD TEXT FORMATTER ---
 const FormattedText = ({ text }: { text: string }) => {
   if (!text) return null;
-  
   return (
     <div className="text-sm opacity-90">
       {text.split('\n').map((line, i) => (
         <p key={i} className={`min-h-[1.25em] ${i > 0 ? 'mt-1' : ''}`}>
           {line.split(/(\*\*.*?\*\*)/g).map((part, j) => {
-            // Check for **bold** markers
             if (part.startsWith('**') && part.endsWith('**')) {
               return <strong key={j} className="font-bold text-slate-900 dark:text-white">{part.slice(2, -2)}</strong>;
             }
@@ -555,6 +553,65 @@ const FormattedText = ({ text }: { text: string }) => {
           })}
         </p>
       ))}
+    </div>
+  );
+};
+
+// --- HELPER 2: LOADING SKELETON (SHIMMER EFFECT) ---
+const LoadingSkeleton = ({ navItems, activeTab, setActiveTab }: any) => {
+  return (
+    <div className="space-y-6 pb-28">
+      {/* Header Skeleton */}
+      <div className="flex justify-between items-end animate-pulse">
+         <div className="space-y-3">
+            <div className="h-8 w-48 bg-slate-200 dark:bg-slate-800 rounded-lg"></div>
+            <div className="h-4 w-64 bg-slate-100 dark:bg-slate-800/50 rounded-lg"></div>
+         </div>
+         <div className="h-4 w-32 bg-slate-100 dark:bg-slate-800/50 rounded-lg hidden md:block"></div>
+      </div>
+
+      {/* Days Skeleton */}
+      <div className="flex gap-2 overflow-hidden py-2 animate-pulse">
+         {[1,2,3,4,5].map(i => (
+           <div key={i} className="h-9 w-24 bg-slate-200 dark:bg-slate-800 rounded-full flex-shrink-0"></div>
+         ))}
+      </div>
+
+      {/* Cards Skeleton */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {[1,2,3,4].map(i => (
+          <div key={i} className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 h-64 animate-pulse p-4 flex flex-col gap-4">
+             <div className="flex justify-between">
+                <div className="h-4 w-20 bg-slate-200 dark:bg-slate-800 rounded"></div>
+                <div className="h-4 w-12 bg-slate-200 dark:bg-slate-800 rounded"></div>
+             </div>
+             <div className="flex gap-4">
+               <div className="w-20 h-20 bg-slate-200 dark:bg-slate-800 rounded-xl flex-shrink-0"></div>
+               <div className="flex-1 space-y-2">
+                 <div className="h-5 w-3/4 bg-slate-200 dark:bg-slate-800 rounded"></div>
+                 <div className="h-3 w-full bg-slate-100 dark:bg-slate-800/50 rounded"></div>
+                 <div className="h-3 w-1/2 bg-slate-100 dark:bg-slate-800/50 rounded"></div>
+               </div>
+             </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Bottom Nav (Static) */}
+      <div className="fixed bottom-0 left-0 right-0 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 pb-safe pt-2 px-6 flex justify-between items-center z-50 h-[70px]">
+        {navItems.map((item: any) => (
+          <button
+            key={item.id}
+            onClick={() => setActiveTab(item.id)}
+            className={`flex flex-col items-center justify-center gap-1 w-full h-full ${
+              activeTab === item.id ? 'text-orange-500' : 'text-slate-400'
+            }`}
+          >
+            <item.icon size={24} />
+            <span className="text-[10px] font-bold">{item.label}</span>
+          </button>
+        ))}
+      </div>
     </div>
   );
 };
