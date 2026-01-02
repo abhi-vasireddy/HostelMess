@@ -112,29 +112,6 @@ export const Login: React.FC = () => {
           </Button>
         </form>
 
-        {/* Demo Credentials (Optional Helper) */}
-        <div className="pt-6 border-t border-slate-100 dark:border-slate-800">
-          <p className="text-xs text-center text-slate-400 mb-4 uppercase font-bold tracking-widest">Demo Accounts</p>
-          <div className="grid grid-cols-2 gap-3">
-            <button
-              type="button"
-              onClick={() => fillDemo(UserRole.ADMIN)}
-              className="flex flex-col items-center justify-center p-3 rounded-xl border border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all group"
-            >
-              <ShieldCheck className="w-6 h-6 text-slate-400 group-hover:text-purple-500 mb-2 transition-colors" />
-              <span className="text-xs font-medium text-slate-600 dark:text-slate-400">Admin</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => fillDemo(UserRole.STUDENT)}
-              className="flex flex-col items-center justify-center p-3 rounded-xl border border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all group"
-            >
-              <User className="w-6 h-6 text-slate-400 group-hover:text-emerald-500 mb-2 transition-colors" />
-              <span className="text-xs font-medium text-slate-600 dark:text-slate-400">Student</span>
-            </button>
-          </div>
-        </div>
-
       </div>
     </div>
   );
