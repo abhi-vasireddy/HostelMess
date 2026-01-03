@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
+
 import { User, DailyMenu, MealType, Announcement, Feedback, AppSettings, CanteenItem, AnnouncementType } from '../types';
 import { MockDB } from '../services/mockDb';
 import { getCurrentDayName, isFeedbackUnlocked, getTodayDateString } from '../services/timeUtils';
 import { Button } from '../components/Button';
+import { LottiePlayer } from '../components/LottiePlayer';
 import { Star, MessageSquare, AlertCircle, UtensilsCrossed, Calendar, CheckCircle2, X, Info, AlertTriangle } from 'lucide-react';
 
 interface Props {
@@ -13,6 +15,10 @@ export const StudentDashboard: React.FC<Props> = ({ user }) => {
   const [activeTab, setActiveTab] = useState<'menu' | 'feedback' | 'suggestions' | 'canteen'>('menu');
   // ... existing state ...
   const [loading, setLoading] = useState(true);
+  const [showSuccess, setShowSuccess] = useState(false);
+  // 👇 PASTE THIS WITH YOUR OTHER STATES
+  const [error, setError] = useState(false);
+  
   
   // ... inside StudentDashboard component ...
 
@@ -133,6 +139,7 @@ export const StudentDashboard: React.FC<Props> = ({ user }) => {
         setFeedbackMap(map);
       } catch (err) {
         console.error("Error loading dashboard data:", err);
+        setError(true); // 👈 ADD THIS LINE: triggers the error screen
       } finally {
         // Stop Loading after a small delay to make it look smooth (optional)
         setTimeout(() => setLoading(false), 500);
@@ -205,6 +212,8 @@ export const StudentDashboard: React.FC<Props> = ({ user }) => {
   const handleSuggestionSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!suggestionText.trim()) return;
+
+    // 1. Submit to Database
     await MockDB.submitSuggestion({
       id: Date.now().toString(),
       userId: user.uid,
@@ -212,13 +221,22 @@ export const StudentDashboard: React.FC<Props> = ({ user }) => {
       text: suggestionText,
       timestamp: Date.now()
     });
+
+    // 2. Clear Input
     setSuggestionText('');
-    setSuggestionStatus('Suggestion sent!');
-    setTimeout(() => setSuggestionStatus(''), 3000);
+
+    // 3. Trigger Success Animation
+    setShowSuccess(true);
+    
+    // 4. Hide Animation after 3 seconds
+    setTimeout(() => {
+      setShowSuccess(false);
+    }, 3000);
   };
 
   const handleSubmitFeedback = async () => {
     if (!activeFeedbackDish) return;
+    
     const feedback: Feedback = {
       id: Date.now().toString(),
       dishId: activeFeedbackDish.id,
@@ -231,12 +249,26 @@ export const StudentDashboard: React.FC<Props> = ({ user }) => {
       date: getTodayDateString(),
       timestamp: Date.now()
     };
+
+    // 1. Submit to Database
     await MockDB.submitFeedback(feedback);
+    
+    // 2. Update Local State (Mark dish as rated)
     setFeedbackMap(prev => ({ ...prev, [activeFeedbackDish.id]: true }));
     setMyFeedbacks(prev => [feedback, ...prev]);
+    
+    // 3. Reset and Close Modal
     setActiveFeedbackDish(null);
     setRating(5);
     setComment('');
+
+    // 👇 4. TRIGGER SUCCESS ANIMATION (Added)
+    setShowSuccess(true);
+    
+    // Hide animation after 3 seconds
+    setTimeout(() => {
+      setShowSuccess(false);
+    }, 3000);
   };
 
   const getGreeting = () => {
@@ -295,7 +327,36 @@ export const StudentDashboard: React.FC<Props> = ({ user }) => {
 
   // --- RENDER LOADING SKELETON ---
   if (loading) {
-    return <LoadingSkeleton navItems={navItems} activeTab={activeTab} setActiveTab={setActiveTab} />;
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-slate-50 dark:bg-slate-950">
+        <LottiePlayer type="loading" className="w-48 h-48" />
+        <p className="text-slate-500 animate-pulse mt-4">Preparing the kitchen...</p>
+      </div>
+    );
+  }
+
+  // 👇 NEW: RENDER ERROR SCREEN (Network Issues / App Crash)
+  if (error) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-white dark:bg-slate-900 p-6 text-center">
+        {/* Uses your local 404.json file */}
+        <LottiePlayer type="404" className="w-64 h-64 mb-4" />
+        
+        <h2 className="text-2xl font-bold text-slate-800 dark:text-white mb-2">
+          Oops! Something went wrong.
+        </h2>
+        <p className="text-slate-500 dark:text-slate-400 mb-8 max-w-xs mx-auto">
+          We couldn't load the menu. Please check your internet connection and try again.
+        </p>
+        
+        <button 
+          onClick={() => window.location.reload()} 
+          className="bg-orange-500 hover:bg-orange-600 text-white font-bold py-3 px-8 rounded-xl shadow-lg shadow-orange-500/30 transition-all active:scale-95"
+        >
+          Retry Connection
+        </button>
+      </div>
+    );
   }
 
   // --- MAIN RENDER ---
@@ -643,6 +704,15 @@ export const StudentDashboard: React.FC<Props> = ({ user }) => {
         </div>
       )}
 
+      {showSuccess && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm animate-in fade-in">
+          <div className="bg-white dark:bg-slate-900 p-8 rounded-2xl shadow-2xl flex flex-col items-center animate-in zoom-in-50 duration-300">
+            <LottiePlayer type="success" className="w-32 h-32" loop={false} />
+            <h3 className="text-xl font-bold mt-4 text-slate-800 dark:text-white">Submitted!</h3>
+            <p className="text-slate-500 text-sm">Thanks for your suggestion.</p>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
