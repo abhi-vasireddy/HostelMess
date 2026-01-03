@@ -54,7 +54,7 @@ export const Login = () => {
       {/* 2. LEFT DECORATION - Absolute Bottom Left */}
       <div className="hidden lg:block absolute bottom-0 left-0 z-0">
          <img 
-           src="https://img.sanishtech.com/u/f536f20d079ead4b00ba80e34123842f.png" 
+           src="/food-thali.png" 
            alt="Food Thali" 
            className="w-[300px] h-[300px] object-cover rounded-full drop-shadow-2xl translate-y-[15%] translate-x-[-40%]"
          />
