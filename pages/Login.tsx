@@ -2,6 +2,10 @@ import React, { useState } from 'react';
 import { useAuth } from '../App';
 import { Eye, EyeOff, Loader2, AlertCircle, User, Lock, ArrowRight } from 'lucide-react';
 
+// --- UPDATED IMPORT PATH ---
+// Points to src/assets/animations/food-thali.png
+import foodThali from '../assets/animations/food-thali.png'; 
+
 export const Login = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -53,8 +57,9 @@ export const Login = () => {
 
       {/* 2. LEFT DECORATION - Absolute Bottom Left */}
       <div className="hidden lg:block absolute bottom-0 left-0 z-0">
+         {/* Using the imported image variable */}
          <img 
-           src="/food-thali.png" 
+           src={foodThali} 
            alt="Food Thali" 
            className="w-[300px] h-[300px] object-cover rounded-full drop-shadow-2xl translate-y-[15%] translate-x-[-40%]"
          />
@@ -73,7 +78,7 @@ export const Login = () => {
             </div>
           )}
 
-          {/* EMAIL ID Field - Label Changed */}
+          {/* EMAIL ID Field */}
           <div className="mb-0 relative group">
             <label className="block text-[11px] font-bold text-[#9CA3AF] uppercase tracking-[1px] mb-1">
               EMAIL ID
