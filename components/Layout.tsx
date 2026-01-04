@@ -64,6 +64,7 @@ export const Layout: React.FC<LayoutProps> = ({ user, onLogout, children }) => {
                >
                  Mess Connect
                </h1>
+               <p style={{ fontFamily: "'Baloo 2', cursive", fontWeight: 25 }}>Mess Secretary : Indra Reddy</p>
              </div>
           </div>
           
