@@ -602,9 +602,6 @@ export const AdminDashboard: React.FC = () => {
       <aside className="w-full md:w-64 flex-shrink-0 space-y-8 md:sticky md:top-24 h-fit">
         
         {/* REVERTED HEADER - No Logo, Simple Text */}
-        <h1 className="text-2xl font-bold text-orange-500 dark:text-orange-400 px-2 mb-2">
-          HostelMess Connect
-        </h1>
 
         <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 p-3 overflow-hidden">
           <nav className="space-y-1">
