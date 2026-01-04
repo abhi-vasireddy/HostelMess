@@ -3,53 +3,44 @@ import { User, DailyMenu, Announcement, AnnouncementType, Feedback, AppSettings,
 import { MockDB } from '../services/mockDb';
 import { generateAIInsights } from '../services/geminiService';
 import { Button } from '../components/Button';
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Cell, PieChart, Pie } from 'recharts';
-import { AlertTriangle, TrendingUp, Users, Menu as MenuIcon, Settings, Lock, Sparkles, Trash2, Plus, CheckCircle2, Pencil, X, Image as ImageIcon, Save, MessageSquare, Search, UtensilsCrossed, FileUp, Calendar, Upload, CheckSquare, StickyNote, Clock, Check, Filter, Info, Download, Lightbulb, ChevronDown, GripVertical, Bold, Italic, List, Video } from 'lucide-react';
-import { getTodayDateString, getCurrentDayName } from '../services/timeUtils';
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
+import { AlertTriangle, TrendingUp, Users, Menu as MenuIcon, Sparkles, Trash2, Plus, CheckCircle2, Pencil, X, MessageSquare, Search, UtensilsCrossed, Calendar, Upload, CheckSquare, StickyNote, Clock, Check, Filter, Info, Download, Lightbulb, ChevronDown, GripVertical, Bold, Italic, List, Video, Lock, Settings } from 'lucide-react';
+import { getCurrentDayName, getTodayDateString } from '../services/timeUtils';
+
+// --- ANIMATION IMPORTS ---
+import { LottiePlayer } from '../components/LottiePlayer';
+import Lottie from 'lottie-react';
+import loadingAnimation from '../assets/animations/loading.json';
 
 export const AdminDashboard: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'dashboard' | 'menu' | 'users' | 'announcements' | 'feedback' | 'canteen' | 'todos' | 'notes' | 'suggestions'>('dashboard');
+  
+  // --- LOADING & ERROR STATES ---
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
+
+  // Data States
   const [users, setUsers] = useState<User[]>([]);
   const [menu, setMenu] = useState<DailyMenu[]>([]);
-  const [showAddCanteenModal, setShowAddCanteenModal] = useState(false);
   const [feedback, setFeedback] = useState<Feedback[]>([]);
-  const [aiInsights, setAiInsights] = useState<{summary: string, suggestions: string[]} | null>(null);
-  const [aiLoading, setAiLoading] = useState(false);
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   const [canteenMenu, setCanteenMenu] = useState<CanteenItem[]>([]);
-  const [settings, setSettings] = useState<AppSettings>({canteenEnabled: false});
-  // 👇 PASTE THIS RIGHT AFTER YOUR 'useState' LINES 👇
-  const handleUpdateSettings = async (newSettings: AppSettings) => {
-    try {
-      await MockDB.updateSettings(newSettings);
-      setSettings(newSettings);
-    } catch (error) {
-      console.error("Failed to update settings:", error);
-      alert("Error saving settings.");
-    }
-  };
-  // 👆 END OF NEW CODE 👆
-  // 👇 PASTE THIS RIGHT AFTER 'handleUpdateSettings'
-  const handleToggleCanteenAvailability = async (item: CanteenItem) => {
-    try {
-      await MockDB.updateCanteenItem({ ...item, isAvailable: !item.isAvailable });
-      const updated = await MockDB.getCanteenMenu();
-      setCanteenMenu(updated);
-    } catch (error) { console.error(error); }
-  };
-  
+  const [settings, setSettings] = useState<AppSettings>({canteenEnabled: false, splashVideoEnabled: false});
+  const [todos, setTodos] = useState<TodoTask[]>([]);
+  const [notes, setNotes] = useState<AdminNote[]>([]);
+  const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
+
+  // UI States
+  const [showAddCanteenModal, setShowAddCanteenModal] = useState(false);
+  const [aiInsights, setAiInsights] = useState<{summary: string, suggestions: string[]} | null>(null);
+  const [aiLoading, setAiLoading] = useState(false);
   const [newAnnouncement, setNewAnnouncement] = useState({ title: '', message: '', type: AnnouncementType.INFO, expiresOn: '' });
   const [isUserModalOpen, setIsUserModalOpen] = useState(false);
   const [newUser, setNewUser] = useState({ email: '', displayName: '', password: 'password123', role: 'STUDENT' });
-
-  // Todo & Notes State
-  const [todos, setTodos] = useState<TodoTask[]>([]);
   const [draggedTaskId, setDraggedTaskId] = useState<string | null>(null);
-  const [notes, setNotes] = useState<AdminNote[]>([]);
   const [newTodo, setNewTodo] = useState<{text: string, description: string, priority: TaskPriority, dueDate: string}>({text: '', description: '', priority: TaskPriority.MEDIUM, dueDate: ''});
   const [newNote, setNewNote] = useState<{title: string, content: string}>({title: '', content: ''});
-  const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
-
+  
   // Menu Management State
   const [selectedDay, setSelectedDay] = useState<string>('Monday');
   const [editingDish, setEditingDish] = useState<Partial<Dish> | null>(null);
@@ -78,28 +69,63 @@ export const AdminDashboard: React.FC = () => {
   }, []);
 
   const loadData = async () => {
-    const [u, m, f, a, s, c, t, n, sugg] = await Promise.all([
-      MockDB.getAllUsers(),
-      MockDB.getWeeklyMenu(),
-      MockDB.getAllFeedback(),
-      MockDB.getAllAnnouncementsAdmin(),
-      MockDB.getSettings(),
-      MockDB.getCanteenMenu(),
-      MockDB.getTodos(),
-      MockDB.getNotes(),
-      MockDB.getSuggestions()
-    ]);
-    setUsers(u);
-    setMenu(m);
-    setFeedback(f);
-    setAnnouncements(a);
-    setSettings(s);
-    setCanteenMenu(c);
-    setTodos(t);
-    setNotes(n);
-    setSuggestions(sugg);
+    try {
+        setLoading(true);
+        setError(false);
+
+        const [u, m, f, a, s, c, t, n, sugg] = await Promise.all([
+            MockDB.getAllUsers(),
+            MockDB.getWeeklyMenu(),
+            MockDB.getAllFeedback(),
+            MockDB.getAllAnnouncementsAdmin(),
+            MockDB.getSettings(),
+            MockDB.getCanteenMenu(),
+            MockDB.getTodos(),
+            MockDB.getNotes(),
+            MockDB.getSuggestions()
+        ]);
+
+        setUsers(u);
+        setMenu(m);
+        setFeedback(f);
+        setAnnouncements(a);
+        setSettings(s);
+        setCanteenMenu(c);
+        setTodos(t);
+        setNotes(n);
+        setSuggestions(sugg);
+    } catch (err) {
+        console.error("Failed to load admin data", err);
+        setError(true);
+    } finally {
+        setTimeout(() => setLoading(false), 800);
+    }
   };
 
+  const handleUpdateSettings = async (newSettings: AppSettings) => {
+    try {
+      await MockDB.updateSettings(newSettings);
+      setSettings(newSettings);
+    } catch (error) {
+      console.error("Failed to update settings:", error);
+      alert("Error saving settings.");
+    }
+  };
+
+  const handleToggleCanteenAvailability = async (item: CanteenItem) => {
+    try {
+      await MockDB.updateCanteenItem({ ...item, isAvailable: !item.isAvailable });
+      const updated = await MockDB.getCanteenMenu();
+      setCanteenMenu(updated);
+    } catch (error) { console.error(error); }
+  };
+
+  const toggleCanteen = async () => {
+    const newS = { ...settings, canteenEnabled: !settings.canteenEnabled };
+    await handleUpdateSettings(newS);
+  };
+
+  // --- AI & Handlers ---
   const handleGenerateAI = async () => {
     setAiLoading(true);
     const insights = await generateAIInsights(feedback);
@@ -151,7 +177,7 @@ export const AdminDashboard: React.FC = () => {
         const selection = text.slice(start, end);
         toInsert = `**${selection}**`;
         newCursorPos = start + toInsert.length;
-        if (!selection) newCursorPos -= 2; // place cursor inside
+        if (!selection) newCursorPos -= 2; 
     } else if (format === 'italic') {
         const selection = text.slice(start, end);
         toInsert = `_${selection}_`;
@@ -167,39 +193,10 @@ export const AdminDashboard: React.FC = () => {
     const newText = text.slice(0, start) + toInsert + text.slice(end);
     setNewAnnouncement({ ...newAnnouncement, message: newText });
     
-    // Defer focus to allow state update
     setTimeout(() => {
         textarea.focus();
         textarea.setSelectionRange(newCursorPos, newCursorPos);
     }, 0);
-  };
-
-  const toggleCanteen = async () => {
-    const newS = { ...settings, canteenEnabled: !settings.canteenEnabled };
-    await MockDB.updateSettings(newS);
-    setSettings(newS);
-    {/* --- SPLASH VIDEO TOGGLE --- */}
-          <div className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700">
-             <div>
-                <h4 className="font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                   {/* You can import VideoIcon from lucide-react */}
-                   <Video size={18} className="text-purple-500" /> Splash Video
-                </h4>
-                <p className="text-sm text-slate-500 dark:text-slate-400">
-                   Play the intro/celebration video on app launch.
-                </p>
-             </div>
-             
-             <label className="relative inline-flex items-center cursor-pointer">
-                <input 
-                  type="checkbox" 
-                  className="sr-only peer"
-                  checked={settings.splashVideoEnabled || false} // Defaults to false if undefined
-                  onChange={(e) => handleUpdateSettings({ ...settings, splashVideoEnabled: e.target.checked })}
-                />
-                <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-purple-300 dark:peer-focus:ring-purple-800 rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-purple-600"></div>
-             </label>
-          </div>
   };
 
   const handleDeleteFeedback = async (id: string, e?: React.MouseEvent) => {
@@ -211,7 +208,6 @@ export const AdminDashboard: React.FC = () => {
   };
 
   // --- User Management Handlers ---
-
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -221,13 +217,10 @@ export const AdminDashboard: React.FC = () => {
       const text = event.target?.result as string;
       if (!text) return;
       
-      // Robust splitting for CRLF and LF, remove empty lines
       const lines = text.split(/\r\n|\n/).filter(line => line.trim() !== '');
       
-      // Parse CSV: Expect "email,displayName,password,role" (ignore header)
       const newUsers = lines.slice(1).map(line => {
         const columns = line.split(',').map(s => s.trim());
-        
         if (columns.length < 2) return null;
 
         const email = columns[0];
@@ -235,12 +228,7 @@ export const AdminDashboard: React.FC = () => {
         const password = columns[2] || '123456';
         const role = columns[3] ? columns[3].toUpperCase() : 'STUDENT';
         
-        if(email && displayName) return { 
-            email, 
-            displayName, 
-            password,
-            role
-        };
+        if(email && displayName) return { email, displayName, password, role };
         return null;
       }).filter(u => u !== null) as {email: string, displayName: string, password?: string, role?: string}[];
 
@@ -263,7 +251,6 @@ export const AdminDashboard: React.FC = () => {
     e.preventDefault();
     if (!newUser.email || !newUser.displayName) return;
     
-    // We reuse the existing import function to create a single user
     await MockDB.importUsers([{
         email: newUser.email,
         displayName: newUser.displayName,
@@ -279,7 +266,6 @@ export const AdminDashboard: React.FC = () => {
 
   const openDeactivateModal = (user: User) => {
     setDeactivateModalUser(user);
-    // Default to 7 days from now if not set
     const defaultDate = new Date();
     defaultDate.setDate(defaultDate.getDate() + 7);
     setDeactivationDate(defaultDate.toISOString().split('T')[0]);
@@ -310,12 +296,11 @@ export const AdminDashboard: React.FC = () => {
   };
 
   // --- Todo & Notes & Suggestions Handlers ---
-
   const handleAddTodo = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newTodo.text) return;
     const newTask = {
-      id: Date.now().toString() + Math.random().toString(36).substr(2, 5), // Unique ID
+      id: Date.now().toString() + Math.random().toString(36).substr(2, 5),
       text: newTodo.text,
       description: newTodo.description,
       priority: newTodo.priority,
@@ -323,7 +308,6 @@ export const AdminDashboard: React.FC = () => {
       isCompleted: false,
       createdAt: Date.now()
     };
-    // Prepend to todos
     setTodos([newTask, ...todos]);
     await MockDB.saveTodo(newTask);
     setNewTodo({text: '', description: '', priority: TaskPriority.MEDIUM, dueDate: ''});
@@ -339,25 +323,20 @@ export const AdminDashboard: React.FC = () => {
   const handleDeleteTodo = async (id: string, e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation(); 
-    
     if (!window.confirm("Delete this task?")) return;
     const updatedList = todos.filter(t => t.id !== id);
     setTodos(updatedList);
     await MockDB.deleteTodo(id);
   };
 
-  // Drag and Drop Handlers
   const handleDragStart = (e: React.DragEvent, taskId: string) => {
     setDraggedTaskId(taskId);
     e.dataTransfer.effectAllowed = 'move';
-    // Adding a small timeout ensures the drag ghost is rendered before we might alter the DOM or styling
-    setTimeout(() => {
-       // Optional: Add a class to the dragged element for styling if needed
-    }, 0);
+    setTimeout(() => { }, 0);
   };
 
   const handleDragOver = (e: React.DragEvent) => {
-    e.preventDefault(); // Necessary to allow dropping
+    e.preventDefault();
     e.dataTransfer.dropEffect = 'move';
   };
 
@@ -367,35 +346,25 @@ export const AdminDashboard: React.FC = () => {
     
     if (!draggedTaskId || draggedTaskId === targetTaskId) return;
 
-    // Get current list for this specific priority to find indices relative to the group
     const priorityList = todos.filter(t => !t.isCompleted && t.priority === priority);
     
     const dragIndex = priorityList.findIndex(t => t.id === draggedTaskId);
     const hoverIndex = priorityList.findIndex(t => t.id === targetTaskId);
 
-    // If dragIndex is -1, it means we are dragging from a different priority group or completed list
-    // The requirement "reorder within the same priority level" implies we should block cross-priority drops.
     if (dragIndex === -1 || hoverIndex === -1) return;
 
-    // Create a new array for this priority group
     const newPriorityList = [...priorityList];
     const [removed] = newPriorityList.splice(dragIndex, 1);
     newPriorityList.splice(hoverIndex, 0, removed);
 
-    // Reconstruct the full list
-    // We maintain a stable global order of [High..., Medium..., Low..., Completed...]
     const high = priority === TaskPriority.HIGH ? newPriorityList : todos.filter(t => !t.isCompleted && t.priority === TaskPriority.HIGH);
     const medium = priority === TaskPriority.MEDIUM ? newPriorityList : todos.filter(t => !t.isCompleted && t.priority === TaskPriority.MEDIUM);
     const low = priority === TaskPriority.LOW ? newPriorityList : todos.filter(t => !t.isCompleted && t.priority === TaskPriority.LOW);
     const completed = todos.filter(t => t.isCompleted);
 
     const newTodos = [...high, ...medium, ...low, ...completed];
-    
-    // Update State Optimistically
     setTodos(newTodos);
     setDraggedTaskId(null);
-
-    // Persist
     await MockDB.updateAllTodos(newTodos);
   };
 
@@ -425,7 +394,6 @@ export const AdminDashboard: React.FC = () => {
   };
 
   // --- Menu Management Handlers ---
-
   const handleOpenEditDish = (dish: Dish, mealType: MealType) => {
     setEditingDish({ ...dish });
     setEditingMealType(mealType);
@@ -457,10 +425,8 @@ export const AdminDashboard: React.FC = () => {
     const dishToSave = editingDish as Dish;
 
     if (dishIndex > -1) {
-      // Update existing
       currentDishes[dishIndex] = dishToSave;
     } else {
-      // Add new
       currentDishes.push(dishToSave);
     }
 
@@ -484,7 +450,6 @@ export const AdminDashboard: React.FC = () => {
   };
 
   // --- Canteen Management Handlers ---
-
   const handleOpenAddCanteenItem = () => {
     setEditingCanteenItem({
       id: Date.now().toString(),
@@ -517,7 +482,6 @@ export const AdminDashboard: React.FC = () => {
   };
 
   // --- Optimized Chart & Filtering Data ---
-  
   const todayStr = getTodayDateString();
   const todayFeedback = feedback.filter(f => f.date === todayStr);
   
@@ -530,7 +494,6 @@ export const AdminDashboard: React.FC = () => {
   const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
   const currentDayMenu = menu.find(m => m.day === selectedDay);
 
-  // Filter Users
   const filteredUsers = users.filter(u => 
     u.displayName.toLowerCase().includes(userSearchQuery.toLowerCase()) || 
     u.email.toLowerCase().includes(userSearchQuery.toLowerCase())
@@ -539,33 +502,24 @@ export const AdminDashboard: React.FC = () => {
   const pendingTodos = todos.filter(t => !t.isCompleted);
   const completedTodos = todos.filter(t => t.isCompleted);
 
-  // Optimized Filtering Logic with useMemo
   const filteredFeedback = useMemo(() => {
     const now = Date.now();
     const twentyFourHours = 24 * 60 * 60 * 1000;
 
     return feedback.filter(f => {
-      // Time Filter: True 24h window
       if (showRecentFeedbackOnly) {
         if (f.timestamp) {
            if (now - f.timestamp > twentyFourHours) return false;
         } else {
-           // Fallback if timestamp missing
            if (f.date !== todayStr) return false;
         }
       }
-
-      // Rating Filter
       if (feedbackRatingFilter !== 'all' && f.rating !== feedbackRatingFilter) return false;
-
-      // Dish Filter
       if (feedbackDishFilter !== 'all' && f.dishName !== feedbackDishFilter) return false;
-
       return true;
     }).sort((a, b) => b.timestamp - a.timestamp);
   }, [feedback, showRecentFeedbackOnly, feedbackRatingFilter, feedbackDishFilter, todayStr]);
 
-  // Memoized Feedback Stats
   const feedbackStats = useMemo(() => {
      const avg = feedback.length 
         ? (feedback.reduce((a,b) => a + b.rating, 0) / feedback.length).toFixed(1) 
@@ -579,12 +533,10 @@ export const AdminDashboard: React.FC = () => {
      return { averageRating: avg, ratingCounts: counts };
   }, [feedback]);
 
-  // Unique Dishes for Filter dropdown
   const uniqueDishes = useMemo(() => {
     return Array.from(new Set(feedback.map(f => f.dishName))).sort();
   }, [feedback]);
 
-  // Robust Export Feedback Handler
   const handleExportFeedback = () => {
     if (filteredFeedback.length === 0) {
       alert("No feedback data to export based on current filters.");
@@ -597,10 +549,10 @@ export const AdminDashboard: React.FC = () => {
       ...filteredFeedback.map(f => [
         `"${f.date}"`,
         `"${f.mealType}"`,
-        `"${f.dishName.replace(/"/g, '""')}"`, // Escape quotes
+        `"${f.dishName.replace(/"/g, '""')}"`, 
         f.rating,
-        `"${(f.comment || '').replace(/"/g, '""')}"`, // Escape quotes
-        `"${f.userName.replace(/"/g, '""')}"` // Escape quotes
+        `"${(f.comment || '').replace(/"/g, '""')}"`,
+        `"${f.userName.replace(/"/g, '""')}"`
       ].join(','))
     ].join('\n');
 
@@ -612,10 +564,48 @@ export const AdminDashboard: React.FC = () => {
     link.click();
   };
 
+  // --- RENDER: LOADING STATE (JSON Animation) ---
+  if (loading) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-slate-50 dark:bg-slate-950">
+        <div className="w-64 h-64">
+           <Lottie animationData={loadingAnimation} loop={true} />
+        </div>
+        <p className="text-slate-500 animate-pulse mt-4 font-medium">Loading Admin Dashboard...</p>
+      </div>
+    );
+  }
+
+  // --- RENDER: ERROR STATE (404 Lottie) ---
+  if (error) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-white p-6 text-center">
+        <LottiePlayer type="404" className="w-64 h-64 mb-4" />
+        <h2 className="text-2xl font-bold text-slate-800 mb-2">System Error</h2>
+        <p className="text-slate-500 mb-8 max-w-xs mx-auto">
+          Unable to load administrative data.
+        </p>
+        <button 
+          onClick={() => window.location.reload()} 
+          className="bg-orange-500 hover:bg-orange-600 text-white font-bold py-3 px-8 rounded-xl shadow-lg transition-all"
+        >
+          Retry Connection
+        </button>
+      </div>
+    );
+  }
+
+  // --- RENDER: MAIN DASHBOARD ---
   return (
     <div className="flex flex-col md:flex-row gap-8">
       {/* Sidebar - Made Sticky */}
       <aside className="w-full md:w-64 flex-shrink-0 space-y-8 md:sticky md:top-24 h-fit">
+        
+        {/* REVERTED HEADER - No Logo, Simple Text */}
+        <h1 className="text-2xl font-bold text-orange-500 dark:text-orange-400 px-2 mb-2">
+          HostelMess Connect
+        </h1>
+
         <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 p-3 overflow-hidden">
           <nav className="space-y-1">
             {[
@@ -711,19 +701,19 @@ export const AdminDashboard: React.FC = () => {
                 
                 <div className="relative z-10 h-full flex flex-col">
                   <div className="flex justify-between items-start mb-6">
-                     <div>
-                       <h3 className="text-xl font-bold flex items-center gap-2"><Sparkles className="w-5 h-5 text-yellow-200"/> AI Insights</h3>
-                       <p className="text-orange-100 text-sm mt-1">Analyze student sentiment instantly.</p>
-                     </div>
-                     <Button 
+                      <div>
+                        <h3 className="text-xl font-bold flex items-center gap-2"><Sparkles className="w-5 h-5 text-yellow-200"/> AI Insights</h3>
+                        <p className="text-orange-100 text-sm mt-1">Analyze student sentiment instantly.</p>
+                      </div>
+                      <Button 
                         variant="secondary" 
                         size="sm" 
                         onClick={handleGenerateAI} 
                         disabled={aiLoading}
                         className="bg-white/20 text-white border-none hover:bg-white/30 backdrop-blur-sm"
-                     >
-                       {aiLoading ? 'Thinking...' : 'Generate Report'}
-                     </Button>
+                      >
+                        {aiLoading ? 'Thinking...' : 'Generate Report'}
+                      </Button>
                   </div>
                   
                   {aiInsights ? (
@@ -782,14 +772,13 @@ export const AdminDashboard: React.FC = () => {
                  <Button onClick={() => setIsUserModalOpen(true)} className="flex items-center gap-2">
                      <Plus size={18}/> Add User
                   </Button>
-                  {/* TEMP FIX BUTTON */}
                   <Button 
                   variant="outline" 
                   className="border-red-200 text-red-600 hover:bg-red-50"
                   onClick={async () => {
                      if(confirm("Delete all duplicate users?")) {
                         await MockDB.cleanupDuplicateUsers();
-                        loadData(); // Refresh list
+                        loadData(); 
                         alert("Duplicates removed!");
                      }
                   }}
@@ -800,7 +789,6 @@ export const AdminDashboard: React.FC = () => {
                    <Upload size={18}/> Import CSV
                  </Button>
                  
-                 {/* Tooltip or Helper for CSV Format */}
                  <div className="relative group">
                     <div className="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-500 cursor-help">?</div>
                     <div className="absolute right-0 top-full mt-2 w-72 p-3 bg-slate-800 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity z-50 pointer-events-none">
@@ -891,9 +879,9 @@ export const AdminDashboard: React.FC = () => {
         {/* --- FEEDBACK TAB --- */}
         {activeTab === 'feedback' && (
            <div className="space-y-6 animate-in fade-in duration-500">
-              
-              {/* Analytics Summary */}
-              <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800">
+             
+             {/* Analytics Summary */}
+             <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800">
                  <div className="flex flex-col md:flex-row gap-8 items-center">
                     <div className="text-center md:text-left">
                        <p className="text-sm text-slate-500 dark:text-slate-400 uppercase font-bold tracking-wider">Overall Rating</p>
@@ -925,64 +913,64 @@ export const AdminDashboard: React.FC = () => {
                        })}
                     </div>
                  </div>
-              </div>
+             </div>
 
-              {/* UNIFIED FILTER TOOLBAR */}
-              <div className="bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col xl:flex-row gap-4 justify-between items-center">
+             {/* UNIFIED FILTER TOOLBAR */}
+             <div className="bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col xl:flex-row gap-4 justify-between items-center">
                  <div className="flex flex-col sm:flex-row gap-3 w-full xl:w-auto flex-1">
-                    {/* Dish Filter */}
-                    <div className="relative flex-1 min-w-[200px]">
-                      <Filter className="absolute left-3 top-2.5 text-slate-400 w-4 h-4"/>
-                      <select 
-                        className="w-full pl-9 pr-8 py-2 bg-slate-50 dark:bg-slate-800 border-none rounded-lg text-sm font-medium focus:ring-2 focus:ring-orange-500 appearance-none text-slate-700 dark:text-slate-200"
-                        value={feedbackDishFilter}
-                        onChange={(e) => setFeedbackDishFilter(e.target.value)}
-                      >
-                        <option value="all">All Menu Items</option>
-                        {uniqueDishes.map(dish => <option key={dish} value={dish}>{dish}</option>)}
-                      </select>
-                      <ChevronDown className="absolute right-3 top-3 w-4 h-4 text-slate-400 pointer-events-none"/>
-                    </div>
+                   {/* Dish Filter */}
+                   <div className="relative flex-1 min-w-[200px]">
+                     <Filter className="absolute left-3 top-2.5 text-slate-400 w-4 h-4"/>
+                     <select 
+                       className="w-full pl-9 pr-8 py-2 bg-slate-50 dark:bg-slate-800 border-none rounded-lg text-sm font-medium focus:ring-2 focus:ring-orange-500 appearance-none text-slate-700 dark:text-slate-200"
+                       value={feedbackDishFilter}
+                       onChange={(e) => setFeedbackDishFilter(e.target.value)}
+                     >
+                       <option value="all">All Menu Items</option>
+                       {uniqueDishes.map(dish => <option key={dish} value={dish}>{dish}</option>)}
+                     </select>
+                     <ChevronDown className="absolute right-3 top-3 w-4 h-4 text-slate-400 pointer-events-none"/>
+                   </div>
 
-                    {/* Rating Filter */}
-                    <div className="relative w-full sm:w-48">
-                      <select 
-                        className="w-full px-4 py-2 bg-slate-50 dark:bg-slate-800 border-none rounded-lg text-sm font-medium focus:ring-2 focus:ring-orange-500 appearance-none text-slate-700 dark:text-slate-200"
-                        value={feedbackRatingFilter}
-                        onChange={(e) => setFeedbackRatingFilter(e.target.value === 'all' ? 'all' : Number(e.target.value))}
-                      >
-                        <option value="all">All Ratings</option>
-                        <option value="5">5 Stars Only</option>
-                        <option value="4">4 Stars Only</option>
-                        <option value="3">3 Stars Only</option>
-                        <option value="2">2 Stars Only</option>
-                        <option value="1">1 Star Only</option>
-                      </select>
-                      <ChevronDown className="absolute right-3 top-3 w-4 h-4 text-slate-400 pointer-events-none"/>
-                    </div>
+                   {/* Rating Filter */}
+                   <div className="relative w-full sm:w-48">
+                     <select 
+                       className="w-full px-4 py-2 bg-slate-50 dark:bg-slate-800 border-none rounded-lg text-sm font-medium focus:ring-2 focus:ring-orange-500 appearance-none text-slate-700 dark:text-slate-200"
+                       value={feedbackRatingFilter}
+                       onChange={(e) => setFeedbackRatingFilter(e.target.value === 'all' ? 'all' : Number(e.target.value))}
+                     >
+                       <option value="all">All Ratings</option>
+                       <option value="5">5 Stars Only</option>
+                       <option value="4">4 Stars Only</option>
+                       <option value="3">3 Stars Only</option>
+                       <option value="2">2 Stars Only</option>
+                       <option value="1">1 Star Only</option>
+                     </select>
+                     <ChevronDown className="absolute right-3 top-3 w-4 h-4 text-slate-400 pointer-events-none"/>
+                   </div>
 
-                    {/* Time Toggle */}
-                    <button 
-                      onClick={() => setShowRecentFeedbackOnly(!showRecentFeedbackOnly)}
-                      className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors border whitespace-nowrap flex items-center justify-center gap-2 ${
-                        showRecentFeedbackOnly 
-                        ? 'bg-orange-50 border-orange-200 text-orange-700 dark:bg-orange-900/20 dark:border-orange-800 dark:text-orange-400' 
-                        : 'bg-slate-50 border-slate-200 text-slate-600 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700'
-                      }`}
-                    >
-                      <Clock size={16} />
-                      {showRecentFeedbackOnly ? 'Recent (24h)' : 'All Time'}
-                    </button>
+                   {/* Time Toggle */}
+                   <button 
+                     onClick={() => setShowRecentFeedbackOnly(!showRecentFeedbackOnly)}
+                     className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors border whitespace-nowrap flex items-center justify-center gap-2 ${
+                       showRecentFeedbackOnly 
+                       ? 'bg-orange-50 border-orange-200 text-orange-700 dark:bg-orange-900/20 dark:border-orange-800 dark:text-orange-400' 
+                       : 'bg-slate-50 border-slate-200 text-slate-600 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700'
+                     }`}
+                   >
+                     <Clock size={16} />
+                     {showRecentFeedbackOnly ? 'Recent (24h)' : 'All Time'}
+                   </button>
                  </div>
 
                  {/* Export Button */}
                  <Button onClick={handleExportFeedback} variant="outline" className="flex items-center gap-2 whitespace-nowrap w-full sm:w-auto justify-center">
                    <Download size={16}/> Export CSV
                  </Button>
-              </div>
-              
-              {/* Feedback List */}
-              {filteredFeedback.length === 0 ? (
+             </div>
+             
+             {/* Feedback List */}
+             {filteredFeedback.length === 0 ? (
                  <div className="text-center py-20 bg-white dark:bg-slate-900 rounded-2xl border border-dashed border-slate-300 dark:border-slate-700">
                     <p className="text-slate-500 dark:text-slate-400">
                        {showRecentFeedbackOnly 
@@ -990,7 +978,7 @@ export const AdminDashboard: React.FC = () => {
                           : "No matching feedback found."}
                     </p>
                  </div>
-              ) : (
+             ) : (
                  <div className="grid gap-3">
                     {filteredFeedback.map(item => (
                        <div 
@@ -1034,22 +1022,22 @@ export const AdminDashboard: React.FC = () => {
                        </div>
                     ))}
                  </div>
-              )}
+             )}
            </div>
         )}
 
         {/* --- SUGGESTIONS TAB --- */}
         {activeTab === 'suggestions' && (
            <div className="space-y-6 animate-in fade-in duration-500">
-              <h3 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
+             <h3 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
                  <Lightbulb className="w-5 h-5 text-yellow-500"/>
                  Student Suggestions
-              </h3>
-              {suggestions.length === 0 ? (
+             </h3>
+             {suggestions.length === 0 ? (
                  <div className="text-center py-20 bg-white dark:bg-slate-900 rounded-2xl border border-dashed border-slate-300 dark:border-slate-700">
                     <p className="text-slate-500 dark:text-slate-400">No suggestions received yet.</p>
                  </div>
-              ) : (
+             ) : (
                  <div className="grid gap-4">
                     {suggestions.map(s => (
                        <div key={s.id} className="bg-white dark:bg-slate-900 p-5 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
@@ -1071,7 +1059,7 @@ export const AdminDashboard: React.FC = () => {
                        </div>
                     ))}
                  </div>
-              )}
+             )}
            </div>
         )}
 
@@ -1083,14 +1071,14 @@ export const AdminDashboard: React.FC = () => {
                  <form onSubmit={handleAddTodo} className="flex flex-col gap-4">
                     <div className="flex flex-col md:flex-row gap-4 items-end">
                       <div className="flex-1 w-full">
-                         <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase mb-1">Task Title</label>
-                         <input 
-                           className="w-full bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 p-3 rounded-xl focus:ring-2 focus:ring-orange-500 outline-none text-slate-900 dark:text-white"
-                           placeholder="What needs to be done?"
-                           value={newTodo.text}
-                           onChange={e => setNewTodo({...newTodo, text: e.target.value})}
-                           required
-                         />
+                          <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase mb-1">Task Title</label>
+                          <input 
+                            className="w-full bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 p-3 rounded-xl focus:ring-2 focus:ring-orange-500 outline-none text-slate-900 dark:text-white"
+                            placeholder="What needs to be done?"
+                            value={newTodo.text}
+                            onChange={e => setNewTodo({...newTodo, text: e.target.value})}
+                            required
+                          />
                       </div>
                       <div className="w-full md:w-48">
                           <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase mb-1">Priority</label>
@@ -1165,49 +1153,48 @@ export const AdminDashboard: React.FC = () => {
                                     onDragOver={handleDragOver}
                                     onDrop={(e) => handleDrop(e, task.id, priority)}
                                     className={`
-                                     relative p-4 rounded-xl border-l-4 transition-all bg-white dark:bg-slate-900 min-h-[120px] flex flex-col justify-between group cursor-grab active:cursor-grabbing hover:shadow-md
-                                     ${task.priority === TaskPriority.HIGH ? 'border-l-red-500 border-t border-r border-b border-slate-200 dark:border-slate-800' : 
-                                       task.priority === TaskPriority.MEDIUM ? 'border-l-amber-500 border-t border-r border-b border-slate-200 dark:border-slate-800' : 
-                                       'border-l-blue-500 border-t border-r border-b border-slate-200 dark:border-slate-800'}
-                                     ${draggedTaskId === task.id ? 'opacity-40' : 'opacity-100'}
-                                  `}>
-                                     <div className="flex justify-between items-start mb-2">
-                                        <div className="flex items-center gap-2">
-                                           <GripVertical className="text-slate-300 w-4 h-4 cursor-grab active:cursor-grabbing"/>
-                                           <span className={`text-[10px] uppercase font-bold px-2 py-0.5 rounded ${
-                                              task.priority === TaskPriority.HIGH ? 'bg-red-50 text-red-700' :
-                                              task.priority === TaskPriority.MEDIUM ? 'bg-amber-50 text-amber-700' :
-                                              'bg-blue-50 text-blue-700'
-                                           }`}>{task.priority}</span>
-                                        </div>
-                                        <div className="flex gap-2">
-                                           <button
-                                             onClick={() => toggleTodo(task)}
-                                             className="text-slate-300 hover:text-emerald-500 transition-colors"
-                                             title="Mark Completed"
-                                           >
-                                              <Check size={18} />
-                                           </button>
-                                           <button 
-                                             onClick={(e) => handleDeleteTodo(task.id, e)}
-                                             className="text-slate-300 hover:text-red-500 transition-colors"
-                                             title="Delete"
-                                           >
-                                              <Trash2 size={16} />
-                                           </button>
-                                        </div>
-                                     </div>
-                                     <div>
-                                       <h4 className="font-bold text-slate-800 dark:text-white mb-1 line-clamp-1">{task.text}</h4>
-                                       {task.description && (
-                                          <p className="text-xs text-slate-500 dark:text-slate-400 line-clamp-2 mb-2">{task.description}</p>
-                                       )}
-                                     </div>
-                                     <div className="flex items-center text-xs text-slate-500 dark:text-slate-400 gap-1.5 mt-auto">
-                                        <Calendar size={12}/>
-                                        {/* Display raw date string or format it manually to avoid timezone shifts */}
-                                        {task.dueDate}
-                                     </div>
+                                      relative p-4 rounded-xl border-l-4 transition-all bg-white dark:bg-slate-900 min-h-[120px] flex flex-col justify-between group cursor-grab active:cursor-grabbing hover:shadow-md
+                                      ${task.priority === TaskPriority.HIGH ? 'border-l-red-500 border-t border-r border-b border-slate-200 dark:border-slate-800' : 
+                                        task.priority === TaskPriority.MEDIUM ? 'border-l-amber-500 border-t border-r border-b border-slate-200 dark:border-slate-800' : 
+                                        'border-l-blue-500 border-t border-r border-b border-slate-200 dark:border-slate-800'}
+                                      ${draggedTaskId === task.id ? 'opacity-40' : 'opacity-100'}
+                                    `}>
+                                       <div className="flex justify-between items-start mb-2">
+                                          <div className="flex items-center gap-2">
+                                             <GripVertical className="text-slate-300 w-4 h-4 cursor-grab active:cursor-grabbing"/>
+                                             <span className={`text-[10px] uppercase font-bold px-2 py-0.5 rounded ${
+                                                task.priority === TaskPriority.HIGH ? 'bg-red-50 text-red-700' :
+                                                task.priority === TaskPriority.MEDIUM ? 'bg-amber-50 text-amber-700' :
+                                                'bg-blue-50 text-blue-700'
+                                             }`}>{task.priority}</span>
+                                          </div>
+                                          <div className="flex gap-2">
+                                             <button
+                                               onClick={() => toggleTodo(task)}
+                                               className="text-slate-300 hover:text-emerald-500 transition-colors"
+                                               title="Mark Completed"
+                                             >
+                                                <Check size={18} />
+                                             </button>
+                                             <button 
+                                               onClick={(e) => handleDeleteTodo(task.id, e)}
+                                               className="text-slate-300 hover:text-red-500 transition-colors"
+                                               title="Delete"
+                                             >
+                                                <Trash2 size={16} />
+                                             </button>
+                                          </div>
+                                       </div>
+                                       <div>
+                                          <h4 className="font-bold text-slate-800 dark:text-white mb-1 line-clamp-1">{task.text}</h4>
+                                          {task.description && (
+                                             <p className="text-xs text-slate-500 dark:text-slate-400 line-clamp-2 mb-2">{task.description}</p>
+                                          )}
+                                       </div>
+                                       <div className="flex items-center text-xs text-slate-500 dark:text-slate-400 gap-1.5 mt-auto">
+                                          <Calendar size={12}/>
+                                          {task.dueDate}
+                                       </div>
                                   </div>
                                ))}
                              </div>
@@ -1236,19 +1223,19 @@ export const AdminDashboard: React.FC = () => {
                                 <div className="flex justify-between items-start mb-2 pr-8">
                                    <span className="text-[10px] uppercase font-bold px-2 py-0.5 rounded bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300">{task.priority}</span>
                                    <div className="flex gap-2">
-                                       <button
-                                          onClick={() => toggleTodo(task)}
-                                          className="text-slate-400 hover:text-orange-500 p-1 transition-colors"
-                                          title="Mark Pending"
-                                       >
-                                          <X size={16}/>
-                                       </button>
-                                       <button 
-                                          onClick={(e) => handleDeleteTodo(task.id, e)}
-                                          className="text-slate-400 hover:text-red-500 p-1 transition-colors"
-                                       >
-                                          <Trash2 size={16} />
-                                       </button>
+                                        <button
+                                           onClick={() => toggleTodo(task)}
+                                           className="text-slate-400 hover:text-orange-500 p-1 transition-colors"
+                                           title="Mark Pending"
+                                        >
+                                           <X size={16}/>
+                                        </button>
+                                        <button 
+                                           onClick={(e) => handleDeleteTodo(task.id, e)}
+                                           className="text-slate-400 hover:text-red-500 p-1 transition-colors"
+                                        >
+                                           <Trash2 size={16} />
+                                        </button>
                                    </div>
                                 </div>
                                 <div>
@@ -1270,7 +1257,6 @@ export const AdminDashboard: React.FC = () => {
            </div>
         )}
 
-        {/* ... (Other tabs kept as is) ... */}
         {activeTab === 'notes' && (
            <div className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
@@ -1318,7 +1304,6 @@ export const AdminDashboard: React.FC = () => {
            </div>
         )}
 
-        {/* ... (Other tabs logic remains same) ... */}
         {activeTab === 'announcements' && (
            <div className="space-y-6">
               <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800">
@@ -1386,22 +1371,20 @@ export const AdminDashboard: React.FC = () => {
 
               <div className="grid gap-4">
                 {announcements.map(ann => {
-                  // 1. Calculate Status
                   const isExpired = new Date(ann.expiresOn).getTime() <= Date.now();
                   
                   return (
                     <div 
                       key={ann.id} 
                       className={`p-4 rounded-xl border flex justify-between items-center transition-all ${
-                         !ann.isActive 
-                           ? 'bg-slate-50 dark:bg-slate-900/50 border-slate-100 dark:border-slate-800 opacity-60' // Inactive
-                           : isExpired 
-                             ? 'bg-red-50 dark:bg-red-900/10 border-red-100 dark:border-red-900/30' // Expired
-                             : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800' // Active
+                          !ann.isActive 
+                            ? 'bg-slate-50 dark:bg-slate-900/50 border-slate-100 dark:border-slate-800 opacity-60' 
+                            : isExpired 
+                              ? 'bg-red-50 dark:bg-red-900/10 border-red-100 dark:border-red-900/30' 
+                              : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800' 
                       }`}
                     >
                        <div className="flex items-start gap-3">
-                          {/* Icon Color Logic */}
                           {ann.type === AnnouncementType.WARNING ? <AlertTriangle className={isExpired ? "text-slate-400" : "text-amber-500"} /> : 
                            ann.type === AnnouncementType.SUCCESS ? <CheckCircle2 className={isExpired ? "text-slate-400" : "text-emerald-500"} /> :
                            <Info className={isExpired ? "text-slate-400" : "text-blue-500"} />}
@@ -1412,7 +1395,6 @@ export const AdminDashboard: React.FC = () => {
                              </h4>
                              <p className="text-sm text-slate-500 dark:text-slate-400">{ann.message}</p>
                              
-                             {/* Date Display */}
                              <p className={`text-xs mt-1 font-medium ${isExpired ? 'text-red-500' : 'text-slate-400'}`}>
                                {isExpired ? 'Expired on: ' : 'Expires: '} 
                                {new Date(ann.expiresOn).toLocaleString()}
@@ -1421,7 +1403,6 @@ export const AdminDashboard: React.FC = () => {
                        </div>
 
                        <div className="flex items-center gap-2">
-                          {/* STATUS BADGE */}
                           {isExpired ? (
                              <span className="px-2 py-1 rounded text-xs font-bold bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 border border-red-200 dark:border-red-800">
                                 Expired
@@ -1436,7 +1417,6 @@ export const AdminDashboard: React.FC = () => {
                              </span>
                           )}
 
-                          {/* Toggle Button */}
                           <button 
                              onClick={() => toggleAnnouncement(ann)}
                              className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg text-slate-500 transition-colors"
@@ -1445,7 +1425,6 @@ export const AdminDashboard: React.FC = () => {
                              {ann.isActive ? 'Deactivate' : 'Activate'}
                           </button>
                           
-                          {/* Delete Button */}
                           <button
                              onClick={(e) => handleDeleteAnnouncement(ann.id, e)}
                              className="p-2 hover:bg-red-50 dark:hover:bg-red-900/20 text-slate-300 hover:text-red-500 rounded-lg transition-colors"
@@ -1486,7 +1465,6 @@ export const AdminDashboard: React.FC = () => {
                          const text = await file.text();
                          const jsonData = JSON.parse(text);
                          
-                         // Basic Validation
                          if (!Array.isArray(jsonData)) {
                            alert("Invalid format: File must be an array of days.");
                            return;
@@ -1494,19 +1472,17 @@ export const AdminDashboard: React.FC = () => {
                          
                          if (confirm(`Upload menu for ${jsonData.length} days? This will overwrite existing data.`)) {
                            await MockDB.bulkUploadMenu(jsonData);
-                           loadData(); // Refresh UI
+                           loadData(); 
                            alert("Menu updated successfully!");
                          }
                        } catch (err) {
                          alert("Error reading file. Please check the JSON format.");
                          console.error(err);
                        }
-                       // Reset input
                        e.target.value = '';
                      }}
                    />
                    
-                   {/* Download Sample Button */}
                    <Button 
                      variant="outline"
                      onClick={() => {
@@ -1529,7 +1505,6 @@ export const AdminDashboard: React.FC = () => {
                      <span className="text-xs">Download Sample</span>
                    </Button>
 
-                   {/* Upload Button */}
                    <Button onClick={() => document.getElementById('menu-upload')?.click()}>
                      Upload JSON
                    </Button>
@@ -1568,14 +1543,11 @@ export const AdminDashboard: React.FC = () => {
                      </div>
 
                      <div className="space-y-4">
-                        {/* 👇 SAFE CHECK: Use ( ... || [] ) to prevent crash */}
                         {(currentDayMenu[meal] || []).length === 0 && (
                            <p className="text-slate-400 text-sm italic">No dishes added yet.</p>
                         )}
                         
-                        {/* 👇 SAFE MAP: Use ( ... || [] ) here too */}
                         {(currentDayMenu[meal] || []).map(dish => {
-                           // 👇 FIX: Check both "isVeg" and "isveg" to handle JSON casing errors
                            const isDishVeg = dish.isVeg !== undefined ? dish.isVeg : (dish as any).isveg;
 
                            return (
@@ -1591,7 +1563,6 @@ export const AdminDashboard: React.FC = () => {
                                     </div>
                                     <p className="text-xs text-slate-500 dark:text-slate-400 line-clamp-1">{dish.description}</p>
                                     <div className="mt-1">
-                                       {/* 👇 UPDATED CHECK: Uses the safe 'isDishVeg' variable */}
                                        {isDishVeg ? (
                                           <span className="text-[10px] font-bold text-green-600 border border-green-200 px-1 rounded bg-green-50">VEG</span>
                                        ) : (
@@ -1611,17 +1582,17 @@ export const AdminDashboard: React.FC = () => {
         {activeTab === 'canteen' && (
         <div className="max-w-4xl mx-auto space-y-4">
            
-           {/* --- 1. CANTEEN TOGGLE (Existing) --- */}
+           {/* --- 1. CANTEEN TOGGLE --- */}
            <div className="flex items-center justify-between p-4 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
-              <div>
+             <div>
                  <h4 className="font-bold text-slate-900 dark:text-white flex items-center gap-2">
                     <UtensilsCrossed size={18} className="text-orange-500" /> Enable Canteen
                  </h4>
                  <p className="text-sm text-slate-500 dark:text-slate-400">
-                    Allow students to see and order from the canteen.
+                   Allow students to see and order from the canteen.
                  </p>
-              </div>
-              <label className="relative inline-flex items-center cursor-pointer">
+             </div>
+             <label className="relative inline-flex items-center cursor-pointer">
                  <input 
                    type="checkbox" 
                    className="sr-only peer"
@@ -1629,20 +1600,20 @@ export const AdminDashboard: React.FC = () => {
                    onChange={(e) => handleUpdateSettings({ ...settings, canteenEnabled: e.target.checked })}
                  />
                  <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-orange-300 dark:peer-focus:ring-orange-800 rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-orange-500"></div>
-              </label>
+             </label>
            </div>
 
-           {/* --- 2. NEW SPLASH VIDEO TOGGLE (Added Here) --- */}
+           {/* --- 2. SPLASH VIDEO TOGGLE --- */}
            <div className="flex items-center justify-between p-4 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
-              <div>
+             <div>
                  <h4 className="font-bold text-slate-900 dark:text-white flex items-center gap-2">
                     <Video size={18} className="text-purple-500" /> Splash Video
                  </h4>
                  <p className="text-sm text-slate-500 dark:text-slate-400">
                     Play the intro/celebration video on app launch.
                  </p>
-              </div>
-              <label className="relative inline-flex items-center cursor-pointer">
+             </div>
+             <label className="relative inline-flex items-center cursor-pointer">
                  <input 
                    type="checkbox" 
                    className="sr-only peer"
@@ -1650,18 +1621,18 @@ export const AdminDashboard: React.FC = () => {
                    onChange={(e) => handleUpdateSettings({ ...settings, splashVideoEnabled: e.target.checked })}
                  />
                  <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-purple-300 dark:peer-focus:ring-purple-800 rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-purple-600"></div>
-              </label>
+             </label>
            </div>
 
            {/* --- 3. CANTEEN ITEMS HEADER --- */}
            <div className="flex justify-between items-center pt-4">
-              <h3 className="text-xl font-bold text-slate-800 dark:text-white">Canteen Menu</h3>
-              <Button onClick={() => setShowAddCanteenModal(true)} icon={<Plus size={18}/>}>Add Item</Button>
+             <h3 className="text-xl font-bold text-slate-800 dark:text-white">Canteen Menu</h3>
+             <Button onClick={() => setShowAddCanteenModal(true)} icon={<Plus size={18}/>}>Add Item</Button>
            </div>
 
            {/* --- 4. CANTEEN ITEMS LIST --- */}
            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {canteenMenu.map(item => (
+             {canteenMenu.map(item => (
                  <div key={item.id} className="bg-white dark:bg-slate-900 p-3 rounded-xl border border-slate-200 dark:border-slate-800 flex gap-4">
                     <img src={item.image} alt={item.name} className="w-16 h-16 rounded-lg object-cover bg-slate-100" />
                     <div className="flex-1">
@@ -1685,19 +1656,18 @@ export const AdminDashboard: React.FC = () => {
                        </div>
                     </div>
                  </div>
-              ))}
-              {canteenMenu.length === 0 && (
+             ))}
+             {canteenMenu.length === 0 && (
                  <div className="col-span-full text-center py-10 border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-xl">
                     <p className="text-slate-400">No items in canteen menu.</p>
                  </div>
-              )}
+             )}
            </div>
         </div>
-      )}
+        )}
       </main>
 
       {/* --- Modals --- */}
-      {/* ... (Feedback Detail Modal, Dish Edit, Canteen Edit, Deactivate User Modals remain same) ... */}
       {selectedFeedback && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
            <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl w-full max-w-lg p-6 border border-slate-200 dark:border-slate-800 relative flex flex-col max-h-[90vh]">
@@ -1972,7 +1942,6 @@ export const AdminDashboard: React.FC = () => {
 };
 
 // Helper component for Star
-// FIX: Added ': React.FC<{...}>' to properly allow 'key' and other standard props
 const StarIcon: React.FC<{ filled: boolean, size?: number }> = ({ filled, size = 14 }) => (
   <svg 
     width={size} 
