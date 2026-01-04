@@ -36,6 +36,10 @@ export default defineConfig({
             purpose: 'any maskable'
           }
         ]
+      },
+      // 👇 ADDED THIS SECTION TO FIX BUILD ERROR 👇
+      workbox: {
+        maximumFileSizeToCacheInBytes: 4 * 1024 * 1024, // Increase limit to 4MB
       }
     })
   ],
