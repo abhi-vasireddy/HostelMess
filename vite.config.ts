@@ -9,9 +9,9 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.svg', 'apple-touch-icon.png', 'mask-icon.svg'],
       manifest: {
-        name: 'HostelMess Connect',
-        short_name: 'Hostel Mess',
-        description: 'Smart Hostel Mess Management System',
+        name: 'Mess Connect',
+        short_name: 'Mess Connect',
+        description: 'Smart Mess Connect Management System',
         theme_color: '#ffffff',
         background_color: '#ffffff',
         display: 'standalone',
