@@ -10,7 +10,7 @@ export default defineConfig({
       includeAssets: ['favicon.svg', 'apple-touch-icon.png', 'mask-icon.svg'],
       manifest: {
         name: 'HostelMess Connect',
-        short_name: 'HostelMess',
+        short_name: 'Hostel Mess',
         description: 'Smart Hostel Mess Management System',
         theme_color: '#ffffff',
         background_color: '#ffffff',

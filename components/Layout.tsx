@@ -45,6 +45,11 @@ export const Layout: React.FC<LayoutProps> = ({ user, onLogout, children }) => {
 
   return (
     <div className="min-h-screen flex flex-col bg-orange-50 dark:bg-slate-950 transition-colors duration-200">
+      {/* Import Font specifically for Layout if not global */}
+      <style>
+        {`@import url('https://fonts.googleapis.com/css2?family=Pacifico&display=swap');`}
+      </style>
+
       <header className="bg-white dark:bg-slate-900 shadow-sm border-b border-orange-100 dark:border-slate-800 sticky top-0 z-20 transition-colors duration-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -52,8 +57,13 @@ export const Layout: React.FC<LayoutProps> = ({ user, onLogout, children }) => {
                 <Utensils className="w-5 h-5" />
              </div>
              <div>
-               <h1 className="text-lg font-bold text-slate-900 dark:text-white leading-none">HostelMess</h1>
-               <span className="text-xs text-orange-500 dark:text-orange-400 font-medium tracking-wide">CONNECT</span>
+               {/* UPDATED NAME AND FONT */}
+               <h1 
+                 className="text-2xl text-slate-900 dark:text-white leading-none mt-1"
+                 style={{ fontFamily: "'Pacifico', cursive", fontWeight: 400 }}
+               >
+                 Mess Connect
+               </h1>
              </div>
           </div>
           
@@ -94,7 +104,8 @@ export const Layout: React.FC<LayoutProps> = ({ user, onLogout, children }) => {
         <footer className="bg-white dark:bg-slate-900 border-t border-orange-100 dark:border-slate-800 py-8 mt-auto transition-colors duration-200">
           <div className="max-w-7xl mx-auto px-4 text-center">
             <p className="text-slate-500 dark:text-slate-400 text-sm">
-              &copy; {new Date().getFullYear()} HostelMess Connect.
+              {/* UPDATED FOOTER TEXT */}
+              &copy; {new Date().getFullYear()} Mess Connect.
             </p>
           </div>
         </footer>

@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
-
 import { User, DailyMenu, MealType, Announcement, Feedback, AppSettings, CanteenItem, AnnouncementType } from '../types';
 import { MockDB } from '../services/mockDb';
 import { getCurrentDayName, isFeedbackUnlocked, getTodayDateString } from '../services/timeUtils';
 import { Button } from '../components/Button';
-import { LottiePlayer } from '../components/LottiePlayer';
+import { LottiePlayer } from '../components/LottiePlayer'; 
 import { Star, MessageSquare, AlertCircle, UtensilsCrossed, Calendar, CheckCircle2, X, Info, AlertTriangle } from 'lucide-react';
+import Lottie from 'lottie-react';
+import loadingAnimation from '../assets/animations/loading.json';
 
 interface Props {
   user: User;
@@ -13,33 +14,45 @@ interface Props {
 
 export const StudentDashboard: React.FC<Props> = ({ user }) => {
   const [activeTab, setActiveTab] = useState<'menu' | 'feedback' | 'suggestions' | 'canteen'>('menu');
-  // ... existing state ...
   const [loading, setLoading] = useState(true);
-  const [showSuccess, setShowSuccess] = useState(false);
-  // 👇 PASTE THIS WITH YOUR OTHER STATES
   const [error, setError] = useState(false);
-  
-  
-  // ... inside StudentDashboard component ...
+  const [showSuccess, setShowSuccess] = useState(false);
 
-  // 👇 1. UPDATED STATE: Video starts HIDDEN (false) until we check settings
+  // Data States
+  const [menu, setMenu] = useState<DailyMenu[]>([]);
+  const [announcements, setAnnouncements] = useState<Announcement[]>([]);
+  const [selectedDay, setSelectedDay] = useState<string>(getCurrentDayName());
+  const [settings, setSettings] = useState<AppSettings>({ canteenEnabled: false, splashVideoEnabled: false });
+  const [canteenMenu, setCanteenMenu] = useState<CanteenItem[]>([]);
+  
+  // Feedback States
+  const [myFeedbacks, setMyFeedbacks] = useState<Feedback[]>([]);
+  const [feedbackMap, setFeedbackMap] = useState<Record<string, boolean>>({}); 
+  const [activeFeedbackDish, setActiveFeedbackDish] = useState<{id: string, name: string, meal: MealType} | null>(null);
+  const [rating, setRating] = useState(5);
+  const [comment, setComment] = useState('');
+
+  // Suggestion States
+  const [suggestionText, setSuggestionText] = useState('');
+  const [suggestionStatus, setSuggestionStatus] = useState('');
+
+  // Video Splash States
   const [showSplash, setShowSplash] = useState(false);
   const [canSkip, setCanSkip] = useState(false);
   
-  // 👇 Video Links
   const desktopVideoUrl = "https://files.catbox.moe/camisw.mp4";
   const mobileVideoUrl = "https://files.catbox.moe/zv8gqr.mp4";
 
-  // 👇 2. UPDATED DATA LOADING & VIDEO CHECK
   useEffect(() => {
     const fetchData = async () => {
       try {
         setLoading(true);
-        // Fetch all data including settings
+        setError(false);
+
         const [m, a, s, allF, c] = await Promise.all([
           MockDB.getWeeklyMenu(),
           MockDB.getAnnouncements(),
-          MockDB.getSettings(), // 👈 Fetching Admin Settings
+          MockDB.getSettings(),
           MockDB.getAllFeedback(),
           MockDB.getCanteenMenu()
         ]);
@@ -49,14 +62,12 @@ export const StudentDashboard: React.FC<Props> = ({ user }) => {
         setSettings(s || { canteenEnabled: false, splashVideoEnabled: false });
         setCanteenMenu(c || []);
 
-        // 👇 CHECK: Turn ON video only if Admin enabled it
         if (s?.splashVideoEnabled) {
            setShowSplash(true); 
         } else {
            setShowSplash(false);
         }
 
-        // Handle User Feedback History
         const today = getTodayDateString();
         const userFeedbackHistory = (allF || [])
           .filter(f => f.userId === user.uid)
@@ -71,12 +82,12 @@ export const StudentDashboard: React.FC<Props> = ({ user }) => {
 
       } catch (err) {
         console.error("Error loading dashboard data:", err);
+        setError(true);
       } finally {
-        setLoading(false);
+        setTimeout(() => setLoading(false), 800);
       }
     };
 
-    // 👇 Check Skip Permission (Run immediately)
     const hasSeen = localStorage.getItem('introVideoSeen');
     if (hasSeen) {
       setCanSkip(true);
@@ -87,84 +98,7 @@ export const StudentDashboard: React.FC<Props> = ({ user }) => {
     fetchData();
   }, [user.uid]);
 
-  // 👇 Helper to close video
-  const handleVideoEnd = () => {
-    localStorage.setItem('introVideoSeen', 'true'); 
-    setShowSplash(false); 
-  };
-  const [menu, setMenu] = useState<DailyMenu[]>([]);
-  const [announcements, setAnnouncements] = useState<Announcement[]>([]);
-  const [selectedDay, setSelectedDay] = useState<string>(getCurrentDayName());
-  const [settings, setSettings] = useState<AppSettings>({ canteenEnabled: false });
-  const [feedbackMap, setFeedbackMap] = useState<Record<string, boolean>>({}); 
-  const [canteenMenu, setCanteenMenu] = useState<CanteenItem[]>([]);
-  const [myFeedbacks, setMyFeedbacks] = useState<Feedback[]>([]);
-  
-  // Suggestion State
-  const [suggestionText, setSuggestionText] = useState('');
-  const [suggestionStatus, setSuggestionStatus] = useState('');
-
-  // Feedback Form State
-  const [rating, setRating] = useState(5);
-  const [comment, setComment] = useState('');
-  const [activeFeedbackDish, setActiveFeedbackDish] = useState<{id: string, name: string, meal: MealType} | null>(null);
-
-  // --- DATA LOADING ---
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        setLoading(true); // Start Loading
-        const [m, a, s, allF, c] = await Promise.all([
-          MockDB.getWeeklyMenu(),
-          MockDB.getAnnouncements(),
-          MockDB.getSettings(),
-          MockDB.getAllFeedback(),
-          MockDB.getCanteenMenu()
-        ]);
-        setMenu(m || []);
-        setAnnouncements(a || []);
-        setSettings(s || { canteenEnabled: false });
-        setCanteenMenu(c || []);
-
-        const today = getTodayDateString();
-        const userFeedbackHistory = (allF || [])
-          .filter(f => f.userId === user.uid)
-          .sort((a, b) => b.timestamp - a.timestamp);
-        
-        setMyFeedbacks(userFeedbackHistory);
-
-        const myTodayFeedback = userFeedbackHistory.filter(f => f.date === today);
-        const map: Record<string, boolean> = {};
-        myTodayFeedback.forEach(f => map[f.dishId] = true);
-        setFeedbackMap(map);
-      } catch (err) {
-        console.error("Error loading dashboard data:", err);
-        setError(true); // 👈 ADD THIS LINE: triggers the error screen
-      } finally {
-        // Stop Loading after a small delay to make it look smooth (optional)
-        setTimeout(() => setLoading(false), 500);
-      }
-    };
-    fetchData();
-  }, [user.uid]);
-
-  // --- SYSTEM NOTIFICATION LOGIC ---
-  useEffect(() => {
-    const sendSystemNotification = (title: string, body: string) => {
-      if (!("Notification" in window)) return;
-      if (Notification.permission === 'granted') {
-        try {
-          new Notification(title, {
-            body: body,
-            icon: '/pwa-192x192.png',
-            // @ts-ignore
-            vibrate: [200, 100, 200],
-            tag: 'meal-notification'
-          });
-        } catch (e) { console.error(e); }
-      }
-    };
-
     const checkAndNotify = () => {
       if (!("Notification" in window)) return;
       if (Notification.permission !== 'granted') return;
@@ -190,7 +124,10 @@ export const StudentDashboard: React.FC<Props> = ({ user }) => {
              const alreadySent = localStorage.getItem(notifKey);
 
              if (hasUnratedDishes && !alreadySent) {
-               sendSystemNotification(`Time for ${currentMeal}! 🍽️`, `The menu is live. Rate your food now!`);
+               new Notification(`Time for ${currentMeal}! 🍽️`, {
+                 body: `The menu is live. Rate your food now!`,
+                 icon: '/pwa-192x192.png'
+               });
                localStorage.setItem(notifKey, 'true');
              }
           }
@@ -203,17 +140,19 @@ export const StudentDashboard: React.FC<Props> = ({ user }) => {
     }
 
     checkAndNotify();
-    const interval = setInterval(checkAndNotify, 5 * 60 * 1000);
+    const interval = setInterval(checkAndNotify, 5 * 60 * 1000); 
     return () => clearInterval(interval);
-  }, [menu, feedbackMap, user.uid]);
+  }, [menu, feedbackMap]);
 
+  const handleVideoEnd = () => {
+    localStorage.setItem('introVideoSeen', 'true'); 
+    setShowSplash(false); 
+  };
 
-  // --- HANDLERS ---
   const handleSuggestionSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!suggestionText.trim()) return;
 
-    // 1. Submit to Database
     await MockDB.submitSuggestion({
       id: Date.now().toString(),
       userId: user.uid,
@@ -222,16 +161,9 @@ export const StudentDashboard: React.FC<Props> = ({ user }) => {
       timestamp: Date.now()
     });
 
-    // 2. Clear Input
     setSuggestionText('');
-
-    // 3. Trigger Success Animation
     setShowSuccess(true);
-    
-    // 4. Hide Animation after 3 seconds
-    setTimeout(() => {
-      setShowSuccess(false);
-    }, 3000);
+    setTimeout(() => setShowSuccess(false), 3000);
   };
 
   const handleSubmitFeedback = async () => {
@@ -250,25 +182,17 @@ export const StudentDashboard: React.FC<Props> = ({ user }) => {
       timestamp: Date.now()
     };
 
-    // 1. Submit to Database
     await MockDB.submitFeedback(feedback);
     
-    // 2. Update Local State (Mark dish as rated)
     setFeedbackMap(prev => ({ ...prev, [activeFeedbackDish.id]: true }));
     setMyFeedbacks(prev => [feedback, ...prev]);
     
-    // 3. Reset and Close Modal
     setActiveFeedbackDish(null);
     setRating(5);
     setComment('');
 
-    // 👇 4. TRIGGER SUCCESS ANIMATION (Added)
     setShowSuccess(true);
-    
-    // Hide animation after 3 seconds
-    setTimeout(() => {
-      setShowSuccess(false);
-    }, 3000);
+    setTimeout(() => setShowSuccess(false), 3000);
   };
 
   const getGreeting = () => {
@@ -290,23 +214,17 @@ export const StudentDashboard: React.FC<Props> = ({ user }) => {
     { id: 'canteen', label: 'Canteen', icon: UtensilsCrossed }
   ];
 
-  // 👇 3. RENDER VIDEO PLAYER (High Priority)
   if (showSplash) {
     return (
-      // Changed background to white briefly so the fade-out is smoother against light theme, but black is fine too
       <div className="fixed inset-0 z-[100] bg-black flex items-center justify-center animate-in fade-in duration-700">
-        
-        {/* 👇 UPDATED SKIP BUTTON (Black Theme) */}
         {canSkip && (
           <button 
             onClick={handleVideoEnd}
-            // New styling: Dark text, semi-transparent black background
-            className="absolute top-8 right-8 z-[110] bg-black/20 backdrop-blur-md text-slate-900 px-6 py-2 rounded-full text-sm font-bold border border-black/10 hover:bg-black/30 transition-all flex items-center gap-2 shadow-sm"
+            className="absolute top-8 right-8 z-[110] bg-black/20 backdrop-blur-md text-slate-200 px-6 py-2 rounded-full text-sm font-bold border border-white/10 hover:bg-black/40 transition-all flex items-center gap-2"
           >
             Skip Intro <span className="text-lg">→</span>
           </button>
         )}
-        
         <video 
           autoPlay 
           muted 
@@ -314,41 +232,34 @@ export const StudentDashboard: React.FC<Props> = ({ user }) => {
           onEnded={handleVideoEnd}
           className="w-full h-full object-cover"
         >
-          {/* 👇 RESPONSIVE VIDEO SOURCES */}
-          {/* 1. Mobile Source (Browser checks this first. Runs if screen is narrower than 768px) */}
           <source src={mobileVideoUrl} type="video/mp4" media="(max-width: 768px)" />
-          
-          {/* 2. Desktop Source (Fallback for larger screens) */}
           <source src={desktopVideoUrl} type="video/mp4" />
         </video>
       </div>
     );
   }
 
-  // --- RENDER LOADING SKELETON ---
   if (loading) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-slate-50 dark:bg-slate-950">
-        <LottiePlayer type="loading" className="w-48 h-48" />
-        <p className="text-slate-500 animate-pulse mt-4">Preparing the kitchen...</p>
+        <div className="w-64 h-64">
+           <Lottie animationData={loadingAnimation} loop={true} />
+        </div>
+        <p className="text-slate-500 animate-pulse mt-4 font-medium">Loading the menu...</p>
       </div>
     );
   }
 
-  // 👇 NEW: RENDER ERROR SCREEN (Network Issues / App Crash)
   if (error) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-white dark:bg-slate-900 p-6 text-center">
-        {/* Uses your local 404.json file */}
         <LottiePlayer type="404" className="w-64 h-64 mb-4" />
-        
         <h2 className="text-2xl font-bold text-slate-800 dark:text-white mb-2">
           Oops! Something went wrong.
         </h2>
         <p className="text-slate-500 dark:text-slate-400 mb-8 max-w-xs mx-auto">
           We couldn't load the menu. Please check your internet connection and try again.
         </p>
-        
         <button 
           onClick={() => window.location.reload()} 
           className="bg-orange-500 hover:bg-orange-600 text-white font-bold py-3 px-8 rounded-xl shadow-lg shadow-orange-500/30 transition-all active:scale-95"
@@ -359,12 +270,11 @@ export const StudentDashboard: React.FC<Props> = ({ user }) => {
     );
   }
 
-  // --- MAIN RENDER ---
   return (
     <div className="space-y-6 pb-28 animate-in fade-in duration-500">
       
-      {/* Greeting Section */}
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
+      {/* Greeting Section (Restored to top) */}
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mt-6">
         <div>
           <h2 className="text-3xl font-bold text-slate-800 dark:text-white tracking-tight">
             {getGreeting()}, <span className="text-orange-500 dark:text-orange-400">{firstName}</span>
@@ -404,7 +314,7 @@ export const StudentDashboard: React.FC<Props> = ({ user }) => {
         </div>
       )}
 
-      {/* Content */}
+      {/* Content Tabs */}
       <div className="min-h-[400px]">
       {activeTab === 'menu' && (
         <div className="space-y-6">
@@ -451,17 +361,13 @@ export const StudentDashboard: React.FC<Props> = ({ user }) => {
                     ) : (
                       <div className="space-y-6">
                     {(currentDayMenu[meal] || []).map(dish => {
-                      // 👇 FIX: Check both "isVeg" and "isveg" to handle JSON casing errors
                       const isDishVeg = dish.isVeg !== undefined ? dish.isVeg : (dish as any).isveg;
-
                       return (
                         <div key={dish.id} className="flex gap-4 items-start">
                             <img src={dish.image} alt={dish.name} className="w-20 h-20 rounded-xl object-cover bg-slate-100 dark:bg-slate-800 shadow-inner flex-shrink-0" />
                             <div className="flex-1 min-w-0">
                               <div className="flex justify-between items-start gap-2">
                                 <h5 className="font-semibold text-slate-900 dark:text-white truncate">{dish.name}</h5>
-                                
-                                {/* 👇 UPDATED CHECK: Uses the safe 'isDishVeg' variable */}
                                 {isDishVeg ? (
                                   <div className="w-4 h-4 rounded border border-green-500 flex items-center justify-center flex-shrink-0" title="Veg">
                                     <div className="w-2 h-2 rounded-full bg-green-500"></div>
@@ -512,7 +418,7 @@ export const StudentDashboard: React.FC<Props> = ({ user }) => {
         </div>
       )}
 
-      {/* Other Tabs */}
+      {/* FEEDBACK TAB */}
       {activeTab === 'feedback' && (
         <div className="max-w-2xl mx-auto space-y-6">
            <div className="flex items-center gap-3 bg-white dark:bg-slate-900 p-6 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800">
@@ -555,6 +461,7 @@ export const StudentDashboard: React.FC<Props> = ({ user }) => {
         </div>
       )}
 
+      {/* SUGGESTIONS TAB */}
       {activeTab === 'suggestions' && (
         <div className="max-w-2xl mx-auto">
           <div className="bg-white dark:bg-slate-900 p-8 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800">
@@ -586,6 +493,7 @@ export const StudentDashboard: React.FC<Props> = ({ user }) => {
         </div>
       )}
 
+      {/* CANTEEN TAB */}
       {activeTab === 'canteen' && (
         <div className="flex flex-col items-center justify-center py-6">
            {settings.canteenEnabled ? (
@@ -704,12 +612,13 @@ export const StudentDashboard: React.FC<Props> = ({ user }) => {
         </div>
       )}
 
+      {/* Success Animation Overlay */}
       {showSuccess && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm animate-in fade-in">
           <div className="bg-white dark:bg-slate-900 p-8 rounded-2xl shadow-2xl flex flex-col items-center animate-in zoom-in-50 duration-300">
             <LottiePlayer type="success" className="w-32 h-32" loop={false} />
             <h3 className="text-xl font-bold mt-4 text-slate-800 dark:text-white">Submitted!</h3>
-            <p className="text-slate-500 text-sm">Thanks for your suggestion.</p>
+            <p className="text-slate-500 text-sm">Thanks for your feedback.</p>
           </div>
         </div>
       )}
@@ -717,7 +626,6 @@ export const StudentDashboard: React.FC<Props> = ({ user }) => {
   );
 };
 
-// --- HELPER 1: BOLD TEXT FORMATTER ---
 const FormattedText = ({ text }: { text: string }) => {
   if (!text) return null;
   return (
@@ -732,65 +640,6 @@ const FormattedText = ({ text }: { text: string }) => {
           })}
         </p>
       ))}
-    </div>
-  );
-};
-
-// --- HELPER 2: LOADING SKELETON (SHIMMER EFFECT) ---
-const LoadingSkeleton = ({ navItems, activeTab, setActiveTab }: any) => {
-  return (
-    <div className="space-y-6 pb-28">
-      {/* Header Skeleton */}
-      <div className="flex justify-between items-end animate-pulse">
-         <div className="space-y-3">
-            <div className="h-8 w-48 bg-slate-200 dark:bg-slate-800 rounded-lg"></div>
-            <div className="h-4 w-64 bg-slate-100 dark:bg-slate-800/50 rounded-lg"></div>
-         </div>
-         <div className="h-4 w-32 bg-slate-100 dark:bg-slate-800/50 rounded-lg hidden md:block"></div>
-      </div>
-
-      {/* Days Skeleton */}
-      <div className="flex gap-2 overflow-hidden py-2 animate-pulse">
-         {[1,2,3,4,5].map(i => (
-           <div key={i} className="h-9 w-24 bg-slate-200 dark:bg-slate-800 rounded-full flex-shrink-0"></div>
-         ))}
-      </div>
-
-      {/* Cards Skeleton */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {[1,2,3,4].map(i => (
-          <div key={i} className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 h-64 animate-pulse p-4 flex flex-col gap-4">
-             <div className="flex justify-between">
-                <div className="h-4 w-20 bg-slate-200 dark:bg-slate-800 rounded"></div>
-                <div className="h-4 w-12 bg-slate-200 dark:bg-slate-800 rounded"></div>
-             </div>
-             <div className="flex gap-4">
-               <div className="w-20 h-20 bg-slate-200 dark:bg-slate-800 rounded-xl flex-shrink-0"></div>
-               <div className="flex-1 space-y-2">
-                 <div className="h-5 w-3/4 bg-slate-200 dark:bg-slate-800 rounded"></div>
-                 <div className="h-3 w-full bg-slate-100 dark:bg-slate-800/50 rounded"></div>
-                 <div className="h-3 w-1/2 bg-slate-100 dark:bg-slate-800/50 rounded"></div>
-               </div>
-             </div>
-          </div>
-        ))}
-      </div>
-
-      {/* Bottom Nav (Static) */}
-      <div className="fixed bottom-0 left-0 right-0 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 pb-safe pt-2 px-6 flex justify-between items-center z-50 h-[70px]">
-        {navItems.map((item: any) => (
-          <button
-            key={item.id}
-            onClick={() => setActiveTab(item.id)}
-            className={`flex flex-col items-center justify-center gap-1 w-full h-full ${
-              activeTab === item.id ? 'text-orange-500' : 'text-slate-400'
-            }`}
-          >
-            <item.icon size={24} />
-            <span className="text-[10px] font-bold">{item.label}</span>
-          </button>
-        ))}
-      </div>
     </div>
   );
 };
