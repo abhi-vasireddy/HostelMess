@@ -241,11 +241,11 @@ export const StudentDashboard: React.FC<Props> = ({ user }) => {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-slate-50 dark:bg-slate-950">
-        <div className="w-64 h-64">
+      <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-orange-50 to-amber-50 dark:from-slate-900 dark:to-slate-950">
+        <div className="w-64 h-64 p-8 bg-white/50 dark:bg-slate-900/50 rounded-full backdrop-blur-xl shadow-2xl shadow-orange-500/10 animate-pulse">
            <Lottie animationData={loadingAnimation} loop={true} />
         </div>
-        <p className="text-slate-500 animate-pulse mt-4 font-medium">Loading the menu...</p>
+        <p className="text-orange-500/80 animate-pulse mt-8 font-bold tracking-widest uppercase text-sm">Preparing Menu...</p>
       </div>
     );
   }
@@ -253,150 +253,195 @@ export const StudentDashboard: React.FC<Props> = ({ user }) => {
   if (error) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-white dark:bg-slate-900 p-6 text-center">
-        <LottiePlayer type="404" className="w-64 h-64 mb-4" />
-        <h2 className="text-2xl font-bold text-slate-800 dark:text-white mb-2">
-          Oops! Something went wrong.
+        <div className="relative">
+          <div className="absolute inset-0 bg-red-500/20 blur-3xl rounded-full"></div>
+          <LottiePlayer type="404" className="w-64 h-64 mb-4 relative z-10" />
+        </div>
+        <h2 className="text-3xl font-bold text-slate-800 dark:text-white mb-2 tracking-tight">
+          Connection Lost
         </h2>
-        <p className="text-slate-500 dark:text-slate-400 mb-8 max-w-xs mx-auto">
-          We couldn't load the menu. Please check your internet connection and try again.
+        <p className="text-slate-500 dark:text-slate-400 mb-8 max-w-xs mx-auto leading-relaxed">
+          We couldn't fetch the menu. Check your internet or try again later.
         </p>
         <button 
           onClick={() => window.location.reload()} 
-          className="bg-orange-500 hover:bg-orange-600 text-white font-bold py-3 px-8 rounded-xl shadow-lg shadow-orange-500/30 transition-all active:scale-95"
+          className="bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white font-bold py-3.5 px-10 rounded-2xl shadow-lg shadow-orange-500/30 transition-all active:scale-95 transform hover:-translate-y-1"
         >
-          Retry Connection
+          Retry
         </button>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6 pb-28 animate-in fade-in duration-500">
+    <div className="space-y-8 pb-32 animate-in fade-in duration-700 bg-gradient-to-b from-orange-50/30 via-transparent to-transparent dark:from-slate-900 dark:via-slate-950 dark:to-slate-950 min-h-screen">
       
-      {/* Greeting Section (Restored to top) */}
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mt-6">
-        <div>
-          <h2 className="text-3xl font-bold text-slate-800 dark:text-white tracking-tight">
-            {getGreeting()}, <span className="text-orange-500 dark:text-orange-400">{firstName}</span>
-          </h2>
-          <p className="text-slate-500 dark:text-slate-400 mt-1">Check out today's menu and share your thoughts.</p>
-        </div>
-        <div className="text-right hidden md:block">
-           <p className="text-sm font-medium text-slate-400 dark:text-slate-500 uppercase tracking-wider">{new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}</p>
+      {/* Enhanced Greeting Section */}
+      <div className="relative pt-4">
+        <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 z-10 relative">
+          <div>
+            <h2 className="text-4xl md:text-5xl font-extrabold text-slate-800 dark:text-white tracking-tight drop-shadow-sm">
+              <span className="bg-clip-text text-transparent bg-gradient-to-r from-slate-700 to-slate-500 dark:from-slate-200 dark:to-slate-400">
+                {getGreeting()},
+              </span> 
+              <br className="md:hidden" />
+              <span className="bg-clip-text text-transparent bg-gradient-to-r from-orange-500 to-amber-500 ml-2 md:ml-3">
+                {firstName}
+              </span>
+            </h2>
+            <p className="text-slate-500 dark:text-slate-400 mt-2 font-medium flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
+              The kitchen is serving delicious meals today.
+            </p>
+          </div>
+          <div className="text-right hidden md:block bg-white/60 dark:bg-slate-800/60 backdrop-blur-md px-4 py-2 rounded-2xl border border-white/50 dark:border-slate-700 shadow-sm">
+             <p className="text-sm font-bold text-slate-600 dark:text-slate-300 uppercase tracking-widest">
+               {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
+             </p>
+          </div>
         </div>
       </div>
 
-      {/* Announcements */}
+      {/* Modern Announcements */}
       {announcements.length > 0 && (
-        <div className="grid gap-3">
+        <div className="grid gap-4">
             {announcements.map(a => (
               <div key={a.id} className={`
-                p-4 rounded-xl border-l-4 shadow-sm flex items-start gap-3
+                relative overflow-hidden p-5 rounded-2xl border flex items-start gap-4 shadow-lg transition-transform hover:scale-[1.01] duration-300
                 ${a.type === AnnouncementType.WARNING 
-                  ? 'bg-amber-50 dark:bg-amber-900/20 border-amber-500 text-amber-900 dark:text-amber-100' 
+                  ? 'bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-950/40 dark:to-orange-950/40 border-amber-200/50 dark:border-amber-800/50' 
                   : a.type === AnnouncementType.SUCCESS
-                  ? 'bg-emerald-50 dark:bg-emerald-900/20 border-emerald-500 text-emerald-900 dark:text-emerald-100'
-                  : 'bg-blue-50 dark:bg-blue-900/20 border-blue-500 text-blue-900 dark:text-blue-100'}
+                  ? 'bg-gradient-to-br from-emerald-50 to-green-50 dark:from-emerald-950/40 dark:to-green-950/40 border-emerald-200/50 dark:border-emerald-800/50'
+                  : 'bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950/40 dark:to-indigo-950/40 border-blue-200/50 dark:border-blue-800/50'}
               `}>
-                {a.type === AnnouncementType.WARNING ? (
-                  <AlertTriangle className="w-5 h-5 flex-shrink-0 mt-0.5" />
-                ) : a.type === AnnouncementType.SUCCESS ? (
-                  <CheckCircle2 className="w-5 h-5 flex-shrink-0 mt-0.5" />
-                ) : (
-                  <Info className="w-5 h-5 flex-shrink-0 mt-0.5" />
-                )}
-                <div className="flex-1">
-                  <h4 className="font-bold text-sm">{a.title}</h4>
-                  <FormattedText text={a.message} />
+                <div className={`
+                  p-3 rounded-xl shadow-inner
+                  ${a.type === AnnouncementType.WARNING ? 'bg-amber-100 dark:bg-amber-900/50 text-amber-600' :
+                    a.type === AnnouncementType.SUCCESS ? 'bg-emerald-100 dark:bg-emerald-900/50 text-emerald-600' :
+                    'bg-blue-100 dark:bg-blue-900/50 text-blue-600'}
+                `}>
+                  {a.type === AnnouncementType.WARNING ? <AlertTriangle className="w-6 h-6" /> : 
+                   a.type === AnnouncementType.SUCCESS ? <CheckCircle2 className="w-6 h-6" /> : 
+                   <Info className="w-6 h-6" />}
+                </div>
+                <div className="flex-1 z-10">
+                  <h4 className={`font-bold text-base mb-1
+                     ${a.type === AnnouncementType.WARNING ? 'text-amber-900 dark:text-amber-100' :
+                       a.type === AnnouncementType.SUCCESS ? 'text-emerald-900 dark:text-emerald-100' :
+                       'text-blue-900 dark:text-blue-100'}
+                  `}>{a.title}</h4>
+                  <div className="text-slate-600 dark:text-slate-300 text-sm leading-relaxed">
+                    <FormattedText text={a.message} />
+                  </div>
                 </div>
               </div>
             ))}
         </div>
       )}
 
-      {/* Content Tabs */}
-      <div className="min-h-[400px]">
+      {/* Main Content Area */}
+      <div className="min-h-[500px]">
       {activeTab === 'menu' && (
-        <div className="space-y-6">
-           {/* Day Selector */}
-           <div className="sticky top-16 md:top-0 z-10 bg-orange-50 dark:bg-slate-950 py-2 -mx-4 px-4 md:mx-0 md:px-0 transition-colors duration-200">
-             <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
+        <div className="space-y-8">
+           {/* Floating Glass Day Selector */}
+           <div className="sticky top-20 z-10 mx-auto max-w-full">
+             <div className="bg-white/70 dark:bg-slate-900/70 backdrop-blur-xl border border-white/50 dark:border-slate-800 shadow-xl shadow-slate-200/40 dark:shadow-black/40 p-2 rounded-3xl overflow-x-auto pb-2 scrollbar-hide flex gap-2">
                {days.map(day => (
                  <button
                    key={day}
                    onClick={() => setSelectedDay(day)}
                    className={`
-                     px-5 py-2 rounded-full text-sm font-medium transition-all duration-200 whitespace-nowrap
+                     px-6 py-3 rounded-2xl text-sm font-bold transition-all duration-300 whitespace-nowrap relative overflow-hidden group
                      ${selectedDay === day 
-                       ? 'bg-orange-500 text-white shadow-md shadow-orange-500/20' 
-                       : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-800 hover:border-orange-300 dark:hover:border-orange-700'}
+                       ? 'text-white shadow-lg shadow-orange-500/30 scale-105' 
+                       : 'text-slate-500 dark:text-slate-400 hover:bg-orange-50 dark:hover:bg-slate-800'}
                    `}
                  >
-                   {day}
+                   {selectedDay === day && (
+                     <div className="absolute inset-0 bg-gradient-to-r from-orange-500 to-amber-500"></div>
+                   )}
+                   <span className="relative z-10 md:hidden">{day.slice(0, 3)}</span>
+                   <span className="relative z-10 hidden md:inline">{day}</span>
                  </button>
                ))}
              </div>
            </div>
 
-           {/* Menu Cards */}
+           {/* Menu Cards Grid */}
            {currentDayMenu ? (
-             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {[MealType.BREAKFAST, MealType.LUNCH, MealType.SNACKS, MealType.DINNER].map((meal) => (
-                  <div key={meal} className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden group hover:border-orange-200 dark:hover:border-orange-900 transition-colors">
-                    <div className="px-5 py-3 bg-slate-50 dark:bg-slate-800/50 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center">
-                      <h4 className="font-bold text-slate-700 dark:text-slate-200 uppercase tracking-wide text-xs">{meal}</h4>
-                      {isToday && isFeedbackUnlocked(meal) && (
-                        <span className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 text-[10px] font-bold uppercase tracking-wider">
-                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                          Rate Now
-                        </span>
-                      )}
+             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                {[MealType.BREAKFAST, MealType.LUNCH, MealType.SNACKS, MealType.DINNER].map((meal, index) => (
+                  <div key={meal} className="group relative bg-white dark:bg-slate-900 rounded-[2rem] shadow-xl shadow-slate-200/50 dark:shadow-black/50 border border-slate-100 dark:border-slate-800 overflow-hidden hover:shadow-2xl hover:shadow-orange-500/10 transition-all duration-500">
+                    
+                    {/* Artistic Header */}
+                    <div className={`h-24 relative overflow-hidden flex items-center px-8
+                      ${index === 0 ? 'bg-gradient-to-r from-orange-100 to-amber-100 dark:from-orange-950/30 dark:to-amber-950/30' :
+                        index === 1 ? 'bg-gradient-to-r from-blue-100 to-cyan-100 dark:from-blue-950/30 dark:to-cyan-950/30' :
+                        index === 2 ? 'bg-gradient-to-r from-pink-100 to-rose-100 dark:from-pink-950/30 dark:to-rose-950/30' :
+                        'bg-gradient-to-r from-indigo-100 to-violet-100 dark:from-indigo-950/30 dark:to-violet-950/30'}
+                    `}>
+                       <div className="absolute -right-6 -top-6 opacity-10 rotate-12 transform group-hover:scale-110 transition-transform duration-700">
+                          <UtensilsCrossed size={140} className="text-slate-900 dark:text-white" />
+                       </div>
+                       
+                       <div className="relative z-10 w-full flex justify-between items-center">
+                          <h4 className="text-2xl font-black text-slate-800 dark:text-white uppercase tracking-tighter">{meal}</h4>
+                          {isToday && isFeedbackUnlocked(meal) && (
+                            <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/80 dark:bg-slate-900/80 backdrop-blur text-emerald-600 dark:text-emerald-400 text-xs font-bold uppercase tracking-wider shadow-sm animate-bounce-slow">
+                              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                              Live
+                            </span>
+                          )}
+                       </div>
                     </div>
                     
-                    <div className="p-5">
+                    <div className="p-6">
                     {(currentDayMenu[meal] || []).length === 0 ? (
-                       <div className="text-center py-6">
-                         <p className="text-slate-400 dark:text-slate-600 text-sm italic">Nothing on the menu.</p>
+                       <div className="text-center py-10 opacity-50">
+                         <UtensilsCrossed className="w-12 h-12 mx-auto mb-3 text-slate-300" />
+                         <p className="text-slate-400 dark:text-slate-600 font-medium">Kitchen is resting.</p>
                        </div>
                     ) : (
                       <div className="space-y-6">
                     {(currentDayMenu[meal] || []).map(dish => {
                       const isDishVeg = dish.isVeg !== undefined ? dish.isVeg : (dish as any).isveg;
                       return (
-                        <div key={dish.id} className="flex gap-4 items-start">
-                            <img src={dish.image} alt={dish.name} className="w-20 h-20 rounded-xl object-cover bg-slate-100 dark:bg-slate-800 shadow-inner flex-shrink-0" />
-                            <div className="flex-1 min-w-0">
+                        <div key={dish.id} className="flex gap-5 items-start p-3 -mx-3 rounded-2xl hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors duration-300">
+                            {/* Dish Image with Pop Effect */}
+                            <div className="relative group/img">
+                               <div className="absolute inset-0 bg-orange-500 rounded-2xl blur opacity-0 group-hover/img:opacity-20 transition-opacity duration-500"></div>
+                               <img src={dish.image} alt={dish.name} className="w-24 h-24 rounded-2xl object-cover shadow-md relative z-0 transform group-hover/img:scale-105 transition-transform duration-500" />
+                               <div className="absolute -top-2 -left-2 z-5">
+                                  {isDishVeg ? (
+                                    <div className="w-6 h-6 rounded-full bg-white shadow-sm flex items-center justify-center border border-green-100">
+                                      <div className="w-3 h-3 rounded-full bg-green-500 animate-pulse"></div>
+                                    </div>
+                                  ) : (
+                                    <div className="w-6 h-6 rounded-full bg-white shadow-sm flex items-center justify-center border border-red-100">
+                                      <div className="w-3 h-3 rounded-full bg-red-500 animate-pulse"></div>
+                                    </div>
+                                  )}
+                               </div>
+                            </div>
+
+                            <div className="flex-1 min-w-0 pt-1">
                               <div className="flex justify-between items-start gap-2">
-                                <h5 className="font-semibold text-slate-900 dark:text-white truncate">{dish.name}</h5>
-                                {isDishVeg ? (
-                                  <div className="w-4 h-4 rounded border border-green-500 flex items-center justify-center flex-shrink-0" title="Veg">
-                                    <div className="w-2 h-2 rounded-full bg-green-500"></div>
-                                  </div>
-                                ) : (
-                                  <div className="w-4 h-4 rounded border border-red-500 flex items-center justify-center flex-shrink-0" title="Non-Veg">
-                                    <div className="w-2 h-2 rounded-full bg-red-500"></div>
-                                  </div>
-                                )}
+                                <h5 className="text-lg font-bold text-slate-900 dark:text-white leading-tight">{dish.name}</h5>
                               </div>
-                              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 line-clamp-2">{dish.description}</p>
+                              <p className="text-sm text-slate-500 dark:text-slate-400 mt-1 line-clamp-2 leading-relaxed opacity-80">{dish.description}</p>
                               
-                              <div className="mt-3">
+                              <div className="mt-4 flex items-center gap-3">
                                 {isToday && isFeedbackUnlocked(meal) && !feedbackMap[dish.id] && (
                                   <button 
                                     onClick={() => setActiveFeedbackDish({ id: dish.id, name: dish.name, meal })}
-                                    className="text-xs font-semibold text-orange-600 dark:text-orange-400 hover:text-orange-700 dark:hover:text-orange-300 flex items-center gap-1 transition-colors"
+                                    className="px-4 py-2 rounded-xl bg-slate-900 dark:bg-white text-white dark:text-slate-900 text-xs font-bold flex items-center gap-2 hover:bg-orange-600 dark:hover:bg-orange-400 hover:text-white dark:hover:text-slate-900 transition-all shadow-lg shadow-slate-900/10 active:scale-95"
                                   >
-                                    <Star className="w-3.5 h-3.5" /> Rate Dish
+                                    <Star className="w-3.5 h-3.5" fill="currentColor" /> Rate It
                                   </button>
                                 )}
                                 {feedbackMap[dish.id] && (
-                                    <span className="text-xs font-medium text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5">
-                                      <CheckCircle2 className="w-3.5 h-3.5"/> Feedback Submitted
-                                    </span>
-                                )}
-                                {(!isToday || !isFeedbackUnlocked(meal)) && !feedbackMap[dish.id] && (
-                                    <span className="text-xs text-slate-400 dark:text-slate-600 flex items-center gap-1 cursor-not-allowed">
-                                      <Star className="w-3.5 h-3.5" /> Locked
+                                    <span className="px-3 py-1.5 rounded-lg bg-emerald-100/50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 text-xs font-bold flex items-center gap-1.5 border border-emerald-200/50 dark:border-emerald-800/30">
+                                      <CheckCircle2 className="w-3.5 h-3.5"/> Rated
                                     </span>
                                 )}
                               </div>
@@ -411,8 +456,9 @@ export const StudentDashboard: React.FC<Props> = ({ user }) => {
                 ))}
              </div>
            ) : (
-             <div className="text-center py-20 bg-white dark:bg-slate-900 rounded-2xl border border-dashed border-slate-300 dark:border-slate-700">
-               <p className="text-slate-500 dark:text-slate-400">Menu not available for this day.</p>
+             <div className="flex flex-col items-center justify-center py-24 bg-white/50 dark:bg-slate-900/50 backdrop-blur-sm rounded-[2rem] border border-dashed border-slate-300 dark:border-slate-700">
+               <Calendar className="w-16 h-16 text-slate-300 dark:text-slate-600 mb-4" />
+               <p className="text-slate-500 dark:text-slate-400 font-medium">Menu loading or unavailable.</p>
              </div>
            )}
         </div>
@@ -420,38 +466,50 @@ export const StudentDashboard: React.FC<Props> = ({ user }) => {
 
       {/* FEEDBACK TAB */}
       {activeTab === 'feedback' && (
-        <div className="max-w-2xl mx-auto space-y-6">
-           <div className="flex items-center gap-3 bg-white dark:bg-slate-900 p-6 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800">
-              <div className="w-12 h-12 rounded-full bg-orange-100 dark:bg-orange-900/30 flex items-center justify-center text-orange-600 dark:text-orange-400">
-                 <Star className="w-6 h-6"/>
+        <div className="max-w-3xl mx-auto space-y-8">
+           <div className="bg-gradient-to-r from-orange-500 to-amber-500 p-8 rounded-[2rem] shadow-2xl shadow-orange-500/20 text-white relative overflow-hidden">
+              <div className="absolute right-0 top-0 opacity-10 transform translate-x-10 -translate-y-10">
+                 <Star size={200} fill="currentColor" />
               </div>
-              <div>
-                 <h3 className="text-xl font-bold text-slate-900 dark:text-white">Your Feedback History</h3>
-                 <p className="text-sm text-slate-500 dark:text-slate-400">Past ratings and reviews you've submitted.</p>
+              <div className="relative z-10">
+                 <h3 className="text-3xl font-extrabold mb-2">My Food Journey</h3>
+                 <p className="text-orange-100 font-medium max-w-md">Track your ratings and help us improve the taste every single day.</p>
               </div>
            </div>
 
            {myFeedbacks.length === 0 ? (
-              <div className="text-center py-12 bg-white dark:bg-slate-900 rounded-2xl border border-dashed border-slate-300 dark:border-slate-700">
-                 <p className="text-slate-400 italic">You haven't submitted any feedback yet.</p>
+              <div className="text-center py-20">
+                 <div className="w-24 h-24 bg-slate-100 dark:bg-slate-800 rounded-full flex items-center justify-center mx-auto mb-6">
+                    <Star className="w-10 h-10 text-slate-300" />
+                 </div>
+                 <p className="text-slate-400 italic">No feedback history found.</p>
               </div>
            ) : (
-              <div className="grid gap-4">
+              <div className="grid gap-6">
                  {myFeedbacks.map(item => (
-                    <div key={item.id} className="bg-white dark:bg-slate-900 p-5 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
-                       <div className="flex justify-between items-start mb-2">
-                          <div>
-                             <h4 className="font-bold text-slate-800 dark:text-white">{item.dishName}</h4>
-                             <span className="text-xs text-slate-500 dark:text-slate-400">{item.date} • {item.mealType}</span>
+                    <div key={item.id} className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-lg shadow-slate-200/50 dark:shadow-black/50 hover:shadow-xl transition-shadow">
+                       <div className="flex justify-between items-start mb-4">
+                          <div className="flex items-center gap-4">
+                             <div className="w-12 h-12 rounded-xl bg-orange-100 dark:bg-orange-900/30 flex items-center justify-center text-orange-600 dark:text-orange-400 font-black text-xl">
+                                {item.dishName.charAt(0)}
+                             </div>
+                             <div>
+                                <h4 className="font-bold text-lg text-slate-800 dark:text-white">{item.dishName}</h4>
+                                <span className="text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider">{item.date} • {item.mealType}</span>
+                             </div>
                           </div>
-                          <div className="flex items-center gap-1 bg-orange-50 dark:bg-orange-900/20 px-2 py-1 rounded-lg border border-orange-100 dark:border-orange-900/30">
-                             <Star className="w-3.5 h-3.5 text-orange-500 fill-orange-500"/>
-                             <span className="text-sm font-bold text-orange-700 dark:text-orange-300">{item.rating}</span>
+                          <div className="flex flex-col items-end gap-1">
+                             <div className="flex gap-1">
+                                {[...Array(5)].map((_, i) => (
+                                   <Star key={i} size={14} className={i < item.rating ? "text-amber-400 fill-amber-400" : "text-slate-200 dark:text-slate-700"} />
+                                ))}
+                             </div>
+                             <span className="text-xs font-bold text-slate-400">Rating: {item.rating}/5</span>
                           </div>
                        </div>
                        {item.comment && (
-                          <div className="mt-3 bg-slate-50 dark:bg-slate-800/50 p-3 rounded-lg">
-                             <p className="text-sm text-slate-600 dark:text-slate-300 italic">"{item.comment}"</p>
+                          <div className="bg-slate-50 dark:bg-slate-800/50 p-4 rounded-xl border border-slate-100 dark:border-slate-800">
+                             <p className="text-slate-600 dark:text-slate-300 italic text-sm leading-relaxed">"{item.comment}"</p>
                           </div>
                        )}
                     </div>
@@ -464,29 +522,31 @@ export const StudentDashboard: React.FC<Props> = ({ user }) => {
       {/* SUGGESTIONS TAB */}
       {activeTab === 'suggestions' && (
         <div className="max-w-2xl mx-auto">
-          <div className="bg-white dark:bg-slate-900 p-8 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800">
-            <div className="flex items-center gap-3 mb-6">
-               <div className="w-10 h-10 rounded-full bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center text-amber-600 dark:text-amber-400">
-                  <MessageSquare className="w-5 h-5"/>
+          <div className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl p-8 md:p-10 rounded-[2.5rem] shadow-2xl border border-white/50 dark:border-slate-700 relative overflow-hidden">
+            <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-orange-400 via-pink-500 to-purple-500"></div>
+            
+            <div className="text-center mb-10">
+               <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white mx-auto mb-4 shadow-lg shadow-indigo-500/30">
+                  <MessageSquare className="w-8 h-8"/>
                </div>
-               <div>
-                  <h3 className="text-xl font-bold text-slate-900 dark:text-white">Make a Suggestion</h3>
-                  <p className="text-sm text-slate-500 dark:text-slate-400">Help us improve the menu and service.</p>
-               </div>
+               <h3 className="text-2xl font-black text-slate-900 dark:text-white">Voice Box</h3>
+               <p className="text-slate-500 dark:text-slate-400 mt-2">Suggest a new dish or report an issue directly to the mess secretary.</p>
             </div>
             
-            <form onSubmit={handleSuggestionSubmit}>
-               <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Your Feedback / Request</label>
-               <textarea
-                 className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-4 focus:ring-2 focus:ring-orange-500 focus:outline-none transition-all dark:text-white resize-none"
-                 rows={5}
-                 placeholder="e.g. Please increase the spiciness in the curry..."
-                 value={suggestionText}
-                 onChange={(e) => setSuggestionText(e.target.value)}
-               ></textarea>
-               <div className="mt-6 flex justify-between items-center">
+            <form onSubmit={handleSuggestionSubmit} className="space-y-6">
+               <div className="space-y-2">
+                 <label className="text-sm font-bold text-slate-700 dark:text-slate-300 ml-1">Your Message</label>
+                 <textarea
+                   className="w-full bg-slate-50 dark:bg-slate-950 border-0 ring-1 ring-slate-200 dark:ring-slate-800 rounded-2xl p-5 focus:ring-2 focus:ring-indigo-500 outline-none dark:text-white transition-all shadow-inner text-base resize-none"
+                   rows={6}
+                   placeholder="Type your suggestion here..."
+                   value={suggestionText}
+                   onChange={(e) => setSuggestionText(e.target.value)}
+                 ></textarea>
+               </div>
+               <div className="flex justify-between items-center pt-2">
                  <span className="text-sm text-emerald-600 dark:text-emerald-400 font-medium animate-pulse">{suggestionStatus}</span>
-                 <Button type="submit" disabled={!suggestionText} className="px-8">Submit</Button>
+                 <Button type="submit" disabled={!suggestionText} className="px-10 py-4 rounded-xl font-bold bg-indigo-600 hover:bg-indigo-700 text-white shadow-xl shadow-indigo-600/20">Send Suggestion</Button>
                </div>
             </form>
           </div>
@@ -497,116 +557,127 @@ export const StudentDashboard: React.FC<Props> = ({ user }) => {
       {activeTab === 'canteen' && (
         <div className="flex flex-col items-center justify-center py-6">
            {settings.canteenEnabled ? (
-             <div className="max-w-4xl w-full">
-                <div className="text-center mb-8">
-                  <h3 className="text-2xl font-bold text-slate-900 dark:text-white mb-2">Canteen Menu</h3>
-                  <p className="text-slate-500 dark:text-slate-400">Order tasty snacks and drinks</p>
+             <div className="max-w-5xl w-full">
+                <div className="text-center mb-12">
+                  <h3 className="text-4xl font-black text-slate-900 dark:text-white mb-3">Canteen</h3>
+                  <div className="h-1 w-20 bg-orange-500 mx-auto rounded-full"></div>
+                  <p className="text-slate-500 dark:text-slate-400 mt-4">Order extras, drinks, and special treats.</p>
                 </div>
                 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
                    {canteenMenu.filter(item => item.isAvailable).map(item => (
-                      <div key={item.id} className="bg-white dark:bg-slate-900 p-4 rounded-xl shadow-sm border border-slate-200 dark:border-slate-800 flex items-center gap-4 hover:border-orange-300 transition-colors">
-                         <img src={item.image} alt={item.name} className="w-20 h-20 rounded-lg object-cover bg-slate-100 dark:bg-slate-800" />
-                         <div className="flex-1">
-                            <h4 className="font-bold text-slate-900 dark:text-white">{item.name}</h4>
-                            <span className="text-[10px] bg-slate-100 dark:bg-slate-800 text-slate-500 px-2 py-0.5 rounded-full">{item.category}</span>
-                            <div className="mt-2 flex items-center justify-between">
-                               <p className="text-lg font-bold text-orange-600 dark:text-orange-400">₹{item.price}</p>
-                               <button className="text-xs bg-orange-50 dark:bg-orange-900/20 text-orange-600 dark:text-orange-400 px-3 py-1.5 rounded-lg font-bold hover:bg-orange-100 dark:hover:bg-orange-900/40 transition-colors">
-                                  View
+                      <div key={item.id} className="bg-white dark:bg-slate-900 p-4 rounded-3xl shadow-lg hover:shadow-2xl hover:-translate-y-2 transition-all duration-300 border border-slate-100 dark:border-slate-800 group">
+                         <div className="relative overflow-hidden rounded-2xl aspect-square mb-4">
+                            <img src={item.image} alt={item.name} className="w-full h-full object-cover transform group-hover:scale-110 transition-transform duration-700" />
+                            <div className="absolute top-2 right-2 bg-black/60 backdrop-blur-md text-white px-3 py-1 rounded-full text-xs font-bold">
+                               {item.category}
+                            </div>
+                         </div>
+                         <div>
+                            <h4 className="font-bold text-lg text-slate-900 dark:text-white mb-1 truncate">{item.name}</h4>
+                            <div className="flex items-center justify-between mt-3">
+                               <p className="text-2xl font-black text-orange-600 dark:text-orange-400">₹{item.price}</p>
+                               <button className="w-10 h-10 rounded-full bg-slate-900 dark:bg-white text-white dark:text-slate-900 flex items-center justify-center hover:bg-orange-600 dark:hover:bg-orange-400 transition-colors">
+                                  <UtensilsCrossed size={18} />
                                </button>
                             </div>
                          </div>
                       </div>
                    ))}
                    {canteenMenu.filter(item => item.isAvailable).length === 0 && (
-                      <div className="col-span-full text-center py-10">
-                        <p className="text-slate-400 italic">No items available in canteen right now.</p>
+                      <div className="col-span-full text-center py-16">
+                        <p className="text-slate-400 text-lg font-light">Stocks are empty right now.</p>
                       </div>
                    )}
                 </div>
              </div>
            ) : (
-             <div className="text-center py-20 px-6 max-w-md mx-auto bg-white dark:bg-slate-900 rounded-3xl border border-dashed border-slate-300 dark:border-slate-700">
-                <div className="w-16 h-16 bg-slate-100 dark:bg-slate-800 rounded-full flex items-center justify-center text-slate-400 mx-auto mb-4">
-                   <UtensilsCrossed size={32} />
+             <div className="text-center py-24 px-8 max-w-lg mx-auto bg-white/50 dark:bg-slate-900/50 backdrop-blur-xl rounded-[3rem] border border-white/60 dark:border-slate-700 shadow-2xl">
+                <div className="w-24 h-24 bg-red-50 dark:bg-red-900/20 rounded-full flex items-center justify-center text-red-400 mx-auto mb-6 animate-pulse">
+                   <UtensilsCrossed size={40} />
                 </div>
-                <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-2">Canteen Closed</h3>
-                <p className="text-slate-500 dark:text-slate-400">The canteen section is currently disabled by the admin. Please check back later.</p>
+                <h3 className="text-2xl font-bold text-slate-900 dark:text-white mb-3">Currently Closed</h3>
+                <p className="text-slate-500 dark:text-slate-400 leading-relaxed">The canteen is taking a break. Come back later for tasty snacks!</p>
              </div>
            )}
         </div>
       )}
       </div>
 
-      {/* Fixed Bottom Navigation */}
-      <div className="fixed bottom-0 left-0 right-0 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 pb-safe pt-2 px-6 flex justify-between items-center z-50 h-[70px] shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
-        {navItems.map((item) => (
-          <button
-            key={item.id}
-            onClick={() => setActiveTab(item.id as any)}
-            className={`flex flex-col items-center justify-center gap-1 w-full h-full transition-all duration-300 ${
-              activeTab === item.id 
-                ? 'text-orange-500 dark:text-orange-400' 
-                : 'text-slate-400 dark:text-slate-600 hover:text-slate-600 dark:hover:text-slate-400'
-            }`}
-          >
-            <item.icon 
-              size={24} 
-              strokeWidth={activeTab === item.id ? 2.5 : 2} 
-              className={`transition-transform duration-300 ${activeTab === item.id ? 'scale-110' : 'scale-100'}`}
-            />
-            <span className={`text-[10px] font-bold ${activeTab === item.id ? 'opacity-100' : 'opacity-80'}`}>
-              {item.label}
-            </span>
-            {activeTab === item.id && (
-              <span className="w-1 h-1 rounded-full bg-orange-500 dark:bg-orange-400 absolute bottom-1"></span>
-            )}
-          </button>
-        ))}
+      {/* Floating Glass Bottom Navigation */}
+      <div className="fixed bottom-6 left-6 right-6 md:left-1/2 md:-translate-x-1/2 md:w-auto md:min-w-[400px] z-40">
+        <div className="bg-black/80 dark:bg-white/10 backdrop-blur-xl border border-white/10 dark:border-white/20 rounded-full px-6 py-4 shadow-2xl flex justify-between items-center gap-4 md:gap-8">
+          {navItems.map((item) => (
+            <button
+              key={item.id}
+              onClick={() => {
+                setActiveTab(item.id as any);
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+              }}
+              className={`relative flex flex-col items-center justify-center gap-1 transition-all duration-300 w-14 ${
+                activeTab === item.id 
+                  ? 'text-orange-400 scale-110' 
+                  : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              <div className={`p-2 rounded-full transition-all duration-300 ${activeTab === item.id ? 'bg-white/10' : 'bg-transparent'}`}>
+                <item.icon 
+                  size={24} 
+                  strokeWidth={activeTab === item.id ? 2.5 : 2} 
+                />
+              </div>
+              {activeTab === item.id && (
+                <span className="absolute -bottom-2 w-1 h-1 rounded-full bg-orange-400 animate-pulse"></span>
+              )}
+            </button>
+          ))}
+        </div>
       </div>
 
-      {/* Feedback Modal */}
+      {/* Modern Feedback Modal */}
       {activeFeedbackDish && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
-           <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl w-full max-w-sm p-6 border border-slate-200 dark:border-slate-800 relative">
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-900/80 backdrop-blur-md animate-in fade-in duration-300">
+           <div className="bg-white dark:bg-slate-900 rounded-[2rem] shadow-2xl w-full max-w-sm p-8 border border-slate-200 dark:border-slate-700 relative animate-in zoom-in-95 duration-300">
               <button 
                 onClick={() => setActiveFeedbackDish(null)}
-                className="absolute top-4 right-4 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors"
+                className="absolute top-5 right-5 w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-500 hover:bg-red-100 hover:text-red-500 transition-colors"
               >
-                <X size={20} />
+                <X size={16} />
               </button>
               
-              <div className="text-center mb-6">
-                 <h3 className="text-lg font-bold text-slate-900 dark:text-white">Rate {activeFeedbackDish.name}</h3>
-                 <p className="text-xs text-slate-500 dark:text-slate-400 uppercase tracking-wide mt-1">{activeFeedbackDish.meal}</p>
+              <div className="text-center mb-8">
+                 <span className="px-3 py-1 rounded-full bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400 text-[10px] font-bold uppercase tracking-wider mb-3 inline-block">
+                    {activeFeedbackDish.meal}
+                 </span>
+                 <h3 className="text-2xl font-black text-slate-900 dark:text-white leading-tight mt-2">{activeFeedbackDish.name}</h3>
+                 <p className="text-sm text-slate-500 dark:text-slate-400 mt-2">How was the taste today?</p>
               </div>
 
-              <div className="flex justify-center gap-2 mb-6">
+              <div className="flex justify-center gap-3 mb-8">
                  {[1, 2, 3, 4, 5].map((star) => (
                     <button 
                        key={star} 
                        onClick={() => setRating(star)}
-                       className="p-1 hover:scale-110 transition-transform"
+                       className="group p-1 relative"
                     >
                        <Star 
-                         size={32} 
-                         className={`${star <= rating ? 'fill-amber-400 text-amber-400' : 'text-slate-200 dark:text-slate-700'}`} 
+                         size={36} 
+                         className={`transition-all duration-200 ${star <= rating ? 'fill-amber-400 text-amber-400 scale-110 drop-shadow-lg' : 'text-slate-200 dark:text-slate-700 group-hover:text-amber-200'}`} 
                        />
                     </button>
                  ))}
               </div>
 
               <textarea 
-                 className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-3 focus:ring-2 focus:ring-orange-500 outline-none dark:text-white text-sm mb-4 resize-none"
+                 className="w-full bg-slate-50 dark:bg-slate-950 border-0 ring-1 ring-slate-200 dark:ring-slate-800 rounded-xl p-4 focus:ring-2 focus:ring-orange-500 outline-none dark:text-white text-sm mb-6 resize-none shadow-inner"
                  rows={3}
-                 placeholder="Any comments? (Optional)"
+                 placeholder="Tell the chef what you think... (Optional)"
                  value={comment}
                  onChange={(e) => setComment(e.target.value)}
               ></textarea>
 
-              <Button fullWidth onClick={handleSubmitFeedback} className="shadow-lg shadow-orange-500/20">
-                 Submit Feedback
+              <Button fullWidth onClick={handleSubmitFeedback} className="py-4 text-base font-bold shadow-xl shadow-orange-500/20 rounded-xl">
+                 Submit Review
               </Button>
            </div>
         </div>
@@ -614,11 +685,13 @@ export const StudentDashboard: React.FC<Props> = ({ user }) => {
 
       {/* Success Animation Overlay */}
       {showSuccess && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm animate-in fade-in">
-          <div className="bg-white dark:bg-slate-900 p-8 rounded-2xl shadow-2xl flex flex-col items-center animate-in zoom-in-50 duration-300">
-            <LottiePlayer type="success" className="w-32 h-32" loop={false} />
-            <h3 className="text-xl font-bold mt-4 text-slate-800 dark:text-white">Submitted!</h3>
-            <p className="text-slate-500 text-sm">Thanks for your feedback.</p>
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-md animate-in fade-in">
+          <div className="bg-white dark:bg-slate-900 p-10 rounded-[2.5rem] shadow-2xl flex flex-col items-center animate-in zoom-in-50 duration-300 border border-white/20">
+            <div className="scale-150 mb-4">
+               <LottiePlayer type="success" className="w-32 h-32" loop={false} />
+            </div>
+            <h3 className="text-2xl font-black mt-4 text-slate-800 dark:text-white">Awesome!</h3>
+            <p className="text-slate-500 text-base font-medium">Your feedback has been recorded.</p>
           </div>
         </div>
       )}
