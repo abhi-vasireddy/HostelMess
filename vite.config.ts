@@ -38,9 +38,12 @@ export default defineConfig({
         ]
       },
       workbox: {
-        maximumFileSizeToCacheInBytes: 4 * 1024 * 1024,
-        // 👇 THIS LINE FIXES THE 404 ON MOBILE 👇
+        maximumFileSizeToCacheInBytes: 5 * 1024 * 1024, // Increased to 5MB just to be safe
         navigateFallback: '/index.html',
+        cleanupOutdatedCaches: true, // 👇 FORCE DELETE old broken caches
+        clientsClaim: true,          // 👇 Control the page immediately
+        skipWaiting: true,           // 👇 Activate new SW immediately
+        globPatterns: ['**/*.{js,css,html,ico,png,svg}'] // 👇 Ensure everything is cached
       }
     })
   ],
