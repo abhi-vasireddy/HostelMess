@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-// 👇 CHANGE: Import HashRouter
-import { HashRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+// 👇 IMPORT HashRouter explicitly
+import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { Login } from './pages/Login';
 import { StudentDashboard } from './pages/StudentDashboard';
 import { AdminDashboard } from './pages/AdminDashboard';
@@ -58,8 +58,8 @@ function App() {
 
   return (
     <AuthContext.Provider value={{ user, login, logout, loading }}>
-      {/* 👇 Router is now HashRouter */}
-      <Router>
+      {/* 👇 HashRouter GUARANTEES no 404s on reload */}
+      <HashRouter>
         <Routes>
           <Route 
             path="/login" 
@@ -91,7 +91,7 @@ function App() {
           />
           <Route path="*" element={<Navigate to="/login" />} />
         </Routes>
-      </Router>
+      </HashRouter>
     </AuthContext.Provider>
   );
 }
