@@ -7,7 +7,7 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['favicon.svg', 'apple-touch-icon.png', 'mask-icon.svg'],
+      includeAssets: ['favicon.ico', 'apple-touch-icon.png'],
       manifest: {
         name: 'Mess Connect',
         short_name: 'Mess Connect',
@@ -37,14 +37,15 @@ export default defineConfig({
           }
         ]
       },
-      // 👇 ADDED THIS SECTION TO FIX BUILD ERROR 👇
       workbox: {
-        maximumFileSizeToCacheInBytes: 4 * 1024 * 1024, // Increase limit to 4MB
+        maximumFileSizeToCacheInBytes: 4 * 1024 * 1024,
+        // 👇 THIS LINE FIXES THE 404 ON MOBILE 👇
+        navigateFallback: '/index.html',
       }
     })
   ],
   server: {
-    host: true,  // This exposes the app to your network
+    host: true,
   },
   optimizeDeps: {
     exclude: ['lucide-react'],
