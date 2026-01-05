@@ -38,12 +38,11 @@ export default defineConfig({
         ]
       },
       workbox: {
-        maximumFileSizeToCacheInBytes: 5 * 1024 * 1024, // Increased to 5MB just to be safe
+        maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
         navigateFallback: '/index.html',
-        cleanupOutdatedCaches: true, // 👇 FORCE DELETE old broken caches
-        clientsClaim: true,          // 👇 Control the page immediately
-        skipWaiting: true,           // 👇 Activate new SW immediately
-        globPatterns: ['**/*.{js,css,html,ico,png,svg}'] // 👇 Ensure everything is cached
+        cleanupOutdatedCaches: true, // Force cleanup
+        clientsClaim: true,          // Take control immediately
+        skipWaiting: true            // Activate immediately
       }
     })
   ],
