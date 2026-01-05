@@ -1,13 +1,13 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+// 👇 CHANGE 1: Import HashRouter instead of BrowserRouter
+import { HashRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { Login } from './pages/Login';
 import { StudentDashboard } from './pages/StudentDashboard';
 import { AdminDashboard } from './pages/AdminDashboard';
 import { MockDB } from './services/mockDb';
 import { User, UserRole } from './types';
-import { Layout } from './components/Layout'; // <--- Import Layout
+import { Layout } from './components/Layout'; 
 
-// 1. Define the shape of our Auth Context
 interface AuthContextType {
   user: User | null;
   login: (email: string, password?: string) => Promise<void>;
@@ -15,22 +15,18 @@ interface AuthContextType {
   loading: boolean;
 }
 
-// 2. Create the Context
 const AuthContext = createContext<AuthContextType | null>(null);
 
-// 3. EXPORT the hook
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (!context) throw new Error('useAuth must be used within an AuthProvider');
   return context;
 };
 
-// 4. The Main App Component
 function App() {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // Check for existing session on load
   useEffect(() => {
     const initAuth = async () => {
       const savedUser = MockDB.getCurrentUser();
@@ -62,6 +58,7 @@ function App() {
 
   return (
     <AuthContext.Provider value={{ user, login, logout, loading }}>
+      {/* 👇 CHANGE 2: Using the Router (which is now HashRouter) */}
       <Router>
         <Routes>
           {/* Public Route: Login */}
@@ -75,7 +72,6 @@ function App() {
             path="/student" 
             element={
               user && user.role === UserRole.STUDENT ? (
-                // WRAPPER ADDED: Layout + User Prop Passed
                 <Layout user={user} onLogout={logout}>
                    <StudentDashboard user={user} />
                 </Layout>
@@ -90,7 +86,6 @@ function App() {
             path="/admin" 
             element={
               user && user.role === UserRole.ADMIN ? (
-                // WRAPPER ADDED: Layout
                 <Layout user={user} onLogout={logout}>
                    <AdminDashboard />
                 </Layout>
