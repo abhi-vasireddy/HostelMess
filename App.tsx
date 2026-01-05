@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-// 👇 CHANGE 1: Import HashRouter instead of BrowserRouter
+// 👇 CHANGE: Import HashRouter
 import { HashRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { Login } from './pages/Login';
 import { StudentDashboard } from './pages/StudentDashboard';
@@ -58,16 +58,13 @@ function App() {
 
   return (
     <AuthContext.Provider value={{ user, login, logout, loading }}>
-      {/* 👇 CHANGE 2: Using the Router (which is now HashRouter) */}
+      {/* 👇 Router is now HashRouter */}
       <Router>
         <Routes>
-          {/* Public Route: Login */}
           <Route 
             path="/login" 
             element={!user ? <Login /> : <Navigate to={user.role === UserRole.ADMIN ? "/admin" : "/student"} />} 
           />
-
-          {/* Protected Route: Student Dashboard */}
           <Route 
             path="/student" 
             element={
@@ -80,8 +77,6 @@ function App() {
               )
             } 
           />
-
-          {/* Protected Route: Admin Dashboard */}
           <Route 
             path="/admin" 
             element={
@@ -94,8 +89,6 @@ function App() {
               )
             } 
           />
-
-          {/* Default Redirect */}
           <Route path="*" element={<Navigate to="/login" />} />
         </Routes>
       </Router>

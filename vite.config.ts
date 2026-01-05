@@ -40,9 +40,9 @@ export default defineConfig({
       workbox: {
         maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
         navigateFallback: '/index.html',
-        cleanupOutdatedCaches: true, // Force cleanup
-        clientsClaim: true,          // Take control immediately
-        skipWaiting: true            // Activate immediately
+        cleanupOutdatedCaches: true, // 👇 CRITICAL: Deletes old cache
+        clientsClaim: true,          // 👇 CRITICAL: Takes control immediately
+        skipWaiting: true            // 👇 CRITICAL: Updates immediately
       }
     })
   ],
