@@ -602,21 +602,27 @@ export const StudentDashboard: React.FC<Props> = ({ user }) => {
                   <p className="text-slate-500 dark:text-slate-400 mt-4">Order extras, drinks, and special treats.</p>
                 </div>
                 
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
+                {/* UPDATED: 2 columns on mobile, 4 on desktop. Reduced gap. */}
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-6">
                    {canteenMenu.filter(item => item.isAvailable).map(item => (
-                      <div key={item.id} className="bg-white dark:bg-slate-900 p-4 rounded-3xl shadow-lg hover:shadow-2xl hover:-translate-y-2 transition-all duration-300 border border-slate-100 dark:border-slate-800 group">
-                         <div className="relative overflow-hidden rounded-2xl aspect-square mb-4">
+                      <div key={item.id} className="bg-white dark:bg-slate-900 p-2 md:p-3 rounded-2xl md:rounded-3xl shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all duration-300 border border-slate-100 dark:border-slate-800 group">
+                         {/* UPDATED: Compact image container */}
+                         <div className="relative overflow-hidden rounded-xl md:rounded-2xl aspect-square mb-2 md:mb-3">
                             <img src={item.image} alt={item.name} className="w-full h-full object-cover transform group-hover:scale-110 transition-transform duration-700" />
-                            <div className="absolute top-2 right-2 bg-black/60 backdrop-blur-md text-white px-3 py-1 rounded-full text-xs font-bold">
+                            {/* UPDATED: Smaller category badge */}
+                            <div className="absolute top-1 right-1 md:top-2 md:right-2 bg-black/60 backdrop-blur-md text-white px-2 py-0.5 md:px-3 md:py-1 rounded-full text-[10px] md:text-xs font-bold">
                                {item.category}
                             </div>
                          </div>
                          <div>
-                            <h4 className="font-bold text-lg text-slate-900 dark:text-white mb-1 truncate">{item.name}</h4>
-                            <div className="flex items-center justify-between mt-3">
-                               <p className="text-2xl font-black text-orange-600 dark:text-orange-400">₹{item.price}</p>
-                               <button className="w-10 h-10 rounded-full bg-slate-900 dark:bg-white text-white dark:text-slate-900 flex items-center justify-center hover:bg-orange-600 dark:hover:bg-orange-400 transition-colors">
-                                  <UtensilsCrossed size={18} />
+                            {/* UPDATED: Responsive text sizes */}
+                            <h4 className="font-bold text-sm md:text-lg text-slate-900 dark:text-white mb-1 truncate">{item.name}</h4>
+                            <div className="flex items-center justify-between mt-1 md:mt-3">
+                               {/* UPDATED: Smaller price font */}
+                               <p className="text-base md:text-2xl font-black text-orange-600 dark:text-orange-400">₹{item.price}</p>
+                               {/* UPDATED: Smaller button size */}
+                               <button className="w-8 h-8 md:w-10 md:h-10 rounded-full bg-slate-900 dark:bg-white text-white dark:text-slate-900 flex items-center justify-center hover:bg-orange-600 dark:hover:bg-orange-400 transition-colors">
+                                  <UtensilsCrossed size={14} className="md:w-[18px] md:h-[18px]" />
                                </button>
                             </div>
                          </div>

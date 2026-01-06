@@ -1624,7 +1624,10 @@ export const AdminDashboard: React.FC = () => {
            {/* --- 3. CANTEEN ITEMS HEADER --- */}
            <div className="flex justify-between items-center pt-4">
              <h3 className="text-xl font-bold text-slate-800 dark:text-white">Canteen Menu</h3>
-             <Button onClick={() => setShowAddCanteenModal(true)} icon={<Plus size={18}/>}>Add Item</Button>
+             {/* 👇 FIXED: Uses the correct handler function now */}
+             <Button onClick={handleOpenAddCanteenItem} className="flex items-center gap-2">
+               <Plus size={18}/> Add Item
+             </Button>
            </div>
 
            {/* --- 4. CANTEEN ITEMS LIST --- */}
@@ -1639,26 +1642,19 @@ export const AdminDashboard: React.FC = () => {
                              <p className="text-xs text-slate-500">{item.category}</p>
                           </div>
                           <div className="flex gap-1">
+                             {/* 👇 ADDED: Edit Button */}
+                             <button onClick={() => handleOpenEditCanteenItem(item)} className="p-1.5 text-slate-400 hover:text-blue-500 hover:bg-blue-50 rounded-lg transition-colors"><Pencil size={16}/></button>
                              <button onClick={() => handleDeleteCanteenItem(item.id)} className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"><Trash2 size={16}/></button>
                           </div>
                        </div>
                        <div className="flex justify-between items-end mt-2">
-                          <span className="font-bold text-slate-900 dark:text-white">₹{item.price}</span>
-                          <button 
-                             onClick={() => handleToggleCanteenAvailability(item)}
-                             className={`text-[10px] font-bold px-2 py-1 rounded-md border ${item.isAvailable ? 'bg-green-50 text-green-600 border-green-200' : 'bg-slate-50 text-slate-500 border-slate-200'}`}
-                          >
-                             {item.isAvailable ? 'AVAILABLE' : 'SOLD OUT'}
-                          </button>
+                          <span className="text-sm font-medium text-slate-700 dark:text-slate-300">
+                             {item.price}
+                          </span>
                        </div>
                     </div>
                  </div>
-             ))}
-             {canteenMenu.length === 0 && (
-                 <div className="col-span-full text-center py-10 border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-xl">
-                    <p className="text-slate-400">No items in canteen menu.</p>
-                 </div>
-             )}
+              ))}
            </div>
         </div>
         )}
