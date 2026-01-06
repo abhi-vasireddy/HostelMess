@@ -63,7 +63,7 @@ function App() {
         <Routes>
           <Route 
             path="/login" 
-            element={!user ? <Login /> : <Navigate to={user.role === UserRole.ADMIN ? "/admin" : "/student"} />} 
+            element={!user ? <Login /> : <Navigate to={(user.role === UserRole.ADMIN || user.role === UserRole.CANTEEN_STAFF) ? "/admin" : "/student"} />} 
           />
           <Route 
             path="/student" 
@@ -80,9 +80,11 @@ function App() {
           <Route 
             path="/admin" 
             element={
-              user && user.role === UserRole.ADMIN ? (
+              // 👇 Allow both ADMIN and CANTEEN_STAFF
+              user && (user.role === UserRole.ADMIN || user.role === UserRole.CANTEEN_STAFF) ? (
                 <Layout user={user} onLogout={logout}>
-                   <AdminDashboard />
+                   {/* 👇 Pass the 'user' prop so Dashboard knows who is logged in */}
+                   <AdminDashboard user={user} />
                 </Layout>
               ) : (
                 <Navigate to="/login" />

@@ -3,6 +3,7 @@ import { User, DailyMenu, Announcement, AnnouncementType, Feedback, AppSettings,
 import { MockDB } from '../services/mockDb';
 import { generateAIInsights } from '../services/geminiService';
 import { Button } from '../components/Button';
+import { useAuth } from '../App';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
 import { AlertTriangle, TrendingUp, Users, Menu as MenuIcon, Sparkles, Trash2, Plus, CheckCircle2, Pencil, X, MessageSquare, Search, UtensilsCrossed, Calendar, Upload, CheckSquare, StickyNote, Clock, Check, Filter, Info, Download, Lightbulb, ChevronDown, GripVertical, Bold, Italic, List, Video, Lock, Settings } from 'lucide-react';
 import { getCurrentDayName, getTodayDateString } from '../services/timeUtils';
@@ -13,7 +14,10 @@ import Lottie from 'lottie-react';
 import loadingAnimation from '../assets/animations/loading.json';
 
 export const AdminDashboard: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'menu' | 'users' | 'announcements' | 'feedback' | 'canteen' | 'todos' | 'notes' | 'suggestions'>('dashboard');
+  const { user } = useAuth();
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'menu' | 'users' | 'announcements' | 'feedback' | 'canteen' | 'todos' | 'notes' | 'suggestions'>(
+    user?.role === UserRole.CANTEEN_STAFF ? 'canteen' : 'dashboard'
+  );
   
   // --- LOADING & ERROR STATES ---
   const [loading, setLoading] = useState(true);
@@ -600,10 +604,11 @@ export const AdminDashboard: React.FC = () => {
   return (
     <div className="flex flex-col md:flex-row gap-8">
       {/* Sidebar - Collapsible on Mobile, Sticky on Desktop */}
-      <aside className="w-full md:w-64 flex-shrink-0 md:sticky md:top-24 h-fit z-40">
+      {/* 👇 UPDATED: Added 'sticky top-2' so it stays fixed while scrolling on mobile */}
+      <aside className="w-full md:w-64 flex-shrink-0 sticky top-2 md:top-24 h-fit z-40 transition-all duration-300">
         
         {/* Mobile Toggle Header (Visible only on mobile) */}
-        <div className="md:hidden flex justify-between items-center bg-white dark:bg-slate-900 p-4 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 mb-4">
+        <div className="md:hidden flex justify-between items-center bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl p-4 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 mb-4 transition-all duration-300">
             <span className="font-bold text-slate-800 dark:text-white flex items-center gap-2">
                 <Settings className="w-5 h-5 text-orange-500"/> Admin Panel
             </span>
@@ -616,11 +621,13 @@ export const AdminDashboard: React.FC = () => {
         </div>
 
         {/* Sidebar Content (Hidden on mobile unless open) */}
-        <div className={`${isSidebarOpen ? 'block' : 'hidden'} md:block space-y-6 animate-in slide-in-from-top-4 duration-300 md:animate-none`}>
+        {/* 👇 UPDATED: Added max-height & overflow handling for scrollable menu on small screens */}
+        <div className={`${isSidebarOpen ? 'block' : 'hidden'} md:block space-y-6 animate-in slide-in-from-top-4 duration-300 md:animate-none max-h-[80vh] overflow-y-auto md:max-h-none md:overflow-visible custom-scrollbar`}>
             
             <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 p-3 overflow-hidden">
               <nav className="space-y-1">
-                {[
+                {/* 👇 CHANGED: Filter menu items based on Role */}
+                  {[
                   { id: 'dashboard', icon: TrendingUp, label: 'Dashboard' },
                   { id: 'menu', icon: MenuIcon, label: 'Menu Mgmt' },
                   { id: 'canteen', icon: UtensilsCrossed, label: 'Canteen' },
@@ -630,36 +637,44 @@ export const AdminDashboard: React.FC = () => {
                   { id: 'announcements', icon: AlertTriangle, label: 'Announcements' },
                   { id: 'todos', icon: CheckSquare, label: 'To-Do List' },
                   { id: 'notes', icon: StickyNote, label: 'Notes' },
-                ].map(item => (
+                  ].filter(item => {
+                  // If user is Canteen Staff, ONLY show the Canteen tab
+                  if (user?.role === UserRole.CANTEEN_STAFF) {
+                     return item.id === 'canteen';
+                  }
+                  // Otherwise (Admin), show everything
+                  return true;
+                  }).map(item => (
                   <button 
-                    key={item.id}
-                    onClick={() => {
+                     key={item.id}
+                     onClick={() => {
                         setActiveTab(item.id as any);
-                        setIsSidebarOpen(false); // Close sidebar on mobile when clicked
-                    }} 
-                    className={`flex items-center gap-3 px-4 py-3 w-full text-left rounded-xl transition-all ${
-                      activeTab === item.id 
-                      ? 'bg-orange-50 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300 font-semibold' 
-                      : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800'
-                    }`}
+                        setIsSidebarOpen(false);
+                     }} 
+                     className={`flex items-center gap-3 px-4 py-3 w-full text-left rounded-xl transition-all ${
+                        activeTab === item.id 
+                        ? 'bg-orange-50 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300 font-semibold' 
+                        : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800'
+                     }`}
                   >
-                    <item.icon size={18} /> {item.label}
+                     <item.icon size={18} /> {item.label}
                   </button>
-                ))}
+                  ))}
               </nav>
             </div>
             
             <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 p-5">
               <h4 className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-4">Quick Settings</h4>
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-medium text-slate-700 dark:text-slate-300">Canteen Access</span>
-                <button 
-                  onClick={toggleCanteen}
-                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-300 ${settings.canteenEnabled ? 'bg-emerald-500' : 'bg-slate-200 dark:bg-slate-700'}`}
-                >
-                  <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow-sm transition-transform duration-300 ${settings.canteenEnabled ? 'translate-x-6' : 'translate-x-1'}`} />
-                </button>
-              </div>
+              {/* 👇 NEW: Splash Video Toggle moved here */}
+               <div className="flex items-center justify-between mt-4">
+                  <span className="text-sm font-medium text-slate-700 dark:text-slate-300">Splash Video</span>
+                  <button 
+                     onClick={() => handleUpdateSettings({ ...settings, splashVideoEnabled: !settings.splashVideoEnabled })}
+                     className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-300 ${settings.splashVideoEnabled ? 'bg-purple-500' : 'bg-slate-200 dark:bg-slate-700'}`}
+                  >
+                     <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow-sm transition-transform duration-300 ${settings.splashVideoEnabled ? 'translate-x-6' : 'translate-x-1'}`} />
+                  </button>
+               </div>
             </div>
         </div>
       </aside>
@@ -1619,27 +1634,6 @@ export const AdminDashboard: React.FC = () => {
              </label>
            </div>
 
-           {/* --- 2. SPLASH VIDEO TOGGLE --- */}
-           <div className="flex items-center justify-between p-4 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
-             <div>
-                 <h4 className="font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                    <Video size={18} className="text-purple-500" /> Splash Video
-                 </h4>
-                 <p className="text-sm text-slate-500 dark:text-slate-400">
-                    Play the intro/celebration video on app launch.
-                 </p>
-             </div>
-             <label className="relative inline-flex items-center cursor-pointer">
-                 <input 
-                   type="checkbox" 
-                   className="sr-only peer"
-                   checked={settings.splashVideoEnabled || false} 
-                   onChange={(e) => handleUpdateSettings({ ...settings, splashVideoEnabled: e.target.checked })}
-                 />
-                 <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-purple-300 dark:peer-focus:ring-purple-800 rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-purple-600"></div>
-             </label>
-           </div>
-
            {/* --- 3. CANTEEN ITEMS HEADER --- */}
            <div className="flex justify-between items-center pt-4">
              <h3 className="text-xl font-bold text-slate-800 dark:text-white">Canteen Menu</h3>
@@ -1930,6 +1924,7 @@ export const AdminDashboard: React.FC = () => {
                         >
                            <option value="STUDENT">Student</option>
                            <option value="ADMIN">Admin</option>
+                           <option value="CANTEEN_STAFF">Canteen Staff</option> {/* 👈 Add this */}
                         </select>
                      </div>
                   </div>

@@ -665,27 +665,48 @@ export const StudentDashboard: React.FC<Props> = ({ user }) => {
                 {/* ITEMS GRID */}
                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-6">
                    {canteenMenu
-                     .filter(item => item.isAvailable)
                      .filter(item => item.name.toLowerCase().includes(canteenSearch.toLowerCase()))
                      .filter(item => canteenCategory === 'All' || item.category === canteenCategory)
                      .sort((a, b) => {
+                        // 👇 NEW: Primary Sort - Availability (Available first, Out of Stock last)
+                        if (a.isAvailable && !b.isAvailable) return -1;
+                        if (!a.isAvailable && b.isAvailable) return 1;
+
+                        // Secondary Sort - Price or Default
                         if (canteenSort === 'price-low') return a.price - b.price;
                         if (canteenSort === 'price-high') return b.price - a.price;
                         return 0;
                      })
                      .map(item => (
-                      <div key={item.id} className="bg-white dark:bg-slate-900 p-2 md:p-3 rounded-2xl md:rounded-3xl shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all duration-300 border border-slate-100 dark:border-slate-800 group">
+                      <div key={item.id} className={`bg-white dark:bg-slate-900 p-2 md:p-3 rounded-2xl md:rounded-3xl shadow-lg transition-all duration-300 border border-slate-100 dark:border-slate-800 group ${item.isAvailable ? 'hover:shadow-xl hover:-translate-y-1' : 'grayscale opacity-80'}`}>
                          <div className="relative overflow-hidden rounded-xl md:rounded-2xl aspect-square mb-2 md:mb-3">
                             <img src={item.image} alt={item.name} className="w-full h-full object-cover transform group-hover:scale-110 transition-transform duration-700" />
+                            
                             <div className="absolute top-1 right-1 md:top-2 md:right-2 bg-black/60 backdrop-blur-md text-white px-2 py-0.5 md:px-3 md:py-1 rounded-full text-[10px] md:text-xs font-bold">
                                {item.category}
                             </div>
+
+                            {!item.isAvailable && (
+                                <div className="absolute inset-0 bg-black/30 backdrop-grayscale flex items-center justify-center z-10">
+                                    <span className="bg-black/80 text-white text-[10px] md:text-xs font-bold px-3 py-1 rounded-full border border-white/20 backdrop-blur-md shadow-xl uppercase tracking-wider">
+                                        Out of Stock
+                                    </span>
+                                </div>
+                            )}
                          </div>
                          <div>
                             <h4 className="font-bold text-sm md:text-lg text-slate-900 dark:text-white mb-1 truncate">{item.name}</h4>
                             <div className="flex items-center justify-between mt-1 md:mt-3">
                                <p className="text-base md:text-2xl font-black text-orange-600 dark:text-orange-400">₹{item.price}</p>
-                               <button className="w-8 h-8 md:w-10 md:h-10 rounded-full bg-slate-900 dark:bg-white text-white dark:text-slate-900 flex items-center justify-center hover:bg-orange-600 dark:hover:bg-orange-400 transition-colors">
+                               
+                               <button 
+                                 disabled={!item.isAvailable}
+                                 className={`w-8 h-8 md:w-10 md:h-10 rounded-full flex items-center justify-center transition-colors ${
+                                   item.isAvailable 
+                                     ? 'bg-slate-900 dark:bg-white text-white dark:text-slate-900 hover:bg-orange-600 dark:hover:bg-orange-400' 
+                                     : 'bg-slate-200 dark:bg-slate-700 text-slate-400 cursor-not-allowed'
+                                 }`}
+                               >
                                   <UtensilsCrossed size={14} className="md:w-[18px] md:h-[18px]" />
                                </button>
                             </div>
@@ -694,7 +715,6 @@ export const StudentDashboard: React.FC<Props> = ({ user }) => {
                    ))}
                    
                    {canteenMenu
-                     .filter(item => item.isAvailable)
                      .filter(item => item.name.toLowerCase().includes(canteenSearch.toLowerCase()))
                      .filter(item => canteenCategory === 'All' || item.category === canteenCategory)
                      .length === 0 && (
