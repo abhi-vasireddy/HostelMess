@@ -32,6 +32,7 @@ export const AdminDashboard: React.FC = () => {
 
   // UI States
   const [showAddCanteenModal, setShowAddCanteenModal] = useState(false);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false); // 👈 ADD THIS
   const [aiInsights, setAiInsights] = useState<{summary: string, suggestions: string[]} | null>(null);
   const [aiLoading, setAiLoading] = useState(false);
   const [newAnnouncement, setNewAnnouncement] = useState({ title: '', message: '', type: AnnouncementType.INFO, expiresOn: '' });
@@ -598,50 +599,68 @@ export const AdminDashboard: React.FC = () => {
   // --- RENDER: MAIN DASHBOARD ---
   return (
     <div className="flex flex-col md:flex-row gap-8">
-      {/* Sidebar - Made Sticky */}
-      <aside className="w-full md:w-64 flex-shrink-0 space-y-8 md:sticky md:top-24 h-fit">
+      {/* Sidebar - Collapsible on Mobile, Sticky on Desktop */}
+      <aside className="w-full md:w-64 flex-shrink-0 md:sticky md:top-24 h-fit z-40">
         
-        {/* REVERTED HEADER - No Logo, Simple Text */}
-
-        <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 p-3 overflow-hidden">
-          <nav className="space-y-1">
-            {[
-              { id: 'dashboard', icon: TrendingUp, label: 'Dashboard' },
-              { id: 'menu', icon: MenuIcon, label: 'Menu Mgmt' },
-              { id: 'canteen', icon: UtensilsCrossed, label: 'Canteen' },
-              { id: 'users', icon: Users, label: 'Users' },
-              { id: 'feedback', icon: MessageSquare, label: 'Feedback' },
-              { id: 'suggestions', icon: Lightbulb, label: 'Suggestions' },
-              { id: 'announcements', icon: AlertTriangle, label: 'Announcements' },
-              { id: 'todos', icon: CheckSquare, label: 'To-Do List' },
-              { id: 'notes', icon: StickyNote, label: 'Notes' },
-            ].map(item => (
-              <button 
-                key={item.id}
-                onClick={() => setActiveTab(item.id as any)} 
-                className={`flex items-center gap-3 px-4 py-3 w-full text-left rounded-xl transition-all ${
-                  activeTab === item.id 
-                  ? 'bg-orange-50 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300 font-semibold' 
-                  : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800'
-                }`}
-              >
-                <item.icon size={18} /> {item.label}
-              </button>
-            ))}
-          </nav>
-        </div>
-        
-        <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 p-5">
-          <h4 className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-4">Quick Settings</h4>
-          <div className="flex items-center justify-between">
-            <span className="text-sm font-medium text-slate-700 dark:text-slate-300">Canteen Access</span>
+        {/* Mobile Toggle Header (Visible only on mobile) */}
+        <div className="md:hidden flex justify-between items-center bg-white dark:bg-slate-900 p-4 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 mb-4">
+            <span className="font-bold text-slate-800 dark:text-white flex items-center gap-2">
+                <Settings className="w-5 h-5 text-orange-500"/> Admin Panel
+            </span>
             <button 
-              onClick={toggleCanteen}
-              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-300 ${settings.canteenEnabled ? 'bg-emerald-500' : 'bg-slate-200 dark:bg-slate-700'}`}
+                onClick={() => setIsSidebarOpen(!isSidebarOpen)} 
+                className="p-2 bg-slate-100 dark:bg-slate-800 rounded-lg text-slate-600 dark:text-slate-300 active:scale-95 transition-transform"
             >
-              <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow-sm transition-transform duration-300 ${settings.canteenEnabled ? 'translate-x-6' : 'translate-x-1'}`} />
+                {isSidebarOpen ? <X size={20}/> : <MenuIcon size={20}/>}
             </button>
-          </div>
+        </div>
+
+        {/* Sidebar Content (Hidden on mobile unless open) */}
+        <div className={`${isSidebarOpen ? 'block' : 'hidden'} md:block space-y-6 animate-in slide-in-from-top-4 duration-300 md:animate-none`}>
+            
+            <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 p-3 overflow-hidden">
+              <nav className="space-y-1">
+                {[
+                  { id: 'dashboard', icon: TrendingUp, label: 'Dashboard' },
+                  { id: 'menu', icon: MenuIcon, label: 'Menu Mgmt' },
+                  { id: 'canteen', icon: UtensilsCrossed, label: 'Canteen' },
+                  { id: 'users', icon: Users, label: 'Users' },
+                  { id: 'feedback', icon: MessageSquare, label: 'Feedback' },
+                  { id: 'suggestions', icon: Lightbulb, label: 'Suggestions' },
+                  { id: 'announcements', icon: AlertTriangle, label: 'Announcements' },
+                  { id: 'todos', icon: CheckSquare, label: 'To-Do List' },
+                  { id: 'notes', icon: StickyNote, label: 'Notes' },
+                ].map(item => (
+                  <button 
+                    key={item.id}
+                    onClick={() => {
+                        setActiveTab(item.id as any);
+                        setIsSidebarOpen(false); // Close sidebar on mobile when clicked
+                    }} 
+                    className={`flex items-center gap-3 px-4 py-3 w-full text-left rounded-xl transition-all ${
+                      activeTab === item.id 
+                      ? 'bg-orange-50 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300 font-semibold' 
+                      : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800'
+                    }`}
+                  >
+                    <item.icon size={18} /> {item.label}
+                  </button>
+                ))}
+              </nav>
+            </div>
+            
+            <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 p-5">
+              <h4 className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-4">Quick Settings</h4>
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium text-slate-700 dark:text-slate-300">Canteen Access</span>
+                <button 
+                  onClick={toggleCanteen}
+                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-300 ${settings.canteenEnabled ? 'bg-emerald-500' : 'bg-slate-200 dark:bg-slate-700'}`}
+                >
+                  <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow-sm transition-transform duration-300 ${settings.canteenEnabled ? 'translate-x-6' : 'translate-x-1'}`} />
+                </button>
+              </div>
+            </div>
         </div>
       </aside>
 
