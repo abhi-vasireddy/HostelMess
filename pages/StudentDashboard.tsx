@@ -4,7 +4,8 @@ import { MockDB } from '../services/mockDb';
 import { getCurrentDayName, isFeedbackUnlocked, getTodayDateString } from '../services/timeUtils';
 import { Button } from '../components/Button';
 import { LottiePlayer } from '../components/LottiePlayer'; 
-import { Star, MessageSquare, AlertCircle, UtensilsCrossed, Calendar, CheckCircle2, X, Info, AlertTriangle } from 'lucide-react';
+
+import { Star, MessageSquare, AlertCircle, UtensilsCrossed, Calendar, CheckCircle2, X, Info, AlertTriangle, Search, Filter} from 'lucide-react';
 import Lottie from 'lottie-react';
 import loadingAnimation from '../assets/animations/loading.json';
 
@@ -24,6 +25,11 @@ export const StudentDashboard: React.FC<Props> = ({ user }) => {
   const [selectedDay, setSelectedDay] = useState<string>('Monday'); // Default to Monday if helper fails
   const [settings, setSettings] = useState<AppSettings>({ canteenEnabled: false, splashVideoEnabled: false });
   const [canteenMenu, setCanteenMenu] = useState<CanteenItem[]>([]);
+
+  // Canteen Filter States
+  const [canteenSearch, setCanteenSearch] = useState('');
+  const [canteenCategory, setCanteenCategory] = useState('All');
+  const [canteenSort, setCanteenSort] = useState<'default' | 'price-low' | 'price-high'>('default');
   
   // Feedback States
   const [myFeedbacks, setMyFeedbacks] = useState<Feedback[]>([]);
@@ -313,67 +319,72 @@ export const StudentDashboard: React.FC<Props> = ({ user }) => {
   return (
     <div className="space-y-8 pb-32 animate-in fade-in duration-700 bg-gradient-to-b from-orange-50/30 via-transparent to-transparent dark:from-slate-900 dark:via-slate-950 dark:to-slate-950 min-h-screen">
       
-      {/* Enhanced Greeting Section */}
-      <div className="relative pt-4">
-        <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 z-10 relative">
-          <div>
-            <h2 className="text-4xl md:text-5xl font-extrabold text-slate-800 dark:text-white tracking-tight drop-shadow-sm">
-              <span className="bg-clip-text text-transparent bg-gradient-to-r from-slate-700 to-slate-500 dark:from-slate-200 dark:to-slate-400">
-                {getGreeting()},
-              </span> 
-              <br className="md:hidden" />
-              <span className="bg-clip-text text-transparent bg-gradient-to-r from-orange-500 to-amber-500 ml-2 md:ml-3">
-                {firstName}
-              </span>
-            </h2>
-            <p className="text-slate-500 dark:text-slate-400 mt-2 font-medium flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
-              The kitchen is serving delicious meals today.
-            </p>
-          </div>
-          <div className="text-right hidden md:block bg-white/60 dark:bg-slate-800/60 backdrop-blur-md px-4 py-2 rounded-2xl border border-white/50 dark:border-slate-700 shadow-sm">
-             <p className="text-sm font-bold text-slate-600 dark:text-slate-300 uppercase tracking-widest">
-               {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
-             </p>
-          </div>
-        </div>
-      </div>
-
-      {/* Modern Announcements */}
-      {announcements.length > 0 && (
-        <div className="grid gap-4">
-            {announcements.map(a => (
-              <div key={a.id} className={`
-                relative overflow-hidden p-5 rounded-2xl border flex items-start gap-4 shadow-lg transition-transform hover:scale-[1.01] duration-300
-                ${a.type === AnnouncementType.WARNING 
-                  ? 'bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-950/40 dark:to-orange-950/40 border-amber-200/50 dark:border-amber-800/50' 
-                  : a.type === AnnouncementType.SUCCESS
-                  ? 'bg-gradient-to-br from-emerald-50 to-green-50 dark:from-emerald-950/40 dark:to-green-950/40 border-emerald-200/50 dark:border-emerald-800/50'
-                  : 'bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950/40 dark:to-indigo-950/40 border-blue-200/50 dark:border-blue-800/50'}
-              `}>
-                <div className={`
-                  p-3 rounded-xl shadow-inner
-                  ${a.type === AnnouncementType.WARNING ? 'bg-amber-100 dark:bg-amber-900/50 text-amber-600' :
-                    a.type === AnnouncementType.SUCCESS ? 'bg-emerald-100 dark:bg-emerald-900/50 text-emerald-600' :
-                    'bg-blue-100 dark:bg-blue-900/50 text-blue-600'}
-                `}>
-                  {a.type === AnnouncementType.WARNING ? <AlertTriangle className="w-6 h-6" /> : 
-                   a.type === AnnouncementType.SUCCESS ? <CheckCircle2 className="w-6 h-6" /> : 
-                   <Info className="w-6 h-6" />}
-                </div>
-                <div className="flex-1 z-10">
-                  <h4 className={`font-bold text-base mb-1
-                     ${a.type === AnnouncementType.WARNING ? 'text-amber-900 dark:text-amber-100' :
-                       a.type === AnnouncementType.SUCCESS ? 'text-emerald-900 dark:text-emerald-100' :
-                       'text-blue-900 dark:text-blue-100'}
-                  `}>{a.title}</h4>
-                  <div className="text-slate-600 dark:text-slate-300 text-sm leading-relaxed">
-                    <FormattedText text={a.message} />
-                  </div>
-                </div>
+      {/* 🟢 Greeting & Announcements: ONLY Visible on 'menu' Tab */}
+      {activeTab === 'menu' && (
+        <>
+          {/* Enhanced Greeting Section */}
+          <div className="relative pt-4">
+            <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 z-10 relative">
+              <div>
+                <h2 className="text-4xl md:text-5xl font-extrabold text-slate-800 dark:text-white tracking-tight drop-shadow-sm">
+                  <span className="bg-clip-text text-transparent bg-gradient-to-r from-slate-700 to-slate-500 dark:from-slate-200 dark:to-slate-400">
+                    {getGreeting()},
+                  </span> 
+                  <br className="md:hidden" />
+                  <span className="bg-clip-text text-transparent bg-gradient-to-r from-orange-500 to-amber-500 ml-2 md:ml-3">
+                    {firstName}
+                  </span>
+                </h2>
+                <p className="text-slate-500 dark:text-slate-400 mt-2 font-medium flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
+                  The kitchen is serving delicious meals today.
+                </p>
               </div>
-            ))}
-        </div>
+              <div className="text-right hidden md:block bg-white/60 dark:bg-slate-800/60 backdrop-blur-md px-4 py-2 rounded-2xl border border-white/50 dark:border-slate-700 shadow-sm">
+                 <p className="text-sm font-bold text-slate-600 dark:text-slate-300 uppercase tracking-widest">
+                   {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
+                 </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Modern Announcements */}
+          {announcements.length > 0 && (
+            <div className="grid gap-4">
+                {announcements.map(a => (
+                  <div key={a.id} className={`
+                    relative overflow-hidden p-5 rounded-2xl border flex items-start gap-4 shadow-lg transition-transform hover:scale-[1.01] duration-300
+                    ${a.type === AnnouncementType.WARNING 
+                      ? 'bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-950/40 dark:to-orange-950/40 border-amber-200/50 dark:border-amber-800/50' 
+                      : a.type === AnnouncementType.SUCCESS
+                      ? 'bg-gradient-to-br from-emerald-50 to-green-50 dark:from-emerald-950/40 dark:to-green-950/40 border-emerald-200/50 dark:border-emerald-800/50'
+                      : 'bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950/40 dark:to-indigo-950/40 border-blue-200/50 dark:border-blue-800/50'}
+                  `}>
+                    <div className={`
+                      p-3 rounded-xl shadow-inner
+                      ${a.type === AnnouncementType.WARNING ? 'bg-amber-100 dark:bg-amber-900/50 text-amber-600' :
+                        a.type === AnnouncementType.SUCCESS ? 'bg-emerald-100 dark:bg-emerald-900/50 text-emerald-600' :
+                        'bg-blue-100 dark:bg-blue-900/50 text-blue-600'}
+                    `}>
+                      {a.type === AnnouncementType.WARNING ? <AlertTriangle className="w-6 h-6" /> : 
+                       a.type === AnnouncementType.SUCCESS ? <CheckCircle2 className="w-6 h-6" /> : 
+                       <Info className="w-6 h-6" />}
+                    </div>
+                    <div className="flex-1 z-10">
+                      <h4 className={`font-bold text-base mb-1
+                         ${a.type === AnnouncementType.WARNING ? 'text-amber-900 dark:text-amber-100' :
+                           a.type === AnnouncementType.SUCCESS ? 'text-emerald-900 dark:text-emerald-100' :
+                           'text-blue-900 dark:text-blue-100'}
+                      `}>{a.title}</h4>
+                      <div className="text-slate-600 dark:text-slate-300 text-sm leading-relaxed">
+                        <FormattedText text={a.message} />
+                      </div>
+                    </div>
+                  </div>
+                ))}
+            </div>
+          )}
+        </>
       )}
 
       {/* Main Content Area */}
@@ -388,7 +399,8 @@ export const StudentDashboard: React.FC<Props> = ({ user }) => {
                    key={day}
                    onClick={() => setSelectedDay(day)}
                    className={`
-                     px-6 py-3 rounded-2xl text-sm font-bold transition-all duration-300 whitespace-nowrap relative overflow-hidden group
+                     /* 👇 FIXED: Added flex-shrink-0 to prevent squishing, adjusted mobile padding */
+                     flex-shrink-0 px-4 py-2.5 md:px-6 md:py-3 rounded-2xl text-sm font-bold transition-all duration-300 whitespace-nowrap relative overflow-hidden group
                      ${selectedDay === day 
                        ? 'text-white shadow-lg shadow-orange-500/30 scale-105' 
                        : 'text-slate-500 dark:text-slate-400 hover:bg-orange-50 dark:hover:bg-slate-800'}
@@ -596,31 +608,83 @@ export const StudentDashboard: React.FC<Props> = ({ user }) => {
         <div className="flex flex-col items-center justify-center py-6">
            {settings.canteenEnabled ? (
              <div className="max-w-5xl w-full">
-                <div className="text-center mb-12">
+                <div className="text-center mb-8">
                   <h3 className="text-4xl font-black text-slate-900 dark:text-white mb-3">Canteen</h3>
                   <div className="h-1 w-20 bg-orange-500 mx-auto rounded-full"></div>
                   <p className="text-slate-500 dark:text-slate-400 mt-4">Order extras, drinks, and special treats.</p>
                 </div>
                 
-                {/* UPDATED: 2 columns on mobile, 4 on desktop. Reduced gap. */}
+                {/* SEARCH, FILTER & SORT CONTROLS */}
+                <div className="mb-8 flex flex-col md:flex-row gap-4 justify-between bg-white dark:bg-slate-900 p-4 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800">
+                  {/* Search */}
+                  <div className="relative flex-1">
+                    <Search className="absolute left-3 top-3 text-slate-400 w-5 h-5" />
+                    <input 
+                      type="text" 
+                      placeholder="Search items..." 
+                      className="w-full pl-10 pr-4 py-2.5 bg-slate-50 dark:bg-slate-950 border-none rounded-xl text-slate-900 dark:text-white focus:ring-2 focus:ring-orange-500 outline-none transition-all"
+                      value={canteenSearch}
+                      onChange={(e) => setCanteenSearch(e.target.value)}
+                    />
+                  </div>
+
+                  <div className="flex gap-3 overflow-x-auto pb-1 md:pb-0 no-scrollbar">
+                    {/* Category Filter */}
+                    <div className="relative min-w-[140px]">
+                      <select 
+                        className="w-full pl-4 pr-10 py-2.5 bg-slate-50 dark:bg-slate-950 border-none rounded-xl text-slate-700 dark:text-slate-200 font-medium focus:ring-2 focus:ring-orange-500 outline-none appearance-none cursor-pointer"
+                        value={canteenCategory}
+                        onChange={(e) => setCanteenCategory(e.target.value)}
+                      >
+                        <option value="All">All Categories</option>
+                        {Array.from(new Set(canteenMenu.map(i => i.category))).map(cat => (
+                          <option key={cat} value={cat}>{cat}</option>
+                        ))}
+                      </select>
+                      <Filter className="absolute right-3 top-3 text-slate-400 w-4 h-4 pointer-events-none"/>
+                    </div>
+
+                    {/* Sort Option */}
+                    <div className="relative min-w-[140px]">
+                      <select 
+                        className="w-full pl-4 pr-10 py-2.5 bg-slate-50 dark:bg-slate-950 border-none rounded-xl text-slate-700 dark:text-slate-200 font-medium focus:ring-2 focus:ring-orange-500 outline-none appearance-none cursor-pointer"
+                        value={canteenSort}
+                        onChange={(e) => setCanteenSort(e.target.value as 'default' | 'price-low' | 'price-high')}
+                      >
+                        <option value="default">Sort By</option>
+                        <option value="price-low">Price: Low to High</option>
+                        <option value="price-high">Price: High to Low</option>
+                      </select>
+                      <div className="absolute right-3 top-3 pointer-events-none text-slate-400">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m21 16-4 4-4-4"/><path d="M17 20V4"/><path d="m3 8 4-4 4 4"/><path d="M7 4v16"/></svg>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* ITEMS GRID */}
                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-6">
-                   {canteenMenu.filter(item => item.isAvailable).map(item => (
+                   {canteenMenu
+                     .filter(item => item.isAvailable)
+                     .filter(item => item.name.toLowerCase().includes(canteenSearch.toLowerCase()))
+                     .filter(item => canteenCategory === 'All' || item.category === canteenCategory)
+                     .sort((a, b) => {
+                        if (canteenSort === 'price-low') return a.price - b.price;
+                        if (canteenSort === 'price-high') return b.price - a.price;
+                        return 0;
+                     })
+                     .map(item => (
                       <div key={item.id} className="bg-white dark:bg-slate-900 p-2 md:p-3 rounded-2xl md:rounded-3xl shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all duration-300 border border-slate-100 dark:border-slate-800 group">
-                         {/* UPDATED: Compact image container */}
                          <div className="relative overflow-hidden rounded-xl md:rounded-2xl aspect-square mb-2 md:mb-3">
                             <img src={item.image} alt={item.name} className="w-full h-full object-cover transform group-hover:scale-110 transition-transform duration-700" />
-                            {/* UPDATED: Smaller category badge */}
                             <div className="absolute top-1 right-1 md:top-2 md:right-2 bg-black/60 backdrop-blur-md text-white px-2 py-0.5 md:px-3 md:py-1 rounded-full text-[10px] md:text-xs font-bold">
                                {item.category}
                             </div>
                          </div>
                          <div>
-                            {/* UPDATED: Responsive text sizes */}
                             <h4 className="font-bold text-sm md:text-lg text-slate-900 dark:text-white mb-1 truncate">{item.name}</h4>
                             <div className="flex items-center justify-between mt-1 md:mt-3">
-                               {/* UPDATED: Smaller price font */}
                                <p className="text-base md:text-2xl font-black text-orange-600 dark:text-orange-400">₹{item.price}</p>
-                               {/* UPDATED: Smaller button size */}
                                <button className="w-8 h-8 md:w-10 md:h-10 rounded-full bg-slate-900 dark:bg-white text-white dark:text-slate-900 flex items-center justify-center hover:bg-orange-600 dark:hover:bg-orange-400 transition-colors">
                                   <UtensilsCrossed size={14} className="md:w-[18px] md:h-[18px]" />
                                </button>
@@ -628,9 +692,15 @@ export const StudentDashboard: React.FC<Props> = ({ user }) => {
                          </div>
                       </div>
                    ))}
-                   {canteenMenu.filter(item => item.isAvailable).length === 0 && (
+                   
+                   {canteenMenu
+                     .filter(item => item.isAvailable)
+                     .filter(item => item.name.toLowerCase().includes(canteenSearch.toLowerCase()))
+                     .filter(item => canteenCategory === 'All' || item.category === canteenCategory)
+                     .length === 0 && (
                       <div className="col-span-full text-center py-16">
-                        <p className="text-slate-400 text-lg font-light">Stocks are empty right now.</p>
+                        <Search className="w-12 h-12 text-slate-300 mx-auto mb-3"/>
+                        <p className="text-slate-400 text-lg font-light">No items match your search.</p>
                       </div>
                    )}
                 </div>
