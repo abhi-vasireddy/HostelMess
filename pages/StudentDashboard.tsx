@@ -21,7 +21,7 @@ export const StudentDashboard: React.FC<Props> = ({ user }) => {
   // Data States
   const [menu, setMenu] = useState<DailyMenu[]>([]);
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
-  const [selectedDay, setSelectedDay] = useState<string>(getCurrentDayName());
+  const [selectedDay, setSelectedDay] = useState<string>('Monday'); // Default to Monday if helper fails
   const [settings, setSettings] = useState<AppSettings>({ canteenEnabled: false, splashVideoEnabled: false });
   const [canteenMenu, setCanteenMenu] = useState<CanteenItem[]>([]);
   
@@ -42,6 +42,16 @@ export const StudentDashboard: React.FC<Props> = ({ user }) => {
   
   const desktopVideoUrl = "https://files.catbox.moe/camisw.mp4";
   const mobileVideoUrl = "https://files.catbox.moe/zv8gqr.mp4";
+
+  // Safe Initialization of Day Name
+  useEffect(() => {
+    try {
+      const day = getCurrentDayName();
+      setSelectedDay(day);
+    } catch (e) {
+      console.warn("Could not get current day name, defaulting to Monday");
+    }
+  }, []);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -68,16 +78,27 @@ export const StudentDashboard: React.FC<Props> = ({ user }) => {
            setShowSplash(false);
         }
 
-        const today = getTodayDateString();
-        const userFeedbackHistory = (allF || [])
-          .filter(f => f.userId === user.uid)
-          .sort((a, b) => b.timestamp - a.timestamp);
+        // --- SAFE DATE & FEEDBACK PROCESSING ---
+        // On some mobiles, date functions might throw errors. We handle that here.
+        let today = new Date().toISOString().split('T')[0];
+        try {
+           today = getTodayDateString();
+        } catch (e) {
+           console.warn("Date utility failed, using fallback date.", e);
+        }
+
+        const safeAllF = Array.isArray(allF) ? allF : [];
+        const userFeedbackHistory = safeAllF
+          .filter(f => f && f.userId === user.uid)
+          .sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
         
         setMyFeedbacks(userFeedbackHistory);
 
         const myTodayFeedback = userFeedbackHistory.filter(f => f.date === today);
         const map: Record<string, boolean> = {};
-        myTodayFeedback.forEach(f => map[f.dishId] = true);
+        myTodayFeedback.forEach(f => {
+          if (f.dishId) map[f.dishId] = true;
+        });
         setFeedbackMap(map);
 
       } catch (err) {
@@ -104,34 +125,39 @@ export const StudentDashboard: React.FC<Props> = ({ user }) => {
       if (Notification.permission !== 'granted') return;
       if (!menu || menu.length === 0) return;
 
-      const hour = new Date().getHours();
-      const todayDate = getTodayDateString();
-      
-      let currentMeal: MealType | null = null;
-      if (hour >= 7 && hour < 10) currentMeal = MealType.BREAKFAST;
-      else if (hour >= 12 && hour < 15) currentMeal = MealType.LUNCH;
-      else if (hour >= 16 && hour < 18) currentMeal = MealType.SNACKS;
-      else if (hour >= 19 && hour < 22) currentMeal = MealType.DINNER;
+      try {
+        const hour = new Date().getHours();
+        let todayDate = new Date().toISOString().split('T')[0];
+        try { todayDate = getTodayDateString(); } catch (e) {}
+        
+        let currentMeal: MealType | null = null;
+        if (hour >= 7 && hour < 10) currentMeal = MealType.BREAKFAST;
+        else if (hour >= 12 && hour < 15) currentMeal = MealType.LUNCH;
+        else if (hour >= 16 && hour < 18) currentMeal = MealType.SNACKS;
+        else if (hour >= 19 && hour < 22) currentMeal = MealType.DINNER;
 
-      if (currentMeal && isFeedbackUnlocked(currentMeal)) {
-        const todayDayName = getCurrentDayName(); 
-        const todayMenu = menu.find(m => m.day === todayDayName);
-        if (todayMenu) {
-          const mealDishes = todayMenu[currentMeal] || [];
-          if (mealDishes.length > 0) {
-             const hasUnratedDishes = mealDishes.some(dish => !feedbackMap[dish.id]);
-             const notifKey = `notif-${todayDate}-${currentMeal}`;
-             const alreadySent = localStorage.getItem(notifKey);
+        if (currentMeal && isFeedbackUnlocked(currentMeal)) {
+          const todayDayName = getCurrentDayName(); 
+          const todayMenu = menu.find(m => m.day === todayDayName);
+          if (todayMenu) {
+            const mealDishes = todayMenu[currentMeal] || [];
+            if (mealDishes.length > 0) {
+               const hasUnratedDishes = mealDishes.some(dish => !feedbackMap[dish.id]);
+               const notifKey = `notif-${todayDate}-${currentMeal}`;
+               const alreadySent = localStorage.getItem(notifKey);
 
-             if (hasUnratedDishes && !alreadySent) {
-               new Notification(`Time for ${currentMeal}! 🍽️`, {
-                 body: `The menu is live. Rate your food now!`,
-                 icon: '/pwa-192x192.png'
-               });
-               localStorage.setItem(notifKey, 'true');
-             }
+               if (hasUnratedDishes && !alreadySent) {
+                 new Notification(`Time for ${currentMeal}! 🍽️`, {
+                   body: `The menu is live. Rate your food now!`,
+                   icon: '/pwa-192x192.png'
+                 });
+                 localStorage.setItem(notifKey, 'true');
+               }
+            }
           }
         }
+      } catch (e) {
+        console.error("Notification logic failed silently", e);
       }
     };
 
@@ -169,6 +195,9 @@ export const StudentDashboard: React.FC<Props> = ({ user }) => {
   const handleSubmitFeedback = async () => {
     if (!activeFeedbackDish) return;
     
+    let today = new Date().toISOString().split('T')[0];
+    try { today = getTodayDateString(); } catch(e) {}
+
     const feedback: Feedback = {
       id: Date.now().toString(),
       dishId: activeFeedbackDish.id,
@@ -178,7 +207,7 @@ export const StudentDashboard: React.FC<Props> = ({ user }) => {
       userName: user.displayName || 'Student',
       rating,
       comment,
-      date: getTodayDateString(),
+      date: today,
       timestamp: Date.now()
     };
 
@@ -205,7 +234,15 @@ export const StudentDashboard: React.FC<Props> = ({ user }) => {
   const firstName = user.displayName ? user.displayName.split(' ')[0] : 'Student';
   const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
   const currentDayMenu = menu.find(m => m.day === selectedDay);
-  const isToday = selectedDay === getCurrentDayName();
+  
+  // Safe helper for current day check
+  const isToday = (() => {
+    try {
+      return selectedDay === getCurrentDayName();
+    } catch {
+      return false;
+    }
+  })();
 
   const navItems = [
     { id: 'menu', label: 'Menu', icon: Calendar },
@@ -343,8 +380,8 @@ export const StudentDashboard: React.FC<Props> = ({ user }) => {
       <div className="min-h-[500px]">
       {activeTab === 'menu' && (
         <div className="space-y-8">
-           {/* Floating Glass Day Selector */}
-           <div className="sticky top-20 z-10 mx-auto max-w-full">
+           {/* Floating Glass Day Selector - Z-Index: 15 (Between content and header) */}
+           <div className="sticky top-20 z-[15] mx-auto max-w-full">
              <div className="bg-white/70 dark:bg-slate-900/70 backdrop-blur-xl border border-white/50 dark:border-slate-800 shadow-xl shadow-slate-200/40 dark:shadow-black/40 p-2 rounded-3xl overflow-x-auto pb-2 scrollbar-hide flex gap-2">
                {days.map(day => (
                  <button
@@ -411,7 +448,8 @@ export const StudentDashboard: React.FC<Props> = ({ user }) => {
                             <div className="relative group/img">
                                <div className="absolute inset-0 bg-orange-500 rounded-2xl blur opacity-0 group-hover/img:opacity-20 transition-opacity duration-500"></div>
                                <img src={dish.image} alt={dish.name} className="w-24 h-24 rounded-2xl object-cover shadow-md relative z-0 transform group-hover/img:scale-105 transition-transform duration-500" />
-                               <div className="absolute -top-2 -left-2 z-5">
+                               {/* FIX: Z-Index to 5 (lowest) so it slides under everything */}
+                               <div className="absolute -top-2 -left-2 z-[5]">
                                   {isDishVeg ? (
                                     <div className="w-6 h-6 rounded-full bg-white shadow-sm flex items-center justify-center border border-green-100">
                                       <div className="w-3 h-3 rounded-full bg-green-500 animate-pulse"></div>
