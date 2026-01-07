@@ -47,7 +47,8 @@ export const Layout: React.FC<LayoutProps> = ({ user, onLogout, children }) => {
     <div className="min-h-screen flex flex-col bg-orange-50 dark:bg-slate-950 transition-colors duration-200">
       {/* Import Font specifically for Layout if not global */}
       <style>
-        {`@import url('https://fonts.googleapis.com/css2?family=Pacifico&display=swap');`}
+        {/* 👇 Updated link to include Baloo 2 */}
+        {`@import url('https://fonts.googleapis.com/css2?family=Baloo+2:wght@400;500;600&family=Pacifico&display=swap');`}
       </style>
 
       <header className="bg-white dark:bg-slate-900 shadow-sm border-b border-orange-100 dark:border-slate-800 sticky top-0 z-20 transition-colors duration-200">
@@ -60,11 +61,11 @@ export const Layout: React.FC<LayoutProps> = ({ user, onLogout, children }) => {
                {/* UPDATED NAME AND FONT */}
                <h1 
                  className="text-2xl text-slate-900 dark:text-white leading-none mt-1"
-                 style={{ fontFamily: "'Pacifico', cursive", fontWeight: 400 }}
+                 style={{ fontFamily: "'Josefin Sans', sans-serif", fontWeight: 400 }}
                >
                  Mess Connect
                </h1>
-               <p style={{ fontFamily: "'Baloo 2', cursive", fontWeight: 25 }}>Mess Secretary : Indra Reddy</p>
+               <p className="text-xs text-slate-500 dark:text-slate-400" style={{ fontFamily: "'Baloo 2', cursive", fontWeight: 500 }}>Mess Secretary : Indra Reddy</p>
              </div>
           </div>
           
