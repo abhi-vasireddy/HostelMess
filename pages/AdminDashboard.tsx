@@ -867,6 +867,7 @@ export const AdminDashboard: React.FC = () => {
                             >
                               <option value={UserRole.STUDENT}>STUDENT</option>
                               <option value={UserRole.ADMIN}>ADMIN</option>
+                              <option value={UserRole.CANTEEN_STAFF}>CANTEEN STAFF</option> {/* 👈 Added missing option */}
                             </select>
                          </td>
                          <td className="px-6 py-4 whitespace-nowrap">
@@ -1649,23 +1650,38 @@ export const AdminDashboard: React.FC = () => {
                  <div key={item.id} className="bg-white dark:bg-slate-900 p-3 rounded-xl border border-slate-200 dark:border-slate-800 flex gap-4">
                     <img src={item.image} alt={item.name} className="w-16 h-16 rounded-lg object-cover bg-slate-100" />
                     <div className="flex-1">
-                       <div className="flex justify-between items-start">
-                          <div>
-                             <h4 className="font-bold text-slate-900 dark:text-white">{item.name}</h4>
-                             <p className="text-xs text-slate-500">{item.category}</p>
-                          </div>
-                          <div className="flex gap-1">
-                             {/* 👇 ADDED: Edit Button */}
-                             <button onClick={() => handleOpenEditCanteenItem(item)} className="p-1.5 text-slate-400 hover:text-blue-500 hover:bg-blue-50 rounded-lg transition-colors"><Pencil size={16}/></button>
-                             <button onClick={() => handleDeleteCanteenItem(item.id)} className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"><Trash2 size={16}/></button>
-                          </div>
-                       </div>
-                       <div className="flex justify-between items-end mt-2">
-                          <span className="text-sm font-medium text-slate-700 dark:text-slate-300">
-                             {item.price}
-                          </span>
-                       </div>
-                    </div>
+                        <div className="flex justify-between items-start">
+                           <div>
+                              <h4 className="font-bold text-slate-900 dark:text-white">{item.name}</h4>
+                              <p className="text-xs text-slate-500">{item.category}</p>
+                              {/* Moved price here for cleaner layout, or keep it below if you prefer */}
+                              <p className="text-sm font-bold text-slate-700 dark:text-slate-300 mt-2">
+                                 ₹{item.price}
+                              </p>
+                           </div>
+
+                           {/* Right Side: Buttons + Toggle Stacked */}
+                           <div className="flex flex-col items-end gap-3">
+                              
+                              {/* 1. Edit/Delete Buttons */}
+                              <div className="flex gap-1">
+                                 <button onClick={() => handleOpenEditCanteenItem(item)} className="p-1.5 text-slate-400 hover:text-blue-500 hover:bg-blue-50 rounded-lg transition-colors"><Pencil size={16}/></button>
+                                 <button onClick={() => handleDeleteCanteenItem(item.id)} className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"><Trash2 size={16}/></button>
+                              </div>
+
+                              {/* 2. Availability Toggle (Below buttons) */}
+                              <label className="relative inline-flex items-center cursor-pointer" title={item.isAvailable ? "Mark Unavailable" : "Mark Available"}>
+                                 <input 
+                                    type="checkbox" 
+                                    className="sr-only peer"
+                                    checked={item.isAvailable} 
+                                    onChange={() => handleToggleCanteenAvailability(item)}
+                                 />
+                                 <div className="w-9 h-5 bg-slate-200 peer-focus:outline-none rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all dark:border-gray-600 peer-checked:bg-emerald-500"></div>
+                              </label>
+                           </div>
+                        </div>
+                     </div>
                  </div>
               ))}
            </div>
@@ -1827,7 +1843,7 @@ export const AdminDashboard: React.FC = () => {
                         type="number"
                         className="w-1/2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-3 focus:ring-2 focus:ring-orange-500 outline-none dark:text-white"
                         placeholder="Price"
-                        value={editingCanteenItem.price}
+                        value={editingCanteenItem.price || ''}
                         onChange={e => setEditingCanteenItem({...editingCanteenItem, price: Number(e.target.value)})}
                      />
                      <select 
@@ -1847,16 +1863,6 @@ export const AdminDashboard: React.FC = () => {
                      value={editingCanteenItem.image}
                      onChange={e => setEditingCanteenItem({...editingCanteenItem, image: e.target.value})}
                   />
-                  <div className="flex items-center gap-2">
-                     <input 
-                        type="checkbox"
-                        id="isAvailable"
-                        checked={editingCanteenItem.isAvailable}
-                        onChange={e => setEditingCanteenItem({...editingCanteenItem, isAvailable: e.target.checked})}
-                        className="w-5 h-5 rounded text-orange-500 focus:ring-orange-500"
-                     />
-                     <label htmlFor="isAvailable" className="text-sm font-medium text-slate-700 dark:text-slate-300">Available for Order</label>
-                  </div>
                   <div className="flex gap-3 pt-2">
                      <Button variant="outline" fullWidth onClick={() => setIsCanteenModalOpen(false)}>Cancel</Button>
                      <Button fullWidth onClick={handleSaveCanteenItem}>Save</Button>

@@ -246,14 +246,11 @@ export const MockDB = {
      }
   },
 
-  // 👇 PASTE THIS INSIDE MockDB object
+  // ✅ FIXED CODE (Paste this instead)
   updateCanteenItem: async (updatedItem: CanteenItem): Promise<void> => {
-    const items = await MockDB.getCanteenMenu();
-    const index = items.findIndex(i => i.id === updatedItem.id);
-    if (index !== -1) {
-      items[index] = updatedItem;
-      localStorage.setItem('canteen_menu', JSON.stringify(items));
-    }
+    const { id, ...data } = updatedItem;
+    // Update the document directly in Firebase
+    await updateDoc(doc(db, 'canteen', id), data);
   },
 
   deleteCanteenItem: async (id: string): Promise<void> => {
