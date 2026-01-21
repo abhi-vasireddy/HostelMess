@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { User, DailyMenu, MealType, Announcement, Feedback, AppSettings, CanteenItem, AnnouncementType } from '../types';
 import { MockDB } from '../services/mockDb';
 import { getCurrentDayName, isFeedbackUnlocked, getTodayDateString } from '../services/timeUtils';
 import { Button } from '../components/Button';
 import { LottiePlayer } from '../components/LottiePlayer'; 
 
-import { Star, MessageSquare, AlertCircle, UtensilsCrossed, Calendar, CheckCircle2, X, Info, AlertTriangle, Search, Filter} from 'lucide-react';
+import { Star, MessageSquare, AlertCircle, UtensilsCrossed, Calendar, CheckCircle2, X, Info, AlertTriangle, Search, Filter, ArrowLeft } from 'lucide-react';
 import Lottie from 'lottie-react';
 import loadingAnimation from '../assets/animations/loading.json';
 
@@ -14,6 +15,8 @@ interface Props {
 }
 
 export const StudentDashboard: React.FC<Props> = ({ user }) => {
+  const navigate = useNavigate();
+
   const [activeTab, setActiveTab] = useState<'menu' | 'feedback' | 'suggestions' | 'canteen'>('menu');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
@@ -22,7 +25,7 @@ export const StudentDashboard: React.FC<Props> = ({ user }) => {
   // Data States
   const [menu, setMenu] = useState<DailyMenu[]>([]);
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
-  const [selectedDay, setSelectedDay] = useState<string>('Monday'); // Default to Monday if helper fails
+  const [selectedDay, setSelectedDay] = useState<string>('Monday'); 
   const [settings, setSettings] = useState<AppSettings>({ canteenEnabled: false, splashVideoEnabled: false });
   const [canteenMenu, setCanteenMenu] = useState<CanteenItem[]>([]);
 
@@ -84,8 +87,6 @@ export const StudentDashboard: React.FC<Props> = ({ user }) => {
            setShowSplash(false);
         }
 
-        // --- SAFE DATE & FEEDBACK PROCESSING ---
-        // On some mobiles, date functions might throw errors. We handle that here.
         let today = new Date().toISOString().split('T')[0];
         try {
            today = getTodayDateString();
@@ -241,7 +242,6 @@ export const StudentDashboard: React.FC<Props> = ({ user }) => {
   const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
   const currentDayMenu = menu.find(m => m.day === selectedDay);
   
-  // Safe helper for current day check
   const isToday = (() => {
     try {
       return selectedDay === getCurrentDayName();
@@ -288,7 +288,8 @@ export const StudentDashboard: React.FC<Props> = ({ user }) => {
         <div className="w-64 h-64 p-8 bg-white/50 dark:bg-slate-900/50 rounded-full backdrop-blur-xl shadow-2xl shadow-orange-500/10 animate-pulse">
            <Lottie animationData={loadingAnimation} loop={true} />
         </div>
-        <p className="text-orange-500/80 animate-pulse mt-8 font-bold tracking-widest uppercase text-sm">Preparing Menu...</p>
+        {/* 👇 UPDATED: Changed text to "Loading Menu..." */}
+        <p className="text-orange-500/80 animate-pulse mt-8 font-bold tracking-widest uppercase text-sm">Loading Menu...</p>
       </div>
     );
   }
@@ -296,10 +297,7 @@ export const StudentDashboard: React.FC<Props> = ({ user }) => {
   if (error) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-white dark:bg-slate-900 p-6 text-center">
-        <div className="relative">
-          <div className="absolute inset-0 bg-red-500/20 blur-3xl rounded-full"></div>
-          <LottiePlayer type="404" className="w-64 h-64 mb-4 relative z-10" />
-        </div>
+        <LottiePlayer type="404" className="w-64 h-64 mb-4 relative z-10" />
         <h2 className="text-3xl font-bold text-slate-800 dark:text-white mb-2 tracking-tight">
           Connection Lost
         </h2>
@@ -335,10 +333,7 @@ export const StudentDashboard: React.FC<Props> = ({ user }) => {
                     {firstName}
                   </span>
                 </h2>
-                <p className="text-slate-500 dark:text-slate-400 mt-2 font-medium flex items-center gap-2">
-                  <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
-                  The kitchen is serving delicious meals today.
-                </p>
+                {/* 👇 REMOVED: "The kitchen is serving..." text was here */}
               </div>
               <div className="text-right hidden md:block bg-white/60 dark:bg-slate-800/60 backdrop-blur-md px-4 py-2 rounded-2xl border border-white/50 dark:border-slate-700 shadow-sm">
                  <p className="text-sm font-bold text-slate-600 dark:text-slate-300 uppercase tracking-widest">
@@ -346,6 +341,23 @@ export const StudentDashboard: React.FC<Props> = ({ user }) => {
                  </p>
               </div>
             </div>
+          </div>
+
+          {/* Back Button placed below Header */}
+          <div className="flex justify-start ml-2 mt-2">
+            <button
+              onClick={() => navigate(-1)}
+              className="flex items-center gap-2
+                        px-4 py-2 rounded-xl
+                        bg-white/70 dark:bg-slate-900/70 backdrop-blur
+                        border border-slate-200 dark:border-slate-700
+                        text-slate-700 dark:text-slate-200
+                        hover:bg-orange-500 hover:text-white
+                        transition-all shadow-lg"
+            >
+              <ArrowLeft size={18} />
+              Back
+            </button>
           </div>
 
           {/* Modern Announcements */}

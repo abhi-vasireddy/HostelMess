@@ -5,7 +5,8 @@ import { generateAIInsights } from '../services/geminiService';
 import { Button } from '../components/Button';
 import { useAuth } from '../App';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
-import { AlertTriangle, TrendingUp, Users, Menu as MenuIcon, Sparkles, Trash2, Plus, CheckCircle2, Pencil, X, MessageSquare, Search, UtensilsCrossed, Calendar, Upload, CheckSquare, StickyNote, Clock, Check, Filter, Info, Download, Lightbulb, ChevronDown, GripVertical, Bold, Italic, List, Video, Lock, Settings } from 'lucide-react';
+import { AlertTriangle, TrendingUp, Users, Menu as MenuIcon, Sparkles, Trash2, Plus, CheckCircle2, Pencil, X, MessageSquare, Search, UtensilsCrossed, Calendar, Upload, CheckSquare, StickyNote, Clock, Check, Filter, Info, Download, Lightbulb, ChevronDown, GripVertical, Bold, Italic, List, Video, Lock, Settings, ArrowLeft } from 'lucide-react'; // 👈 Added ArrowLeft
+import { useNavigate } from 'react-router-dom'; // 👈 Added useNavigate
 import { getCurrentDayName, getTodayDateString } from '../services/timeUtils';
 
 // --- ANIMATION IMPORTS ---
@@ -15,6 +16,7 @@ import loadingAnimation from '../assets/animations/loading.json';
 
 export const AdminDashboard: React.FC = () => {
   const { user } = useAuth();
+  const navigate = useNavigate(); // 👈 Initialize navigation
   const [activeTab, setActiveTab] = useState<'dashboard' | 'menu' | 'users' | 'announcements' | 'feedback' | 'canteen' | 'todos' | 'notes' | 'suggestions'>(
     user?.role === UserRole.CANTEEN_STAFF ? 'canteen' : 'dashboard'
   );
@@ -36,7 +38,7 @@ export const AdminDashboard: React.FC = () => {
 
   // UI States
   const [showAddCanteenModal, setShowAddCanteenModal] = useState(false);
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false); // 👈 ADD THIS
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false); 
   const [aiInsights, setAiInsights] = useState<{summary: string, suggestions: string[]} | null>(null);
   const [aiLoading, setAiLoading] = useState(false);
   const [newAnnouncement, setNewAnnouncement] = useState({ title: '', message: '', type: AnnouncementType.INFO, expiresOn: '' });
@@ -604,7 +606,6 @@ export const AdminDashboard: React.FC = () => {
   return (
     <div className="flex flex-col md:flex-row gap-8">
       {/* Sidebar - Collapsible on Mobile, Sticky on Desktop */}
-      {/* 👇 UPDATED: Added 'sticky top-2' so it stays fixed while scrolling on mobile */}
       <aside className="w-full md:w-64 flex-shrink-0 sticky top-2 md:top-24 h-fit z-40 transition-all duration-300">
         
         {/* Mobile Toggle Header (Visible only on mobile) */}
@@ -621,9 +622,18 @@ export const AdminDashboard: React.FC = () => {
         </div>
 
         {/* Sidebar Content (Hidden on mobile unless open) */}
-        {/* 👇 UPDATED: Added max-height & overflow handling for scrollable menu on small screens */}
         <div className={`${isSidebarOpen ? 'block' : 'hidden'} md:block space-y-6 animate-in slide-in-from-top-4 duration-300 md:animate-none max-h-[80vh] overflow-y-auto md:max-h-none md:overflow-visible custom-scrollbar`}>
             
+            {/* 🔴 NEW BACK BUTTON IS HERE */}
+            <div className="px-3 mb-2">
+              <button 
+                onClick={() => navigate('/')}
+                className="flex items-center gap-3 px-4 py-3 w-full text-left rounded-xl text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all border border-transparent hover:border-slate-200 dark:hover:border-slate-700 font-medium"
+              >
+                <ArrowLeft size={18} /> Back to Hub
+              </button>
+            </div>
+
             <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 p-3 overflow-hidden">
               <nav className="space-y-1">
                 {/* 👇 CHANGED: Filter menu items based on Role */}
