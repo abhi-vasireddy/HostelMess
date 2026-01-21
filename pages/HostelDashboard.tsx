@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { ArrowLeft, Plus, History, CheckCircle2, Clock, AlertCircle, Trash2, Megaphone, X, LayoutDashboard, Building, Users, WashingMachine, Calendar, Timer, Pencil, Settings, Menu as MenuIcon, Home, Filter, ArrowUpDown } from 'lucide-react';
+import { ArrowLeft, Plus, History, CheckCircle2, Clock, AlertCircle, Trash2, Megaphone, X, LayoutDashboard, Building, WashingMachine, Calendar, Timer, Pencil, Filter, ArrowUpDown, ChevronRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { User, UserRole, ComplaintStatus, HostelComplaint, Announcement, LaundryBooking, WashingMachine as MachineType } from '../types';
 import { Button } from '../components/Button';
 import { MockDB } from '../services/mockDb';
-import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Legend, CartesianGrid } from 'recharts';
+import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Legend } from 'recharts';
 
 // Helper to get LOCAL date string (YYYY-MM-DD)
 const getLocalDateString = () => {
@@ -29,10 +29,9 @@ export const HostelDashboard = ({ user }: { user: User }) => {
   // --- UI STATE ---
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'overview' | 'issues' | 'laundry' | 'notices'>('overview');
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [adminSelectedDate, setAdminSelectedDate] = useState<string>(todayDate);
   
-  // 🟢 Filter & Sort States
+  // Filters & Sort States
   const [filterStatus, setFilterStatus] = useState<string>('ALL');
   const [sortOrder, setSortOrder] = useState<'newest' | 'oldest'>('newest');
 
@@ -85,7 +84,7 @@ export const HostelDashboard = ({ user }: { user: User }) => {
   const myComplaints = complaints.filter(c => c.userId === user.uid);
   const myPendingIssues = myComplaints.filter(c => c.status !== ComplaintStatus.RESOLVED).length;
 
-  // 🟢 Apply Filters & Sorting
+  // Apply Filters & Sorting
   const displayedComplaints = (isAdmin ? complaints : myComplaints)
     .filter(c => filterStatus === 'ALL' || c.status === filterStatus)
     .sort((a, b) => {
@@ -145,79 +144,61 @@ export const HostelDashboard = ({ user }: { user: User }) => {
   const formatTime = (time: string) => { const [h, m] = time.split(':'); const hour = parseInt(h); const ampm = hour >= 12 ? 'PM' : 'AM'; const hour12 = hour % 12 || 12; return `${hour12}:${m} ${ampm}`; };
   const getStatusColor = (status: string) => { switch(status) { case ComplaintStatus.RESOLVED: return 'bg-emerald-100 text-emerald-700 border-emerald-200'; case ComplaintStatus.IN_PROGRESS: return 'bg-blue-100 text-blue-700 border-blue-200'; default: return 'bg-amber-100 text-amber-700 border-amber-200'; } };
 
+  // 🟢 NEW: NAVIGATION ITEMS FOR BOTTOM BAR
+  const navItems = [
+    { id: 'overview', label: isAdmin ? 'Overview' : 'Home', icon: LayoutDashboard },
+    { id: 'issues', label: isAdmin ? 'Issues' : 'Help', icon: AlertCircle },
+    { id: 'laundry', label: 'Laundry', icon: WashingMachine },
+    { id: 'notices', label: 'Notices', icon: Megaphone }
+  ];
+
   return (
-    <div className="flex flex-col md:flex-row min-h-screen bg-slate-50 dark:bg-slate-950">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 pb-32 animate-in fade-in">
       
-      {/* 🟢 SIDEBAR */}
-      <aside className={`fixed md:sticky top-0 z-30 h-screen w-64 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 transition-transform duration-300 transform ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}`}>
-         <div className="p-5 flex items-center justify-between">
-            <h1 className="text-xl font-black text-slate-800 dark:text-white flex items-center gap-2">
-               <Building className="text-indigo-600"/> Hostel<span className="text-indigo-600">Connect</span>
-            </h1>
-            <button onClick={() => setIsSidebarOpen(false)} className="md:hidden"><X size={20}/></button>
+      {/* 🟢 HEADER (Like Mess Connect) */}
+      <div className="pt-6 px-6 pb-2">
+         <div className="flex justify-between items-center mb-4">
+             <div>
+                <h1 className="text-3xl font-black text-slate-800 dark:text-white flex items-center gap-2">
+                   <Building className="text-indigo-600"/> Hostel<span className="text-indigo-600">Connect</span>
+                </h1>
+                <p className="text-slate-500 font-medium text-sm ml-1">Room 304-B • Block A</p>
+             </div>
+             
+             {/* Profile/Date Pill */}
+             <div className="hidden md:block bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 px-4 py-2 rounded-xl shadow-sm">
+                <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Today</p>
+                <p className="font-bold text-slate-800 dark:text-white">{new Date().toLocaleDateString('en-US', { weekday: 'short', day: 'numeric', month: 'short'})}</p>
+             </div>
          </div>
-
-         <div className="px-3 py-2 space-y-1">
-            <button onClick={() => navigate('/')} className="flex items-center gap-3 px-4 py-3 w-full text-left rounded-xl text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 mb-4 transition-colors font-medium">
-               <ArrowLeft size={18}/> Back to Hub
-            </button>
-
-            <p className="px-4 text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Menu</p>
-            
-            <button onClick={() => { setActiveTab('overview'); setIsSidebarOpen(false); }} className={`flex items-center gap-3 px-4 py-3 w-full text-left rounded-xl font-medium transition-all ${activeTab === 'overview' ? 'bg-indigo-50 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800'}`}>
-               <LayoutDashboard size={18}/> {isAdmin ? 'Overview' : 'Dashboard'}
-            </button>
-            <button onClick={() => { setActiveTab('issues'); setIsSidebarOpen(false); }} className={`flex items-center gap-3 px-4 py-3 w-full text-left rounded-xl font-medium transition-all ${activeTab === 'issues' ? 'bg-indigo-50 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800'}`}>
-               <AlertCircle size={18}/> {isAdmin ? 'All Complaints' : 'My Issues'}
-            </button>
-            <button onClick={() => { setActiveTab('laundry'); setIsSidebarOpen(false); }} className={`flex items-center gap-3 px-4 py-3 w-full text-left rounded-xl font-medium transition-all ${activeTab === 'laundry' ? 'bg-indigo-50 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800'}`}>
-               <WashingMachine size={18}/> {isAdmin ? 'Laundry Status' : 'Book Laundry'}
-            </button>
-            <button onClick={() => { setActiveTab('notices'); setIsSidebarOpen(false); }} className={`flex items-center gap-3 px-4 py-3 w-full text-left rounded-xl font-medium transition-all ${activeTab === 'notices' ? 'bg-indigo-50 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800'}`}>
-               <Megaphone size={18}/> Notices
-            </button>
-         </div>
-      </aside>
-
-      {/* 🟢 MAIN CONTENT */}
-      <main className="flex-1 min-w-0 h-screen overflow-y-auto">
          
-         {/* Top Header */}
-         <header className="sticky top-0 z-20 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 p-4 flex justify-between items-center">
-            <div className="flex items-center gap-3">
-               <button onClick={() => setIsSidebarOpen(true)} className="md:hidden p-2 hover:bg-slate-100 rounded-lg"><MenuIcon size={20}/></button>
-               <h2 className="text-lg font-bold text-slate-800 dark:text-white capitalize">{activeTab.replace('-', ' ')}</h2>
-            </div>
-            
-            <div className="flex gap-2">
-               {isAdmin && activeTab === 'notices' && (
-                  <Button onClick={() => setShowNoticeForm(true)} size="sm" className="flex items-center gap-2"><Plus size={16}/> Post Notice</Button>
-               )}
-               {!isAdmin && (activeTab === 'overview' || activeTab === 'issues') && (
-                  <Button onClick={() => setShowComplaintForm(true)} size="sm" className="flex items-center gap-2"><Plus size={16}/> Raise Issue</Button>
-               )}
-            </div>
-         </header>
+         <button
+           onClick={() => navigate('/')}
+           className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all shadow-sm mb-4"
+         >
+           <ArrowLeft size={16} /> Back to Hub
+         </button>
+      </div>
 
-         <div className="p-4 md:p-8 max-w-7xl mx-auto">
+      <main className="px-4 md:px-8 max-w-7xl mx-auto">
             
             {/* ======================= */}
             {/* TAB: OVERVIEW        */}
             {/* ======================= */}
             {activeTab === 'overview' && (
-               <div className="space-y-6 animate-in fade-in">
+               <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
                   
                   {isAdmin && (
                      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                        <div className="bg-gradient-to-br from-amber-500 to-orange-600 rounded-2xl p-6 text-white shadow-lg shadow-orange-500/20">
+                        <div className="bg-gradient-to-br from-amber-500 to-orange-600 rounded-[2rem] p-6 text-white shadow-lg shadow-orange-500/20">
                            <p className="text-amber-100 font-bold text-xs uppercase tracking-wider">Pending Issues</p>
                            <p className="text-4xl font-black mt-2">{complaints.filter(c => c.status === ComplaintStatus.PENDING).length}</p>
                         </div>
-                        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm">
+                        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-[2rem] p-6 shadow-sm">
                            <p className="text-slate-500 font-bold text-xs uppercase tracking-wider">Working On</p>
                            <p className="text-3xl font-black text-slate-800 dark:text-white mt-2">{complaints.filter(c => c.status === ComplaintStatus.IN_PROGRESS).length}</p>
                         </div>
-                        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm">
+                        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-[2rem] p-6 shadow-sm">
                            <p className="text-slate-500 font-bold text-xs uppercase tracking-wider">Total Students</p>
                            <p className="text-3xl font-black text-slate-800 dark:text-white mt-2">{totalStudents}</p>
                         </div>
@@ -226,30 +207,45 @@ export const HostelDashboard = ({ user }: { user: User }) => {
 
                   {!isAdmin && (
                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div className="bg-gradient-to-r from-indigo-600 to-blue-600 rounded-[2rem] p-8 text-white shadow-xl relative overflow-hidden">
+                        <div className="bg-gradient-to-r from-indigo-600 to-blue-600 rounded-[2.5rem] p-8 text-white shadow-xl shadow-indigo-500/20 relative overflow-hidden group">
                            <div className="relative z-10">
-                              <p className="text-indigo-100 text-xs font-bold uppercase tracking-wider mb-1">My Room</p>
-                              <h3 className="text-4xl font-black">304-B</h3>
-                              <p className="text-sm opacity-90 mt-2">Block A • 3rd Floor</p>
+                              <p className="text-indigo-100 text-xs font-bold uppercase tracking-wider mb-2">My Status</p>
+                              <div className="flex items-center gap-3 mb-6">
+                                 <div className={`p-3 rounded-2xl ${myPendingIssues > 0 ? 'bg-white/20 text-white' : 'bg-emerald-400/20 text-emerald-100'}`}>
+                                    {myPendingIssues > 0 ? <AlertCircle size={32}/> : <CheckCircle2 size={32}/>}
+                                 </div>
+                                 <div>
+                                    <h4 className="text-2xl font-black text-white">
+                                       {myPendingIssues > 0 ? `${myPendingIssues} Issues` : "All Clear"}
+                                    </h4>
+                                    <p className="text-indigo-100 text-sm">
+                                       {myPendingIssues > 0 ? "Pending resolution" : "No active complaints"}
+                                    </p>
+                                 </div>
+                              </div>
+                              <Button 
+                                 onClick={() => { setActiveTab('issues'); setShowComplaintForm(true); }}
+                                 className="bg-white text-indigo-600 hover:bg-indigo-50 border-none shadow-lg w-full justify-between group-hover:scale-[1.02] transition-transform"
+                              >
+                                 Report New Issue <ChevronRight size={16}/>
+                              </Button>
                            </div>
-                           <div className="absolute right-[-20px] bottom-[-40px] opacity-10">
-                              <History size={180} />
+                           <div className="absolute right-[-20px] bottom-[-40px] opacity-10 rotate-12">
+                              <History size={200} />
                            </div>
                         </div>
 
-                        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-[2rem] p-8 flex flex-col justify-center shadow-sm">
-                           <div className="flex items-center gap-4">
-                              <div className={`p-4 rounded-2xl ${myPendingIssues > 0 ? 'bg-amber-100 text-amber-600' : 'bg-emerald-100 text-emerald-600'}`}>
-                                 {myPendingIssues > 0 ? <AlertCircle size={32}/> : <CheckCircle2 size={32}/>}
-                              </div>
-                              <div>
-                                 <h4 className="text-xl font-bold text-slate-900 dark:text-white">
-                                    {myPendingIssues > 0 ? `${myPendingIssues} Active Issues` : "All Good!"}
-                                 </h4>
-                                 <p className="text-slate-500 text-sm">
-                                    {myPendingIssues > 0 ? "Maintenance is on it." : "No pending complaints."}
-                                 </p>
-                              </div>
+                        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-[2.5rem] p-8 flex flex-col justify-center shadow-sm">
+                           <h3 className="font-bold text-slate-800 dark:text-white mb-4">Quick Actions</h3>
+                           <div className="grid grid-cols-2 gap-4">
+                              <button onClick={() => setActiveTab('laundry')} className="p-4 bg-slate-50 dark:bg-slate-800 rounded-2xl text-left hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors">
+                                 <WashingMachine className="text-blue-500 mb-2" size={24}/>
+                                 <p className="font-bold text-slate-700 dark:text-slate-200 text-sm">Book Laundry</p>
+                              </button>
+                              <button onClick={() => setActiveTab('notices')} className="p-4 bg-slate-50 dark:bg-slate-800 rounded-2xl text-left hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors">
+                                 <Megaphone className="text-orange-500 mb-2" size={24}/>
+                                 <p className="font-bold text-slate-700 dark:text-slate-200 text-sm">Check Notices</p>
+                              </button>
                            </div>
                         </div>
                      </div>
@@ -257,11 +253,11 @@ export const HostelDashboard = ({ user }: { user: User }) => {
 
                   {isAdmin && (
                      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                        <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm h-80">
+                        <div className="bg-white dark:bg-slate-900 p-6 rounded-[2rem] border border-slate-200 dark:border-slate-800 shadow-sm h-80">
                            <h3 className="font-bold text-slate-800 dark:text-white mb-4">Status Distribution</h3>
                            <ResponsiveContainer width="100%" height="100%"><PieChart><Pie data={statusData} cx="50%" cy="50%" innerRadius={60} outerRadius={80} paddingAngle={5} dataKey="value">{statusData.map((entry, index) => (<Cell key={`cell-${index}`} fill={entry.color} />))}</Pie><Tooltip/><Legend/></PieChart></ResponsiveContainer>
                         </div>
-                        <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm h-80">
+                        <div className="bg-white dark:bg-slate-900 p-6 rounded-[2rem] border border-slate-200 dark:border-slate-800 shadow-sm h-80">
                            <h3 className="font-bold text-slate-800 dark:text-white mb-4">Categories</h3>
                            <ResponsiveContainer width="100%" height="100%"><BarChart data={categoryData} layout="vertical"><XAxis type="number" hide/><YAxis dataKey="name" type="category" width={80} tick={{fontSize: 12}}/><Tooltip/><Bar dataKey="count" fill="#8884d8" radius={[0, 4, 4, 0]} barSize={20}>{categoryData.map((e, i) => <Cell key={i} fill={['#6366f1', '#8b5cf6', '#ec4899'][i%3]}/>)}</Bar></BarChart></ResponsiveContainer>
                         </div>
@@ -274,9 +270,13 @@ export const HostelDashboard = ({ user }: { user: User }) => {
             {/* TAB: ISSUES          */}
             {/* ======================= */}
             {activeTab === 'issues' && (
-               <div className="space-y-4 animate-in fade-in">
+               <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                  <div className="flex justify-between items-center mb-4">
+                     <h2 className="text-xl font-black text-slate-900 dark:text-white">Complaints</h2>
+                     <Button onClick={() => setShowComplaintForm(true)} size="sm" className="flex items-center gap-2"><Plus size={16}/> Report Issue</Button>
+                  </div>
                   
-                  {/* 🟢 MINIMALIST FILTER BAR */}
+                  {/* Filter Bar */}
                   <div className="flex justify-end gap-3 mb-2">
                      <div className="flex items-center gap-2 bg-white dark:bg-slate-900 px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
                         <Filter size={14} className="text-slate-400" />
@@ -305,7 +305,7 @@ export const HostelDashboard = ({ user }: { user: User }) => {
                   </div>
 
                   {displayedComplaints.length === 0 ? (
-                     <div className="text-center py-20 bg-slate-50 dark:bg-slate-900 rounded-2xl border border-dashed border-slate-200 dark:border-slate-800">
+                     <div className="text-center py-20 bg-slate-50 dark:bg-slate-900 rounded-[2rem] border border-dashed border-slate-200 dark:border-slate-800">
                         <CheckCircle2 className="w-12 h-12 text-slate-300 mx-auto mb-2"/>
                         <p className="text-slate-500">No issues matching your filters.</p>
                      </div>
@@ -340,11 +340,11 @@ export const HostelDashboard = ({ user }: { user: User }) => {
             {/* TAB: LAUNDRY         */}
             {/* ======================= */}
             {activeTab === 'laundry' && (
-               <div className="space-y-6 animate-in fade-in">
+               <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
                   
                   {/* ADMIN CONTROLS */}
                   {isAdmin && (
-                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-indigo-50 dark:bg-indigo-900/20 p-4 rounded-2xl border border-indigo-100 dark:border-indigo-800/50">
+                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-indigo-50 dark:bg-indigo-900/20 p-4 rounded-[2rem] border border-indigo-100 dark:border-indigo-800/50">
                         <div>
                            <h3 className="font-bold text-lg text-slate-800 dark:text-white flex items-center gap-2"><Calendar className="text-indigo-600"/> Admin View</h3>
                            <p className="text-xs text-indigo-600 dark:text-indigo-300 mt-1">Date: {adminSelectedDate === todayDate ? 'Today' : adminSelectedDate}</p>
@@ -359,8 +359,8 @@ export const HostelDashboard = ({ user }: { user: User }) => {
                   {/* STUDENT HEADER */}
                   {!isAdmin && (
                      <div className="flex items-center justify-between mb-4">
-                        <h3 className="font-bold text-lg text-slate-800 dark:text-white flex items-center gap-2"><Calendar className="text-indigo-600"/> Available Slots</h3>
-                        <span className="text-xs font-bold bg-indigo-50 text-indigo-700 px-3 py-1 rounded-full">Today</span>
+                        <h3 className="font-bold text-2xl text-slate-800 dark:text-white flex items-center gap-2">Laundry Slots</h3>
+                        <span className="text-xs font-bold bg-indigo-50 text-indigo-700 px-3 py-1 rounded-full border border-indigo-100">Today</span>
                      </div>
                   )}
 
@@ -370,16 +370,16 @@ export const HostelDashboard = ({ user }: { user: User }) => {
                         const machineBookings = laundryBookings.filter(b => b.machineId === machine.id && b.date === targetDate).sort((a,b) => a.startTime.localeCompare(b.startTime));
                         
                         return (
-                           <div key={machine.id} className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-sm">
-                              <div className="bg-slate-50 dark:bg-slate-800/50 p-4 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center">
-                                 <div className="flex items-center gap-3">
-                                    <div className="w-10 h-10 rounded-xl bg-white dark:bg-slate-800 flex items-center justify-center border border-slate-200 dark:border-slate-700 shadow-sm"><WashingMachine className="text-indigo-500" size={20} /></div>
-                                    <div><h4 className="font-bold text-slate-900 dark:text-white text-sm">{machine.name}</h4><p className="text-xs text-slate-500 dark:text-slate-400">Capacity: {machine.capacity}</p></div>
+                           <div key={machine.id} className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-sm">
+                              <div className="bg-slate-50 dark:bg-slate-800/50 p-5 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center">
+                                 <div className="flex items-center gap-4">
+                                    <div className="w-12 h-12 rounded-2xl bg-white dark:bg-slate-800 flex items-center justify-center border border-slate-200 dark:border-slate-700 shadow-sm text-indigo-500"><WashingMachine size={24} /></div>
+                                    <div><h4 className="font-bold text-slate-900 dark:text-white text-base">{machine.name}</h4><p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Capacity: {machine.capacity}</p></div>
                                  </div>
                                  {isAdmin ? (
                                     <div className="flex gap-1">
-                                       <button onClick={() => handleOpenEditMachine(machine)} className="p-1.5 text-slate-400 hover:text-blue-500 hover:bg-blue-50 rounded-lg"><Pencil size={14}/></button>
-                                       <button onClick={() => handleDeleteMachine(machine.id)} className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg"><Trash2 size={14}/></button>
+                                       <button onClick={() => handleOpenEditMachine(machine)} className="p-2 text-slate-400 hover:text-blue-500 hover:bg-blue-50 rounded-xl transition-colors"><Pencil size={16}/></button>
+                                       <button onClick={() => handleDeleteMachine(machine.id)} className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-xl transition-colors"><Trash2 size={16}/></button>
                                     </div>
                                  ) : (
                                     <Button size="sm" onClick={() => setActiveMachineForBooking(machine.id)}>Book Slot</Button>
@@ -387,13 +387,18 @@ export const HostelDashboard = ({ user }: { user: User }) => {
                               </div>
                               
                               <div className="p-4 bg-white dark:bg-slate-900 max-h-60 overflow-y-auto custom-scrollbar">
-                                 {machineBookings.length === 0 ? <p className="text-xs text-slate-400 italic text-center py-2">No bookings.</p> : (
+                                 {machineBookings.length === 0 ? (
+                                    <div className="flex flex-col items-center justify-center py-6 opacity-50">
+                                       <Clock size={24} className="mb-2 text-slate-400"/>
+                                       <p className="text-xs text-slate-500 italic">No bookings for this machine yet.</p>
+                                    </div>
+                                 ) : (
                                     <div className="space-y-2">
                                        {machineBookings.map(b => (
-                                          <div key={b.id} className="flex items-center gap-3 text-xs p-2 rounded-lg bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800">
-                                             <div className="flex items-center gap-1 font-mono font-bold text-slate-700 dark:text-slate-300"><Timer size={10} className="text-indigo-500"/> {formatTime(b.startTime)} - {formatTime(b.endTime)}</div>
-                                             <div className="flex-1 text-slate-500 truncate">{b.userName === user.displayName ? 'You' : b.userName}</div>
-                                             {(isAdmin || b.userId === user.uid) && <button onClick={() => handleCancelBooking(b.id)} className="text-red-500 hover:text-red-700"><Trash2 size={14}/></button>}
+                                          <div key={b.id} className="flex items-center gap-3 text-xs p-3 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800">
+                                             <div className="flex items-center gap-1.5 font-mono font-bold text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-700 px-2 py-1 rounded-lg border border-slate-200 dark:border-slate-600"><Timer size={10} className="text-indigo-500"/> {formatTime(b.startTime)} - {formatTime(b.endTime)}</div>
+                                             <div className="flex-1 text-slate-500 truncate font-medium">{b.userName === user.displayName ? 'You' : b.userName}</div>
+                                             {(isAdmin || b.userId === user.uid) && <button onClick={() => handleCancelBooking(b.id)} className="text-slate-400 hover:text-red-500 transition-colors p-1"><Trash2 size={14}/></button>}
                                           </div>
                                        ))}
                                     </div>
@@ -410,44 +415,80 @@ export const HostelDashboard = ({ user }: { user: User }) => {
             {/* TAB: NOTICES         */}
             {/* ======================= */}
             {activeTab === 'notices' && (
-               <div className="space-y-4 animate-in fade-in">
+               <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                  <div className="flex justify-between items-center mb-4">
+                     <h2 className="text-xl font-black text-slate-900 dark:text-white">Notice Board</h2>
+                     {isAdmin && <Button onClick={() => setShowNoticeForm(true)} size="sm" className="flex items-center gap-2"><Plus size={16}/> Post Notice</Button>}
+                  </div>
+
                   {notices.length === 0 ? (
-                     <div className="text-center py-20 bg-slate-50 dark:bg-slate-900 rounded-2xl border border-dashed border-slate-200 dark:border-slate-800">
-                        <Megaphone className="w-12 h-12 text-slate-300 mx-auto mb-2"/>
-                        <p className="text-slate-500">No new notices posted yet.</p>
+                     <div className="text-center py-24 bg-slate-50 dark:bg-slate-900 rounded-[3rem] border border-dashed border-slate-200 dark:border-slate-800">
+                        <Megaphone className="w-12 h-12 text-slate-300 mx-auto mb-3"/>
+                        <p className="text-slate-500 font-medium">No new notices posted yet.</p>
                      </div>
                   ) : (
                      notices.map(n => (
-                        <div key={n.id} className="bg-white dark:bg-slate-900 p-5 rounded-xl border border-slate-200 dark:border-slate-800 flex justify-between items-start group">
+                        <div key={n.id} className="bg-white dark:bg-slate-900 p-6 rounded-[2rem] border border-slate-200 dark:border-slate-800 flex justify-between items-start group hover:shadow-lg transition-all">
                            <div>
-                              <div className="flex items-center gap-2 mb-1">{n.pinned && <AlertCircle size={16} className="text-indigo-500 fill-indigo-50"/>}<h4 className="font-bold text-slate-900 dark:text-white">{n.title}</h4></div>
-                              <p className="text-sm text-slate-600 dark:text-slate-300">{n.message}</p>
+                              <div className="flex items-center gap-2 mb-2">
+                                 <div className="bg-indigo-100 text-indigo-600 p-1.5 rounded-lg"><Megaphone size={14}/></div>
+                                 <h4 className="font-bold text-slate-900 dark:text-white text-lg">{n.title}</h4>
+                              </div>
+                              <p className="text-sm text-slate-600 dark:text-slate-300 leading-relaxed pl-9">{n.message}</p>
                            </div>
-                           {isAdmin && <button onClick={() => handleDeleteNotice(n.id)} className="p-2 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-lg"><Trash2 size={18}/></button>}
+                           {isAdmin && <button onClick={() => handleDeleteNotice(n.id)} className="p-2 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-xl transition-colors"><Trash2 size={18}/></button>}
                         </div>
                      ))
                   )}
                </div>
             )}
-
-         </div>
       </main>
+
+      {/* 🟢 FLOATING BOTTOM NAVIGATION (Just like Mess Connect) */}
+      <div className="fixed bottom-6 left-6 right-6 md:left-1/2 md:-translate-x-1/2 md:w-auto md:min-w-[400px] z-40">
+        <div className="bg-black/80 dark:bg-white/10 backdrop-blur-xl border border-white/10 dark:border-white/20 rounded-full px-6 py-4 shadow-2xl flex justify-between items-center gap-4 md:gap-8">
+          {navItems.map((item) => (
+            <button
+              key={item.id}
+              onClick={() => {
+                setActiveTab(item.id as any);
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+              }}
+              className={`relative flex flex-col items-center justify-center gap-1 transition-all duration-300 w-14 ${
+                activeTab === item.id 
+                  ? 'text-indigo-400 scale-110' 
+                  : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              <div className={`p-2 rounded-full transition-all duration-300 ${activeTab === item.id ? 'bg-white/10' : 'bg-transparent'}`}>
+                <item.icon 
+                  size={24} 
+                  strokeWidth={activeTab === item.id ? 2.5 : 2} 
+                />
+              </div>
+              {activeTab === item.id && (
+                <span className="absolute -bottom-2 w-1 h-1 rounded-full bg-indigo-400 animate-pulse"></span>
+              )}
+            </button>
+          ))}
+        </div>
+      </div>
 
       {/* --- MODALS --- */}
       {showComplaintForm && (
-         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm"><div className="bg-white dark:bg-slate-900 rounded-2xl w-full max-w-sm p-6 shadow-2xl animate-in zoom-in-95"><div className="flex justify-between items-center mb-4"><h3 className="font-bold text-lg text-slate-900 dark:text-white">Report Issue</h3><button onClick={() => setShowComplaintForm(false)}><X size={20} className="text-slate-400"/></button></div><form onSubmit={handleRaiseComplaint} className="space-y-4"><div><label className="text-xs font-bold text-slate-500 uppercase">Category</label><select className="w-full mt-1 p-3 bg-slate-50 dark:bg-slate-950 border-none rounded-xl font-medium outline-none focus:ring-2 focus:ring-blue-500" value={newComplaint.type} onChange={e => setNewComplaint({...newComplaint, type: e.target.value})}><option>Plumbing</option><option>Electrical</option><option>Carpentry</option><option>Internet</option><option>Cleaning</option></select></div><div><label className="text-xs font-bold text-slate-500 uppercase">Description</label><textarea className="w-full mt-1 p-3 bg-slate-50 dark:bg-slate-950 border-none rounded-xl font-medium outline-none focus:ring-2 focus:ring-blue-500 resize-none h-24" placeholder="Describe the problem..." value={newComplaint.desc} onChange={e => setNewComplaint({...newComplaint, desc: e.target.value})} /></div><Button fullWidth type="submit">Submit Complaint</Button></form></div></div>
+         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm"><div className="bg-white dark:bg-slate-900 rounded-[2rem] w-full max-w-sm p-6 shadow-2xl animate-in zoom-in-95 border border-slate-200 dark:border-slate-800"><div className="flex justify-between items-center mb-6"><h3 className="font-bold text-xl text-slate-900 dark:text-white">Report Issue</h3><button onClick={() => setShowComplaintForm(false)}><X size={20} className="text-slate-400 hover:text-slate-600"/></button></div><form onSubmit={handleRaiseComplaint} className="space-y-5"><div><label className="text-xs font-bold text-slate-500 uppercase ml-1">Category</label><select className="w-full mt-1 p-3 bg-slate-50 dark:bg-slate-950 border-none rounded-xl font-medium outline-none focus:ring-2 focus:ring-blue-500" value={newComplaint.type} onChange={e => setNewComplaint({...newComplaint, type: e.target.value})}><option>Plumbing</option><option>Electrical</option><option>Carpentry</option><option>Internet</option><option>Cleaning</option></select></div><div><label className="text-xs font-bold text-slate-500 uppercase ml-1">Description</label><textarea className="w-full mt-1 p-3 bg-slate-50 dark:bg-slate-950 border-none rounded-xl font-medium outline-none focus:ring-2 focus:ring-blue-500 resize-none h-32" placeholder="Describe the problem..." value={newComplaint.desc} onChange={e => setNewComplaint({...newComplaint, desc: e.target.value})} /></div><Button fullWidth type="submit" className="py-3 rounded-xl">Submit Complaint</Button></form></div></div>
       )}
 
       {showNoticeForm && (
-         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm"><div className="bg-white dark:bg-slate-900 rounded-2xl w-full max-w-sm p-6 shadow-2xl animate-in zoom-in-95"><div className="flex justify-between items-center mb-4"><h3 className="font-bold text-lg text-slate-900 dark:text-white">Post New Notice</h3><button onClick={() => setShowNoticeForm(false)}><X size={20} className="text-slate-400"/></button></div><form onSubmit={handlePostNotice} className="space-y-4"><input className="w-full p-3 bg-slate-50 dark:bg-slate-950 border-none rounded-xl font-medium outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Notice Title" value={newNotice.title} onChange={e => setNewNotice({...newNotice, title: e.target.value})} /><textarea className="w-full p-3 bg-slate-50 dark:bg-slate-950 border-none rounded-xl font-medium outline-none focus:ring-2 focus:ring-indigo-500 resize-none h-24" placeholder="Message content..." value={newNotice.message} onChange={e => setNewNotice({...newNotice, message: e.target.value})} /><Button fullWidth type="submit">Publish</Button></form></div></div>
+         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm"><div className="bg-white dark:bg-slate-900 rounded-[2rem] w-full max-w-sm p-6 shadow-2xl animate-in zoom-in-95 border border-slate-200 dark:border-slate-800"><div className="flex justify-between items-center mb-6"><h3 className="font-bold text-xl text-slate-900 dark:text-white">Post New Notice</h3><button onClick={() => setShowNoticeForm(false)}><X size={20} className="text-slate-400 hover:text-slate-600"/></button></div><form onSubmit={handlePostNotice} className="space-y-5"><input className="w-full p-3 bg-slate-50 dark:bg-slate-950 border-none rounded-xl font-medium outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Notice Title" value={newNotice.title} onChange={e => setNewNotice({...newNotice, title: e.target.value})} /><textarea className="w-full p-3 bg-slate-50 dark:bg-slate-950 border-none rounded-xl font-medium outline-none focus:ring-2 focus:ring-indigo-500 resize-none h-32" placeholder="Message content..." value={newNotice.message} onChange={e => setNewNotice({...newNotice, message: e.target.value})} /><Button fullWidth type="submit" className="py-3 rounded-xl">Publish Notice</Button></form></div></div>
       )}
 
       {activeMachineForBooking && (
-         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm"><div className="bg-white dark:bg-slate-900 rounded-2xl w-full max-w-sm p-6 shadow-2xl animate-in zoom-in-95"><div className="flex justify-between items-center mb-4"><h3 className="font-bold text-lg text-slate-900 dark:text-white">Book Slot</h3><button onClick={() => setActiveMachineForBooking(null)}><X size={20} className="text-slate-400"/></button></div><div className="mb-4 text-sm text-slate-600 dark:text-slate-400">Booking: <span className="font-bold text-slate-900 dark:text-white">{machines.find(m => m.id === activeMachineForBooking)?.name}</span></div><form onSubmit={handleBookLaundry} className="space-y-4"><div className="grid grid-cols-2 gap-4"><div><label className="text-xs font-bold text-slate-500 uppercase mb-1 block">Start Time</label><input type="time" required className="w-full p-3 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-700 rounded-xl font-medium outline-none focus:ring-2 focus:ring-indigo-500 dark:text-white" value={bookingTimes.start} onChange={e => setBookingTimes({...bookingTimes, start: e.target.value})}/></div><div><label className="text-xs font-bold text-slate-500 uppercase mb-1 block">End Time</label><input type="time" required className="w-full p-3 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-700 rounded-xl font-medium outline-none focus:ring-2 focus:ring-indigo-500 dark:text-white" value={bookingTimes.end} onChange={e => setBookingTimes({...bookingTimes, end: e.target.value})}/></div></div><Button fullWidth type="submit">Confirm Booking</Button></form></div></div>
+         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm"><div className="bg-white dark:bg-slate-900 rounded-[2rem] w-full max-w-sm p-6 shadow-2xl animate-in zoom-in-95 border border-slate-200 dark:border-slate-800"><div className="flex justify-between items-center mb-6"><h3 className="font-bold text-xl text-slate-900 dark:text-white">Book Slot</h3><button onClick={() => setActiveMachineForBooking(null)}><X size={20} className="text-slate-400 hover:text-slate-600"/></button></div><div className="mb-6 text-sm text-slate-600 dark:text-slate-400 bg-slate-50 dark:bg-slate-800 p-3 rounded-xl text-center">Booking: <span className="font-bold text-slate-900 dark:text-white block text-base mt-1">{machines.find(m => m.id === activeMachineForBooking)?.name}</span></div><form onSubmit={handleBookLaundry} className="space-y-5"><div className="grid grid-cols-2 gap-4"><div><label className="text-xs font-bold text-slate-500 uppercase mb-1 block ml-1">Start Time</label><input type="time" required className="w-full p-3 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-700 rounded-xl font-medium outline-none focus:ring-2 focus:ring-indigo-500 dark:text-white" value={bookingTimes.start} onChange={e => setBookingTimes({...bookingTimes, start: e.target.value})}/></div><div><label className="text-xs font-bold text-slate-500 uppercase mb-1 block ml-1">End Time</label><input type="time" required className="w-full p-3 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-700 rounded-xl font-medium outline-none focus:ring-2 focus:ring-indigo-500 dark:text-white" value={bookingTimes.end} onChange={e => setBookingTimes({...bookingTimes, end: e.target.value})}/></div></div><Button fullWidth type="submit" className="py-3 rounded-xl">Confirm Booking</Button></form></div></div>
       )}
 
       {showMachineModal && (
-         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm"><div className="bg-white dark:bg-slate-900 rounded-2xl w-full max-w-sm p-6 shadow-2xl animate-in zoom-in-95"><div className="flex justify-between items-center mb-4"><h3 className="font-bold text-lg text-slate-900 dark:text-white">{machineForm.id ? 'Edit Machine' : 'Add Machine'}</h3><button onClick={() => setShowMachineModal(false)}><X size={20} className="text-slate-400"/></button></div><form onSubmit={handleSaveMachine} className="space-y-4"><div><label className="text-xs font-bold text-slate-500 uppercase">Machine Name</label><input className="w-full mt-1 p-3 bg-slate-50 dark:bg-slate-950 border-none rounded-xl font-medium outline-none focus:ring-2 focus:ring-indigo-500" placeholder="e.g. Machine 1 (Ground Floor)" value={machineForm.name} onChange={e => setMachineForm({...machineForm, name: e.target.value})} required /></div><div><label className="text-xs font-bold text-slate-500 uppercase">Capacity</label><input className="w-full mt-1 p-3 bg-slate-50 dark:bg-slate-950 border-none rounded-xl font-medium outline-none focus:ring-2 focus:ring-indigo-500" placeholder="e.g. 6kg" value={machineForm.capacity} onChange={e => setMachineForm({...machineForm, capacity: e.target.value})} required /></div><Button fullWidth type="submit">Save Machine</Button></form></div></div>
+         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm"><div className="bg-white dark:bg-slate-900 rounded-[2rem] w-full max-w-sm p-6 shadow-2xl animate-in zoom-in-95 border border-slate-200 dark:border-slate-800"><div className="flex justify-between items-center mb-6"><h3 className="font-bold text-xl text-slate-900 dark:text-white">{machineForm.id ? 'Edit Machine' : 'Add Machine'}</h3><button onClick={() => setShowMachineModal(false)}><X size={20} className="text-slate-400 hover:text-slate-600"/></button></div><form onSubmit={handleSaveMachine} className="space-y-5"><div><label className="text-xs font-bold text-slate-500 uppercase ml-1">Machine Name</label><input className="w-full mt-1 p-3 bg-slate-50 dark:bg-slate-950 border-none rounded-xl font-medium outline-none focus:ring-2 focus:ring-indigo-500" placeholder="e.g. Machine 1 (Ground Floor)" value={machineForm.name} onChange={e => setMachineForm({...machineForm, name: e.target.value})} required /></div><div><label className="text-xs font-bold text-slate-500 uppercase ml-1">Capacity</label><input className="w-full mt-1 p-3 bg-slate-50 dark:bg-slate-950 border-none rounded-xl font-medium outline-none focus:ring-2 focus:ring-indigo-500" placeholder="e.g. 6kg" value={machineForm.capacity} onChange={e => setMachineForm({...machineForm, capacity: e.target.value})} required /></div><Button fullWidth type="submit" className="py-3 rounded-xl">Save Machine</Button></form></div></div>
       )}
     </div>
   );

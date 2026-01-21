@@ -148,3 +148,15 @@ export interface LaundryBooking {
   date: string;      // YYYY-MM-DD
   createdAt: number;
 }
+
+// --- NEW SERVICE MODULE TYPE ---
+export interface ServiceModule {
+  id: string;
+  title: string;
+  description: string;
+  iconName: string; // e.g. 'Book', 'Wifi', 'Dumbbell'
+  path: string;     // e.g. '/library' or 'https://google.com'
+  color: string;    // e.g. 'from-pink-500 to-rose-500'
+  isActive: boolean; // true = Clickable, false = Coming Soon (Locked)
+  isExternal?: boolean; // true if path is a website URL
+}
