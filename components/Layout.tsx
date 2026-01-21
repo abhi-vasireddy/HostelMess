@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { User, UserRole } from '../types';
 import { Button } from './Button';
-import { LogOut, Sun, Moon, Utensils } from 'lucide-react';
+// 👇 Removed LogOut from imports
+import { Sun, Moon, Utensils } from 'lucide-react';
 
 interface LayoutProps {
   user: User | null;
@@ -88,10 +89,7 @@ export const Layout: React.FC<LayoutProps> = ({ user, onLogout, children }) => {
                     {user.role}
                   </span>
                 </div>
-                <Button variant="outline" size="sm" onClick={onLogout} className="!p-2 sm:!px-4 flex items-center gap-2">
-                  <LogOut className="w-4 h-4" />
-                  <span className="hidden sm:inline">Logout</span>
-                </Button>
+                {/* 👇 LOGOUT BUTTON REMOVED FROM HERE */}
               </>
             )}
           </div>

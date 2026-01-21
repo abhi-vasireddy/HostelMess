@@ -1,4 +1,3 @@
-
 export enum UserRole {
   STUDENT = 'STUDENT',
   ADMIN = 'ADMIN',
@@ -10,7 +9,7 @@ export interface User {
   email: string;
   displayName: string;
   role: UserRole;
-  deactivatedUntil?: string | null; // ISO Date string
+  deactivatedUntil?: string | null;
 }
 
 export enum MealType {
@@ -26,12 +25,12 @@ export interface Dish {
   description: string;
   isVeg: boolean;
   image?: string;
-  rating?: number; // Calculated average
+  rating?: number;
   ratingCount?: number;
 }
 
 export interface DailyMenu {
-  day: string; // "Monday", "Tuesday", etc.
+  day: string;
   [MealType.BREAKFAST]: Dish[];
   [MealType.LUNCH]: Dish[];
   [MealType.SNACKS]: Dish[];
@@ -44,10 +43,10 @@ export interface Feedback {
   dishName: string;
   userId: string;
   userName: string;
-  rating: number; // 1-5
+  rating: number;
   comment: string;
   mealType: MealType;
-  date: string; // YYYY-MM-DD
+  date: string;
   timestamp: number;
 }
 
@@ -63,7 +62,8 @@ export interface Announcement {
   message: string;
   type: AnnouncementType;
   isActive: boolean;
-  expiresOn: string; // ISO Date string
+  expiresOn: string;
+  pinned?: boolean; // 👈 Added for Hostel Notices
   createdAt: number;
 }
 
@@ -79,14 +79,14 @@ export interface CanteenItem {
   id: string;
   name: string;
   price: number;
-  category: string; // e.g., 'Snacks', 'Drinks'
+  category: string;
   image?: string;
   isAvailable: boolean;
 }
 
 export interface AppSettings {
   canteenEnabled: boolean;
-  splashVideoEnabled: boolean; // 👈 ADD THIS LINE
+  splashVideoEnabled: boolean;
 }
 
 export enum TaskPriority {
@@ -101,7 +101,7 @@ export interface TodoTask {
   description?: string;
   isCompleted: boolean;
   priority: TaskPriority;
-  dueDate: string; // ISO Date string YYYY-MM-DDTHH:mm
+  dueDate: string;
   createdAt: number;
 }
 
@@ -109,5 +109,42 @@ export interface AdminNote {
   id: string;
   title: string;
   content: string;
+  createdAt: number;
+}
+
+// --- NEW HOSTEL TYPES ---
+
+export enum ComplaintStatus {
+  PENDING = 'Pending',
+  IN_PROGRESS = 'In Progress',
+  RESOLVED = 'Resolved'
+}
+
+export interface HostelComplaint {
+  id: string;
+  userId: string;
+  userName: string;
+  room: string;
+  type: string; // Plumbing, Electrical, etc.
+  desc: string;
+  status: ComplaintStatus;
+  createdAt: number;
+  dateString: string; // For display (e.g. "2h ago" or ISO date)
+}
+
+export interface WashingMachine {
+  id: string;
+  name: string;
+  capacity: string;
+}
+
+export interface LaundryBooking {
+  id: string;
+  machineId: string;
+  userId: string;
+  userName: string;
+  startTime: string; // HH:mm
+  endTime: string;   // HH:mm
+  date: string;      // YYYY-MM-DD
   createdAt: number;
 }

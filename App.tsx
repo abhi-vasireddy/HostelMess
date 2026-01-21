@@ -1,9 +1,10 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-// 👇 IMPORT HashRouter explicitly
 import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { Login } from './pages/Login';
 import { StudentDashboard } from './pages/StudentDashboard';
 import { AdminDashboard } from './pages/AdminDashboard';
+import { HomeHub } from './pages/HomeHub';               // 👈 New!
+import { HostelDashboard } from './pages/HostelDashboard'; // 👈 New!
 import { MockDB } from './services/mockDb';
 import { User, UserRole } from './types';
 import { Layout } from './components/Layout'; 
@@ -58,40 +59,45 @@ function App() {
 
   return (
     <AuthContext.Provider value={{ user, login, logout, loading }}>
-      {/* 👇 HashRouter GUARANTEES no 404s on reload */}
       <HashRouter>
         <Routes>
           <Route 
             path="/login" 
-            element={!user ? <Login /> : <Navigate to={(user.role === UserRole.ADMIN || user.role === UserRole.CANTEEN_STAFF) ? "/admin" : "/student"} />} 
+            element={!user ? <Login /> : <Navigate to="/" />} 
           />
-          <Route 
-            path="/student" 
-            element={
-              user && user.role === UserRole.STUDENT ? (
-                <Layout user={user} onLogout={logout}>
-                   <StudentDashboard user={user} />
-                </Layout>
-              ) : (
-                <Navigate to="/login" />
-              )
-            } 
-          />
-          <Route 
-            path="/admin" 
-            element={
-              // 👇 Allow both ADMIN and CANTEEN_STAFF
-              user && (user.role === UserRole.ADMIN || user.role === UserRole.CANTEEN_STAFF) ? (
-                <Layout user={user} onLogout={logout}>
-                   {/* 👇 Pass the 'user' prop so Dashboard knows who is logged in */}
-                   <AdminDashboard user={user} />
-                </Layout>
-              ) : (
-                <Navigate to="/login" />
-              )
-            } 
-          />
-          <Route path="*" element={<Navigate to="/login" />} />
+          
+          {/* Protected Routes (User must be logged in) */}
+          {user ? (
+            <>
+              {/* 1. Main Hub - The "Super App" Home Screen */}
+              <Route path="/" element={<HomeHub />} />
+
+              {/* 2. Mess Module */}
+              <Route 
+                path="/mess" 
+                element={
+                  (user.role === UserRole.ADMIN || user.role === UserRole.CANTEEN_STAFF) ? (
+                    <Layout user={user} onLogout={logout}>
+                       <AdminDashboard user={user} />
+                    </Layout>
+                  ) : (
+                    <Layout user={user} onLogout={logout}>
+                       <StudentDashboard user={user} />
+                    </Layout>
+                  )
+                } 
+              />
+
+              {/* 3. Hostel Module */}
+              <Route 
+                 path="/hostel" 
+                 element={<HostelDashboard user={user} />} 
+              />
+            </>
+          ) : (
+            // If not logged in, go to login
+            <Route path="*" element={<Navigate to="/login" />} />
+          )}
         </Routes>
       </HashRouter>
     </AuthContext.Provider>
