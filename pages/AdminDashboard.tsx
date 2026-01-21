@@ -1,13 +1,14 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { User, DailyMenu, Announcement, AnnouncementType, Feedback, AppSettings, MealType, Dish, CanteenItem, TodoTask, TaskPriority, AdminNote, Suggestion, UserRole } from '../types';
+import { User, DailyMenu, Announcement, AnnouncementType, Feedback, AppSettings, MealType, Dish, CanteenItem, TodoTask, TaskPriority, AdminNote, Suggestion, UserRole, ServiceModule } from '../types';
 import { MockDB } from '../services/mockDb';
 import { generateAIInsights } from '../services/geminiService';
 import { Button } from '../components/Button';
 import { useAuth } from '../App';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
-import { AlertTriangle, TrendingUp, Users, Menu as MenuIcon, Sparkles, Trash2, Plus, CheckCircle2, Pencil, X, MessageSquare, Search, UtensilsCrossed, Calendar, Upload, CheckSquare, StickyNote, Clock, Check, Filter, Info, Download, Lightbulb, ChevronDown, GripVertical, Bold, Italic, List, Video, Lock, Settings, ArrowLeft } from 'lucide-react'; // 👈 Added ArrowLeft
-import { useNavigate } from 'react-router-dom'; // 👈 Added useNavigate
+import { AlertTriangle, TrendingUp, Users, Menu as MenuIcon, Sparkles, Trash2, Plus, CheckCircle2, Pencil, X, MessageSquare, Search, UtensilsCrossed, Calendar, Upload, CheckSquare, StickyNote, Clock, Check, Filter, Info, Download, Lightbulb, ChevronDown, GripVertical, Bold, Italic, List, Video, Lock, Settings, ArrowLeft, LayoutGrid } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { getCurrentDayName, getTodayDateString } from '../services/timeUtils';
+import { ICON_MAP, GRADIENT_OPTIONS } from '../services/iconMap';
 
 // --- ANIMATION IMPORTS ---
 import { LottiePlayer } from '../components/LottiePlayer';
@@ -16,8 +17,9 @@ import loadingAnimation from '../assets/animations/loading.json';
 
 export const AdminDashboard: React.FC = () => {
   const { user } = useAuth();
-  const navigate = useNavigate(); // 👈 Initialize navigation
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'menu' | 'users' | 'announcements' | 'feedback' | 'canteen' | 'todos' | 'notes' | 'suggestions'>(
+  const navigate = useNavigate();
+  
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'menu' | 'users' | 'announcements' | 'feedback' | 'canteen' | 'todos' | 'notes' | 'suggestions' | 'services'>(
     user?.role === UserRole.CANTEEN_STAFF ? 'canteen' : 'dashboard'
   );
   
@@ -35,6 +37,11 @@ export const AdminDashboard: React.FC = () => {
   const [todos, setTodos] = useState<TodoTask[]>([]);
   const [notes, setNotes] = useState<AdminNote[]>([]);
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
+  
+  // 🟢 NEW: Services State
+  const [services, setServices] = useState<ServiceModule[]>([]);
+  const [editingService, setEditingService] = useState<Partial<ServiceModule> | null>(null);
+  const [showServiceModal, setShowServiceModal] = useState(false);
 
   // UI States
   const [showAddCanteenModal, setShowAddCanteenModal] = useState(false);
@@ -80,7 +87,7 @@ export const AdminDashboard: React.FC = () => {
         setLoading(true);
         setError(false);
 
-        const [u, m, f, a, s, c, t, n, sugg] = await Promise.all([
+        const [u, m, f, a, s, c, t, n, sugg, srv] = await Promise.all([
             MockDB.getAllUsers(),
             MockDB.getWeeklyMenu(),
             MockDB.getAllFeedback(),
@@ -89,7 +96,8 @@ export const AdminDashboard: React.FC = () => {
             MockDB.getCanteenMenu(),
             MockDB.getTodos(),
             MockDB.getNotes(),
-            MockDB.getSuggestions()
+            MockDB.getSuggestions(),
+            MockDB.getServices() 
         ]);
 
         setUsers(u);
@@ -101,6 +109,7 @@ export const AdminDashboard: React.FC = () => {
         setTodos(t);
         setNotes(n);
         setSuggestions(sugg);
+        setServices(srv); 
     } catch (err) {
         console.error("Failed to load admin data", err);
         setError(true);
@@ -119,17 +128,47 @@ export const AdminDashboard: React.FC = () => {
     }
   };
 
+  // --- SERVICE MODULE HANDLERS ---
+  const handleOpenAddService = () => {
+    setEditingService({
+      id: Date.now().toString(),
+      title: '',
+      description: '',
+      iconName: 'Book',
+      color: GRADIENT_OPTIONS[0].value,
+      path: '',
+      isActive: true,
+      isExternal: false
+    });
+    setShowServiceModal(true);
+  };
+
+  const handleOpenEditService = (srv: ServiceModule) => {
+    setEditingService({ ...srv });
+    setShowServiceModal(true);
+  };
+
+  const handleSaveService = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingService?.title) return;
+    await MockDB.saveService(editingService as ServiceModule);
+    setShowServiceModal(false);
+    loadData();
+  };
+
+  const handleDeleteService = async (id: string) => {
+    if (confirm('Delete this service module?')) {
+      await MockDB.deleteService(id);
+      loadData();
+    }
+  };
+
   const handleToggleCanteenAvailability = async (item: CanteenItem) => {
     try {
       await MockDB.updateCanteenItem({ ...item, isAvailable: !item.isAvailable });
       const updated = await MockDB.getCanteenMenu();
       setCanteenMenu(updated);
     } catch (error) { console.error(error); }
-  };
-
-  const toggleCanteen = async () => {
-    const newS = { ...settings, canteenEnabled: !settings.canteenEnabled };
-    await handleUpdateSettings(newS);
   };
 
   // --- AI & Handlers ---
@@ -624,7 +663,7 @@ export const AdminDashboard: React.FC = () => {
         {/* Sidebar Content (Hidden on mobile unless open) */}
         <div className={`${isSidebarOpen ? 'block' : 'hidden'} md:block space-y-6 animate-in slide-in-from-top-4 duration-300 md:animate-none max-h-[80vh] overflow-y-auto md:max-h-none md:overflow-visible custom-scrollbar`}>
             
-            {/* 🔴 NEW BACK BUTTON IS HERE */}
+            {/* NEW BACK BUTTON IS HERE */}
             <div className="px-3 mb-2">
               <button 
                 onClick={() => navigate('/')}
@@ -636,7 +675,7 @@ export const AdminDashboard: React.FC = () => {
 
             <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 p-3 overflow-hidden">
               <nav className="space-y-1">
-                {/* 👇 CHANGED: Filter menu items based on Role */}
+                {/* CHANGED: Filter menu items based on Role */}
                   {[
                   { id: 'dashboard', icon: TrendingUp, label: 'Dashboard' },
                   { id: 'menu', icon: MenuIcon, label: 'Menu Mgmt' },
@@ -647,6 +686,7 @@ export const AdminDashboard: React.FC = () => {
                   { id: 'announcements', icon: AlertTriangle, label: 'Announcements' },
                   { id: 'todos', icon: CheckSquare, label: 'To-Do List' },
                   { id: 'notes', icon: StickyNote, label: 'Notes' },
+                  { id: 'services', icon: LayoutGrid, label: 'Service Modules' }, // NEW ITEM
                   ].filter(item => {
                   // If user is Canteen Staff, ONLY show the Canteen tab
                   if (user?.role === UserRole.CANTEEN_STAFF) {
@@ -675,7 +715,6 @@ export const AdminDashboard: React.FC = () => {
             
             <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 p-5">
               <h4 className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-4">Quick Settings</h4>
-              {/* 👇 NEW: Splash Video Toggle moved here */}
                <div className="flex items-center justify-between mt-4">
                   <span className="text-sm font-medium text-slate-700 dark:text-slate-300">Splash Video</span>
                   <button 
@@ -877,7 +916,7 @@ export const AdminDashboard: React.FC = () => {
                             >
                               <option value={UserRole.STUDENT}>STUDENT</option>
                               <option value={UserRole.ADMIN}>ADMIN</option>
-                              <option value={UserRole.CANTEEN_STAFF}>CANTEEN STAFF</option> {/* 👈 Added missing option */}
+                              <option value={UserRole.CANTEEN_STAFF}>CANTEEN STAFF</option> 
                             </select>
                          </td>
                          <td className="px-6 py-4 whitespace-nowrap">
@@ -1697,6 +1736,53 @@ export const AdminDashboard: React.FC = () => {
            </div>
         </div>
         )}
+
+        {/* --- 🟢 NEW: SERVICES TAB --- */}
+        {activeTab === 'services' && (
+          <div className="space-y-6 animate-in fade-in">
+             <div className="flex justify-between items-center bg-white dark:bg-slate-900 p-6 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800">
+                <div>
+                   <h3 className="text-xl font-bold text-slate-900 dark:text-white">Service Modules</h3>
+                   <p className="text-slate-500 dark:text-slate-400 text-sm">Manage the tiles on the Home Hub.</p>
+                </div>
+                <Button onClick={handleOpenAddService} className="flex items-center gap-2"><Plus size={18}/> Add Service</Button>
+             </div>
+
+             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {services.map(srv => {
+                   const Icon = ICON_MAP[srv.iconName] || ICON_MAP['Utensils'];
+                   return (
+                      <div key={srv.id} className="relative bg-white dark:bg-slate-900 p-5 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 group overflow-hidden">
+                         {/* Preview Gradient */}
+                         <div className={`absolute top-0 right-0 w-24 h-24 bg-gradient-to-br ${srv.color} opacity-10 rounded-bl-[4rem]`} />
+                         
+                         <div className="flex justify-between items-start mb-4 relative z-10">
+                            <div className={`w-12 h-12 rounded-2xl bg-gradient-to-br ${srv.color} flex items-center justify-center text-white shadow-md`}>
+                               <Icon size={24} />
+                            </div>
+                            <div className="flex gap-1">
+                               <button onClick={() => handleOpenEditService(srv)} className="p-2 text-slate-400 hover:text-blue-500 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg"><Pencil size={16}/></button>
+                               <button onClick={() => handleDeleteService(srv.id)} className="p-2 text-slate-400 hover:text-red-500 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg"><Trash2 size={16}/></button>
+                            </div>
+                         </div>
+                         
+                         <h4 className="font-bold text-lg text-slate-900 dark:text-white mb-1">{srv.title}</h4>
+                         <p className="text-sm text-slate-500 dark:text-slate-400 mb-3">{srv.description}</p>
+                         
+                         <div className="flex gap-2">
+                            {srv.isActive ? (
+                               <span className="text-[10px] font-bold bg-emerald-100 text-emerald-700 px-2 py-1 rounded">Active</span>
+                            ) : (
+                               <span className="text-[10px] font-bold bg-slate-100 text-slate-500 px-2 py-1 rounded">Locked</span>
+                            )}
+                            {srv.isExternal && <span className="text-[10px] font-bold bg-blue-100 text-blue-700 px-2 py-1 rounded">External Link</span>}
+                         </div>
+                      </div>
+                   );
+                })}
+             </div>
+          </div>
+        )}
       </main>
 
       {/* --- Modals --- */}
@@ -1880,6 +1966,91 @@ export const AdminDashboard: React.FC = () => {
                </div>
             </div>
          </div>
+      )}
+
+      {/* 🟢 UPDATED: SERVICE MODULE MODAL WITH ICONS & COLORS GRID */}
+      {showServiceModal && editingService && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+           <div className="bg-white dark:bg-slate-900 rounded-2xl w-full max-w-md p-6 shadow-2xl animate-in zoom-in-95 max-h-[90vh] overflow-y-auto custom-scrollbar">
+              <div className="flex justify-between items-center mb-4">
+                 <h3 className="font-bold text-lg text-slate-900 dark:text-white">{editingService.id && services.find(s => s.id === editingService.id) ? 'Edit Service' : 'New Service'}</h3>
+                 <button onClick={() => setShowServiceModal(false)}><X size={20} className="text-slate-400"/></button>
+              </div>
+              
+              <form onSubmit={handleSaveService} className="space-y-5">
+                 <div>
+                    <label className="text-xs font-bold text-slate-500 uppercase mb-1 block">Title</label>
+                    <input required className="w-full p-3 bg-slate-50 dark:bg-slate-950 rounded-xl outline-none focus:ring-2 focus:ring-orange-500 dark:text-white" value={editingService.title} onChange={e => setEditingService({...editingService, title: e.target.value})} placeholder="e.g. Gym Connect" />
+                 </div>
+                 
+                 <div>
+                    <label className="text-xs font-bold text-slate-500 uppercase mb-1 block">Description</label>
+                    <input className="w-full p-3 bg-slate-50 dark:bg-slate-950 rounded-xl outline-none focus:ring-2 focus:ring-orange-500 dark:text-white" value={editingService.description} onChange={e => setEditingService({...editingService, description: e.target.value})} placeholder="Short description" />
+                 </div>
+
+                 {/* 🟢 NEW: ICONS GRID */}
+                 <div>
+                    <label className="text-xs font-bold text-slate-500 uppercase mb-2 block">Select Icon</label>
+                    <div className="grid grid-cols-5 gap-2 max-h-40 overflow-y-auto p-2 border border-slate-200 dark:border-slate-800 rounded-xl custom-scrollbar">
+                      {Object.keys(ICON_MAP).map(iconKey => {
+                         const IconComponent = ICON_MAP[iconKey];
+                         const isSelected = editingService.iconName === iconKey;
+                         return (
+                           <button
+                             key={iconKey}
+                             type="button"
+                             onClick={() => setEditingService({...editingService, iconName: iconKey})}
+                             className={`p-2 rounded-xl flex items-center justify-center transition-all aspect-square ${isSelected ? 'bg-orange-100 text-orange-600 ring-2 ring-orange-500' : 'bg-slate-50 dark:bg-slate-800 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-700'}`}
+                             title={iconKey}
+                           >
+                             <IconComponent size={20} />
+                           </button>
+                         )
+                      })}
+                    </div>
+                 </div>
+
+                 {/* 🟢 NEW: COLORS GRID */}
+                 <div>
+                    <label className="text-xs font-bold text-slate-500 uppercase mb-2 block">Select Color Theme</label>
+                    <div className="grid grid-cols-4 gap-3">
+                      {GRADIENT_OPTIONS.map(g => {
+                         const isSelected = editingService.color === g.value;
+                         return (
+                           <button
+                             key={g.value}
+                             type="button"
+                             onClick={() => setEditingService({...editingService, color: g.value})}
+                             className={`w-full h-10 rounded-xl bg-gradient-to-br ${g.value} relative transition-transform hover:scale-105 shadow-sm ${isSelected ? 'ring-2 ring-offset-2 ring-orange-500 dark:ring-offset-slate-900' : ''}`}
+                             title={g.label}
+                           >
+                             {isSelected && <div className="absolute inset-0 flex items-center justify-center text-white"><Check size={16} strokeWidth={3} /></div>}
+                           </button>
+                         )
+                      })}
+                    </div>
+                 </div>
+
+                 <div>
+                    <label className="text-xs font-bold text-slate-500 uppercase mb-1 block">Path / URL</label>
+                    <input className="w-full p-3 bg-slate-50 dark:bg-slate-950 rounded-xl outline-none focus:ring-2 focus:ring-orange-500 dark:text-white" value={editingService.path} onChange={e => setEditingService({...editingService, path: e.target.value})} placeholder="/mess or https://..." />
+                 </div>
+
+                 <div className="flex items-center gap-4 pt-2">
+                    <label className="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-300 font-medium cursor-pointer">
+                       <input type="checkbox" checked={editingService.isActive} onChange={e => setEditingService({...editingService, isActive: e.target.checked})} className="w-5 h-5 rounded text-orange-500 focus:ring-orange-500" />
+                       Active
+                    </label>
+                    <label className="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-300 font-medium cursor-pointer">
+                       <input type="checkbox" checked={editingService.isExternal} onChange={e => setEditingService({...editingService, isExternal: e.target.checked})} className="w-5 h-5 rounded text-orange-500 focus:ring-orange-500" />
+                       External Link
+                    </label>
+                 </div>
+
+                 <Button fullWidth type="submit">Save Module</Button>
+              </form>
+           </div>
+        </div>
       )}
 
       {deactivateModalUser && (

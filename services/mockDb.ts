@@ -26,7 +26,8 @@ import {
   HostelComplaint,
   LaundryBooking,
   WashingMachine,
-  ComplaintStatus
+  ComplaintStatus,
+  ServiceModule
 } from '../types';
 
 export const MockDB = {
@@ -324,12 +325,11 @@ export const MockDB = {
     await deleteDoc(doc(db, 'announcements', id));
   },
 
-  // --- 10. LAUNDRY (SORTED BY NAME) ---
+  // --- 10. LAUNDRY ---
 
   getWashingMachines: async (): Promise<WashingMachine[]> => {
     try {
       const colRef = collection(db, 'washing_machines');
-      // 🟢 UPDATED: Now sorts by 'name' alphabetically
       const q = query(colRef, orderBy('name', 'asc')); 
       const snapshot = await getDocs(q);
       return snapshot.docs.map(doc => ({ ...(doc.data() as any), id: doc.id }));
@@ -361,7 +361,6 @@ export const MockDB = {
       const snapshot = await getDocs(q);
       return snapshot.docs.map(doc => ({ ...(doc.data() as any), id: doc.id }) as LaundryBooking);
     } catch (e) { 
-      console.error("Error fetching laundry bookings:", e);
       return []; 
     }
   },
@@ -373,5 +372,50 @@ export const MockDB = {
 
   cancelLaundryBooking: async (id: string): Promise<void> => {
     await deleteDoc(doc(db, 'laundry_bookings', id));
+  },
+
+  // --- 11. DYNAMIC SERVICES (FIXED) ---
+  
+  getServices: async (): Promise<ServiceModule[]> => {
+    try {
+      const snapshot = await getDocs(collection(db, 'services'));
+      
+      // If DB is empty, we must SAVE the defaults there first!
+      if (snapshot.empty) {
+        const defaults: ServiceModule[] = [
+          { id: 'mess', title: 'Mess Connect', description: 'Menu, Ratings & Canteen', iconName: 'Utensils', path: '/mess', color: 'from-orange-500 to-amber-500', isActive: true },
+          { id: 'hostel', title: 'Hostel Connect', description: 'Complaints & Notices', iconName: 'Building', path: '/hostel', color: 'from-blue-500 to-indigo-600', isActive: true },
+          { id: 'sports', title: 'Sports Connect', description: 'Coming Soon', iconName: 'Trophy', path: '', color: 'from-emerald-400 to-teal-500', isActive: false },
+          { id: 'transport', title: 'Transport', description: 'Coming Soon', iconName: 'Bus', path: '', color: 'from-purple-500 to-pink-500', isActive: false }
+        ];
+        
+        // Write defaults to DB
+        const batch = writeBatch(db);
+        defaults.forEach(d => {
+            const { id, ...rest } = d;
+            batch.set(doc(db, 'services', id), rest);
+        });
+        await batch.commit();
+        
+        // Return them so the UI shows them immediately
+        return defaults;
+      }
+      
+      // Otherwise return what is in DB
+      return snapshot.docs.map(doc => ({ ...(doc.data() as any), id: doc.id }) as ServiceModule);
+    } catch (e) { 
+        console.error(e);
+        return []; 
+    }
+  },
+
+  saveService: async (service: ServiceModule): Promise<void> => {
+    const { id, ...data } = service;
+    // 👇 FIXED: This will Create (if new) OR Update (if exists)
+    await setDoc(doc(db, 'services', id), data, { merge: true });
+  },
+
+  deleteService: async (id: string): Promise<void> => {
+    await deleteDoc(doc(db, 'services', id));
   }
 };
