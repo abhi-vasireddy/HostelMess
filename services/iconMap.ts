@@ -2,10 +2,15 @@ import {
   UtensilsCrossed, Building2, Trophy, Bus, Book, Wifi, 
   Dumbbell, Stethoscope, GraduationCap, Music, Video, 
   ShoppingCart, Briefcase, Zap, Heart, Globe, MapPin, 
-  Calculator, Library, Coffee
+  Calculator, Library, Coffee, BedDouble, Shirt, WashingMachine,
+  Apple, Pizza, Gamepad2, Clapperboard, Ticket, Wallet, Banknote,
+  Gift, PartyPopper, Car, Bike, Train, Plane, Umbrella, CloudSun,
+  Laptop, Smartphone, Headphones, Camera, Mail, Phone, Bell,
+  Calendar, Clock, Lock, User, Settings, Megaphone, Printer, Scissors
 } from 'lucide-react';
 
 export const ICON_MAP: Record<string, any> = {
+  // Existing
   'Utensils': UtensilsCrossed,
   'Building': Building2,
   'Trophy': Trophy,
@@ -25,7 +30,42 @@ export const ICON_MAP: Record<string, any> = {
   'Map': MapPin,
   'Math': Calculator,
   'Library': Library,
-  'Coffee': Coffee
+  'Coffee': Coffee,
+  
+  // New Additions
+  'Bed': BedDouble,
+  'Laundry': Shirt,
+  'Washer': WashingMachine,
+  'Food': Apple,
+  'Pizza': Pizza,
+  'Game': Gamepad2,
+  'Movie': Clapperboard,
+  'Ticket': Ticket,
+  'Wallet': Wallet,
+  'Cash': Banknote,
+  'Gift': Gift,
+  'Party': PartyPopper,
+  'Car': Car,
+  'Bike': Bike,
+  'Train': Train,
+  'Plane': Plane,
+  'Umbrella': Umbrella,
+  'Weather': CloudSun,
+  'Laptop': Laptop,
+  'Mobile': Smartphone,
+  'Audio': Headphones,
+  'Camera': Camera,
+  'Mail': Mail,
+  'Phone': Phone,
+  'Bell': Bell,
+  'Calendar': Calendar,
+  'Clock': Clock,
+  'Lock': Lock,
+  'User': User,
+  'Settings': Settings,
+  'Notice': Megaphone,
+  'Print': Printer,
+  'Salon': Scissors
 };
 
 export const GRADIENT_OPTIONS = [
@@ -37,4 +77,17 @@ export const GRADIENT_OPTIONS = [
   { label: 'Pink', value: 'from-pink-500 to-rose-400' },
   { label: 'Cyan', value: 'from-cyan-400 to-blue-500' },
   { label: 'Slate', value: 'from-slate-600 to-slate-800' },
+  { label: 'Yellow', value: 'from-yellow-400 to-orange-500' },
+  { label: 'Indigo', value: 'from-indigo-500 to-purple-600' },
+  // New Colors
+  { label: 'Violet', value: 'from-violet-500 to-fuchsia-500' },
+  { label: 'Sky', value: 'from-sky-400 to-blue-500' },
+  { label: 'Lime', value: 'from-lime-400 to-green-500' },
+  { label: 'Rose', value: 'from-rose-400 to-red-500' },
+  { label: 'Amber', value: 'from-amber-400 to-orange-500' },
+  { label: 'Teal', value: 'from-teal-400 to-emerald-500' },
+  { label: 'Fuchsia', value: 'from-fuchsia-500 to-pink-500' },
+  { label: 'Dark', value: 'from-slate-800 to-black' },
+  { label: 'Midnight', value: 'from-blue-900 to-slate-900' },
+  { label: 'Sunset', value: 'from-orange-400 to-pink-500' },
 ];
