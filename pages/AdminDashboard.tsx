@@ -1991,7 +1991,7 @@ export const AdminDashboard: React.FC = () => {
                  {/* 🟢 NEW: ICONS GRID */}
                  <div>
                     <label className="text-xs font-bold text-slate-500 uppercase mb-2 block">Select Icon</label>
-                    <div className="grid grid-cols-5 gap-2 max-h-40 overflow-y-auto p-2 border border-slate-200 dark:border-slate-800 rounded-xl custom-scrollbar">
+                    <div className="grid grid-cols-8 gap-2 max-h-40 overflow-y-auto p-2 border border-slate-200 dark:border-slate-800 rounded-xl custom-scrollbar">
                       {Object.keys(ICON_MAP).map(iconKey => {
                          const IconComponent = ICON_MAP[iconKey];
                          const isSelected = editingService.iconName === iconKey;
@@ -2000,10 +2000,10 @@ export const AdminDashboard: React.FC = () => {
                              key={iconKey}
                              type="button"
                              onClick={() => setEditingService({...editingService, iconName: iconKey})}
-                             className={`p-2 rounded-xl flex items-center justify-center transition-all aspect-square ${isSelected ? 'bg-orange-100 text-orange-600 ring-2 ring-orange-500' : 'bg-slate-50 dark:bg-slate-800 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-700'}`}
+                             className={`p-1.5 rounded-lg flex items-center justify-center transition-all aspect-square ${isSelected ? 'bg-orange-100 text-orange-600 ring-2 ring-orange-500' : 'bg-slate-50 dark:bg-slate-800 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-700'}`}
                              title={iconKey}
                            >
-                             <IconComponent size={20} />
+                             <IconComponent size={16} />
                            </button>
                          )
                       })}
@@ -2013,7 +2013,8 @@ export const AdminDashboard: React.FC = () => {
                  {/* 🟢 NEW: COLORS GRID */}
                  <div>
                     <label className="text-xs font-bold text-slate-500 uppercase mb-2 block">Select Color Theme</label>
-                    <div className="grid grid-cols-4 gap-3">
+                    {/* Changed grid to 5 cols and h-8 for smaller size */}
+                    <div className="grid grid-cols-5 gap-2">
                       {GRADIENT_OPTIONS.map(g => {
                          const isSelected = editingService.color === g.value;
                          return (
@@ -2021,10 +2022,10 @@ export const AdminDashboard: React.FC = () => {
                              key={g.value}
                              type="button"
                              onClick={() => setEditingService({...editingService, color: g.value})}
-                             className={`w-full h-10 rounded-xl bg-gradient-to-br ${g.value} relative transition-transform hover:scale-105 shadow-sm ${isSelected ? 'ring-2 ring-offset-2 ring-orange-500 dark:ring-offset-slate-900' : ''}`}
+                             className={`w-full h-8 rounded-lg bg-gradient-to-br ${g.value} relative transition-transform hover:scale-105 shadow-sm ${isSelected ? 'ring-2 ring-offset-2 ring-orange-500 dark:ring-offset-slate-900' : ''}`}
                              title={g.label}
                            >
-                             {isSelected && <div className="absolute inset-0 flex items-center justify-center text-white"><Check size={16} strokeWidth={3} /></div>}
+                             {isSelected && <div className="absolute inset-0 flex items-center justify-center text-white"><Check size={14} strokeWidth={3} /></div>}
                            </button>
                          )
                       })}
