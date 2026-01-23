@@ -5,7 +5,7 @@ import { generateAIInsights } from '../services/geminiService';
 import { Button } from '../components/Button';
 import { useAuth } from '../App';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
-import { AlertTriangle, TrendingUp, Users, Menu as MenuIcon, Sparkles, Trash2, Plus, CheckCircle2, Pencil, X, MessageSquare, Search, UtensilsCrossed, Calendar, Upload, CheckSquare, StickyNote, Clock, Check, Filter, Info, Download, Lightbulb, ChevronDown, GripVertical, Bold, Italic, List, Video, Lock, Settings, ArrowLeft, LayoutGrid } from 'lucide-react';
+import { AlertTriangle, TrendingUp, Users, Menu as MenuIcon, Sparkles, Trash2, Plus, CheckCircle2, Pencil, X, MessageSquare, Search, UtensilsCrossed, Calendar, Upload, CheckSquare, StickyNote, Clock, Check, Filter, Info, Download, Lightbulb, ChevronDown, GripVertical, Bold, Italic, List, Video, Lock, Settings, ArrowLeft, LayoutGrid, Copy } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { getCurrentDayName, getTodayDateString } from '../services/timeUtils';
 import { ICON_MAP, GRADIENT_OPTIONS } from '../services/iconMap';
@@ -14,6 +14,18 @@ import { ICON_MAP, GRADIENT_OPTIONS } from '../services/iconMap';
 import { LottiePlayer } from '../components/LottiePlayer';
 import Lottie from 'lottie-react';
 import loadingAnimation from '../assets/animations/loading.json';
+
+// PREDEFINED TEMPLATES
+const SERVICE_TEMPLATES = [
+  { title: 'Mess Connect', description: 'Menu, Ratings & Canteen', iconName: 'Utensils', color: 'from-orange-500 to-amber-500', path: '/mess' },
+  { title: 'Hostel Connect', description: 'Complaints & Notices', iconName: 'Building', color: 'from-blue-500 to-indigo-600', path: '/hostel' },
+  { title: 'Gym Slot', description: 'Check capacity & timing', iconName: 'Gym', color: 'from-red-500 to-rose-600', path: '/gym' },
+  { title: 'Library', description: 'Book search & seats', iconName: 'Book', color: 'from-slate-600 to-slate-800', path: '/library' },
+  { title: 'Transport', description: 'Bus routes & timings', iconName: 'Bus', color: 'from-purple-500 to-pink-500', path: '/transport' },
+  { title: 'Medical', description: 'Health center appointments', iconName: 'Medical', color: 'from-emerald-400 to-teal-500', path: '/medical' },
+  { title: 'Sports', description: 'Equipment & courts', iconName: 'Trophy', color: 'from-cyan-400 to-blue-500', path: '/sports' },
+  { title: 'Laundry', description: 'Washer status', iconName: 'Laundry', color: 'from-indigo-500 to-purple-600', path: '/laundry' },
+];
 
 export const AdminDashboard: React.FC = () => {
   const { user } = useAuth();
@@ -38,10 +50,11 @@ export const AdminDashboard: React.FC = () => {
   const [notes, setNotes] = useState<AdminNote[]>([]);
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
   
-  // 🟢 NEW: Services State
+  // Services State
   const [services, setServices] = useState<ServiceModule[]>([]);
   const [editingService, setEditingService] = useState<Partial<ServiceModule> | null>(null);
   const [showServiceModal, setShowServiceModal] = useState(false);
+  const [draggedServiceIndex, setDraggedServiceIndex] = useState<number | null>(null); // 🟢 For Drag & Drop
 
   // UI States
   const [showAddCanteenModal, setShowAddCanteenModal] = useState(false);
@@ -148,6 +161,19 @@ export const AdminDashboard: React.FC = () => {
     setShowServiceModal(true);
   };
 
+  const handleApplyTemplate = (template: typeof SERVICE_TEMPLATES[0]) => {
+    if (!editingService) return;
+    setEditingService({
+        ...editingService,
+        title: template.title,
+        description: template.description,
+        iconName: template.iconName,
+        color: template.color,
+        path: template.path,
+        isActive: true
+    });
+  };
+
   const handleSaveService = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingService?.title) return;
@@ -169,6 +195,33 @@ export const AdminDashboard: React.FC = () => {
       const updated = await MockDB.getCanteenMenu();
       setCanteenMenu(updated);
     } catch (error) { console.error(error); }
+  };
+
+  // 🟢 NEW: DRAG AND DROP HANDLERS FOR SERVICES
+  const handleServiceDragStart = (index: number) => {
+    setDraggedServiceIndex(index);
+  };
+
+  const handleServiceDragOver = (e: React.DragEvent) => {
+    e.preventDefault(); // Necessary to allow dropping
+  };
+
+  const handleServiceDrop = async (dropIndex: number) => {
+    if (draggedServiceIndex === null || draggedServiceIndex === dropIndex) return;
+
+    // Create a copy of the list
+    const updatedServices = [...services];
+    // Remove the dragged item
+    const [draggedItem] = updatedServices.splice(draggedServiceIndex, 1);
+    // Insert it at the new position
+    updatedServices.splice(dropIndex, 0, draggedItem);
+
+    // Update Local State (Immediate Feedback)
+    setServices(updatedServices);
+    setDraggedServiceIndex(null);
+
+    // Update DB (Persist Order)
+    await MockDB.updateServiceOrder(updatedServices);
   };
 
   // --- AI & Handlers ---
@@ -1749,10 +1802,17 @@ export const AdminDashboard: React.FC = () => {
              </div>
 
              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {services.map(srv => {
+                {services.map((srv, index) => { // 🟢 Added index for drag
                    const Icon = ICON_MAP[srv.iconName] || ICON_MAP['Utensils'];
                    return (
-                      <div key={srv.id} className="relative bg-white dark:bg-slate-900 p-5 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 group overflow-hidden">
+                      <div 
+                        key={srv.id} 
+                        draggable // 🟢 Make draggable
+                        onDragStart={() => handleServiceDragStart(index)}
+                        onDragOver={handleServiceDragOver}
+                        onDrop={() => handleServiceDrop(index)}
+                        className={`relative bg-white dark:bg-slate-900 p-5 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 group overflow-hidden cursor-move hover:shadow-md transition-all ${draggedServiceIndex === index ? 'opacity-50' : 'opacity-100'}`}
+                      >
                          {/* Preview Gradient */}
                          <div className={`absolute top-0 right-0 w-24 h-24 bg-gradient-to-br ${srv.color} opacity-10 rounded-bl-[4rem]`} />
                          
@@ -1968,15 +2028,39 @@ export const AdminDashboard: React.FC = () => {
          </div>
       )}
 
-      {/* 🟢 UPDATED: SERVICE MODULE MODAL WITH ICONS & COLORS GRID */}
+      {/* 🟢 UPDATED: SERVICE MODULE MODAL WITH TEMPLATES + ICONS + COLORS */}
       {showServiceModal && editingService && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
-           <div className="bg-white dark:bg-slate-900 rounded-2xl w-full max-w-md p-6 shadow-2xl animate-in zoom-in-95 max-h-[90vh] overflow-y-auto custom-scrollbar">
+           <div className="bg-white dark:bg-slate-900 rounded-2xl w-full max-w-lg p-6 shadow-2xl animate-in zoom-in-95 max-h-[90vh] overflow-y-auto custom-scrollbar">
               <div className="flex justify-between items-center mb-4">
                  <h3 className="font-bold text-lg text-slate-900 dark:text-white">{editingService.id && services.find(s => s.id === editingService.id) ? 'Edit Service' : 'New Service'}</h3>
                  <button onClick={() => setShowServiceModal(false)}><X size={20} className="text-slate-400"/></button>
               </div>
               
+              {/* 🟢 TEMPLATES SECTION */}
+              {!services.find(s => s.id === editingService.id) && (
+                 <div className="mb-6">
+                    <p className="text-xs font-bold text-slate-500 uppercase mb-2">Quick Start Templates</p>
+                    <div className="flex gap-2 overflow-x-auto pb-2 custom-scrollbar">
+                       {SERVICE_TEMPLATES.map(t => {
+                          const Icon = ICON_MAP[t.iconName];
+                          return (
+                             <button
+                                key={t.title}
+                                onClick={() => handleApplyTemplate(t)}
+                                className="flex-shrink-0 flex flex-col items-center gap-2 p-3 w-24 bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 hover:border-orange-400 dark:hover:border-orange-500 transition-all group"
+                             >
+                                <div className={`w-8 h-8 rounded-lg bg-gradient-to-br ${t.color} flex items-center justify-center text-white shadow-sm`}>
+                                   <Icon size={16} />
+                                </div>
+                                <span className="text-[10px] font-bold text-slate-600 dark:text-slate-300 text-center leading-tight line-clamp-2">{t.title}</span>
+                             </button>
+                          )
+                       })}
+                    </div>
+                 </div>
+              )}
+
               <form onSubmit={handleSaveService} className="space-y-5">
                  <div>
                     <label className="text-xs font-bold text-slate-500 uppercase mb-1 block">Title</label>
@@ -1988,7 +2072,7 @@ export const AdminDashboard: React.FC = () => {
                     <input className="w-full p-3 bg-slate-50 dark:bg-slate-950 rounded-xl outline-none focus:ring-2 focus:ring-orange-500 dark:text-white" value={editingService.description} onChange={e => setEditingService({...editingService, description: e.target.value})} placeholder="Short description" />
                  </div>
 
-                 {/* 🟢 NEW: ICONS GRID */}
+                 {/* 🟢 ICONS GRID */}
                  <div>
                     <label className="text-xs font-bold text-slate-500 uppercase mb-2 block">Select Icon</label>
                     <div className="grid grid-cols-8 gap-2 max-h-40 overflow-y-auto p-2 border border-slate-200 dark:border-slate-800 rounded-xl custom-scrollbar">
@@ -2010,10 +2094,9 @@ export const AdminDashboard: React.FC = () => {
                     </div>
                  </div>
 
-                 {/* 🟢 NEW: COLORS GRID */}
+                 {/* 🟢 COLORS GRID */}
                  <div>
                     <label className="text-xs font-bold text-slate-500 uppercase mb-2 block">Select Color Theme</label>
-                    {/* Changed grid to 5 cols and h-8 for smaller size */}
                     <div className="grid grid-cols-5 gap-2">
                       {GRADIENT_OPTIONS.map(g => {
                          const isSelected = editingService.color === g.value;
