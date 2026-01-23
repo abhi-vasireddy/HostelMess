@@ -10,7 +10,8 @@ import {
   updateDoc,
   deleteDoc,
   orderBy,
-  setDoc
+  setDoc,
+  limit
 } from 'firebase/firestore'; 
 import { 
   User, 
@@ -27,7 +28,10 @@ import {
   LaundryBooking,
   WashingMachine,
   ComplaintStatus,
-  ServiceModule
+  ServiceModule,
+  SportsEquipment,
+  SportsBooking,
+  TeamRequest
 } from '../types';
 
 export const MockDB = {
@@ -374,48 +378,89 @@ export const MockDB = {
     await deleteDoc(doc(db, 'laundry_bookings', id));
   },
 
-  // --- 11. DYNAMIC SERVICES (FIXED) ---
+  // --- 11. DYNAMIC SERVICES (FIXED: NO AUTO-RESTORE) ---
   
   getServices: async (): Promise<ServiceModule[]> => {
     try {
       const snapshot = await getDocs(collection(db, 'services'));
-      
-      // If DB is empty, we must SAVE the defaults there first!
-      if (snapshot.empty) {
-        const defaults: ServiceModule[] = [
-          { id: 'mess', title: 'Mess Connect', description: 'Menu, Ratings & Canteen', iconName: 'Utensils', path: '/mess', color: 'from-orange-500 to-amber-500', isActive: true },
-          { id: 'hostel', title: 'Hostel Connect', description: 'Complaints & Notices', iconName: 'Building', path: '/hostel', color: 'from-blue-500 to-indigo-600', isActive: true },
-          { id: 'sports', title: 'Sports Connect', description: 'Coming Soon', iconName: 'Trophy', path: '', color: 'from-emerald-400 to-teal-500', isActive: false },
-          { id: 'transport', title: 'Transport', description: 'Coming Soon', iconName: 'Bus', path: '', color: 'from-purple-500 to-pink-500', isActive: false }
-        ];
-        
-        // Write defaults to DB
-        const batch = writeBatch(db);
-        defaults.forEach(d => {
-            const { id, ...rest } = d;
-            batch.set(doc(db, 'services', id), rest);
-        });
-        await batch.commit();
-        
-        // Return them so the UI shows them immediately
-        return defaults;
-      }
-      
-      // Otherwise return what is in DB
-      return snapshot.docs.map(doc => ({ ...(doc.data() as any), id: doc.id }) as ServiceModule);
+      // 🟢 Logic Removed: No longer checking if empty to auto-create.
+      // This means if you delete everything, it STAYS deleted.
+      const services = snapshot.docs.map(doc => ({ ...(doc.data() as any), id: doc.id }) as ServiceModule);
+      return services.sort((a, b) => (a.order || 0) - (b.order || 0));
     } catch (e) { 
-        console.error(e);
         return []; 
     }
   },
 
   saveService: async (service: ServiceModule): Promise<void> => {
     const { id, ...data } = service;
-    // 👇 FIXED: This will Create (if new) OR Update (if exists)
+    if (data.order === undefined) {
+       data.order = Date.now();
+    }
     await setDoc(doc(db, 'services', id), data, { merge: true });
+  },
+
+  updateServiceOrder: async (services: ServiceModule[]): Promise<void> => {
+    const batch = writeBatch(db);
+    services.forEach((srv, index) => {
+       const ref = doc(db, 'services', srv.id);
+       batch.update(ref, { order: index });
+    });
+    await batch.commit();
   },
 
   deleteService: async (id: string): Promise<void> => {
     await deleteDoc(doc(db, 'services', id));
+  },
+
+  // --- 12. SPORTS MODULE ---
+  
+  getSportsEquipment: async (): Promise<SportsEquipment[]> => {
+    try {
+      const snapshot = await getDocs(collection(db, 'sports_equipment'));
+      // 🟢 Logic Removed: No auto-creating default sports gear.
+      return snapshot.docs.map(doc => ({ ...(doc.data() as any), id: doc.id }));
+    } catch(e) { return []; }
+  },
+
+  saveSportsEquipment: async (item: SportsEquipment): Promise<void> => {
+     const { id, ...data } = item;
+     if (id) {
+        await setDoc(doc(db, 'sports_equipment', id), data, { merge: true });
+     } else {
+        await addDoc(collection(db, 'sports_equipment'), data);
+     }
+  },
+
+  deleteSportsEquipment: async (id: string): Promise<void> => {
+     await deleteDoc(doc(db, 'sports_equipment', id));
+  },
+
+  getBookings: async (date: string): Promise<SportsBooking[]> => {
+     const q = query(collection(db, 'sports_bookings'), where('date', '==', date));
+     const snap = await getDocs(q);
+     return snap.docs.map(d => ({...d.data(), id: d.id} as SportsBooking));
+  },
+
+  bookSportItem: async (booking: SportsBooking): Promise<void> => {
+     await addDoc(collection(db, 'sports_bookings'), booking);
+  },
+
+  getTeamRequests: async (): Promise<TeamRequest[]> => {
+     const q = query(collection(db, 'team_requests'), orderBy('date', 'asc'));
+     const snap = await getDocs(q);
+     return snap.docs.map(d => ({...d.data(), id: d.id} as TeamRequest));
+  },
+
+  createTeamRequest: async (req: TeamRequest): Promise<void> => {
+     await addDoc(collection(db, 'team_requests'), req);
+  },
+
+  joinTeam: async (requestId: string, playerName: string): Promise<void> => {
+     // Placeholder
+  },
+  
+  addPlayerToTeam: async (requestId: string, newPlayerList: string[]): Promise<void> => {
+     await updateDoc(doc(db, 'team_requests', requestId), { playersJoined: newPlayerList });
   }
 };

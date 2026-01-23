@@ -3,10 +3,12 @@ import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { Login } from './pages/Login';
 import { StudentDashboard } from './pages/StudentDashboard';
 import { AdminDashboard } from './pages/AdminDashboard';
-import { HomeHub } from './pages/HomeHub';               // 👈 New!
-import { HostelDashboard } from './pages/HostelDashboard'; // 👈 New!
+import { HomeHub } from './pages/HomeHub';
+import { HostelDashboard } from './pages/HostelDashboard';
+import { SportsDashboard } from './pages/SportsDashboard';
+import { ComingSoon } from './pages/ComingSoon'; // 👈 Import new page
 import { MockDB } from './services/mockDb';
-import { User, UserRole } from './types';
+import { User, UserRole, ServiceModule } from './types';
 import { Layout } from './components/Layout'; 
 
 interface AuthContextType {
@@ -27,16 +29,26 @@ export const useAuth = () => {
 function App() {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [services, setServices] = useState<ServiceModule[]>([]);
 
+  // 🟢 1. Initialize Auth AND Fetch Services
   useEffect(() => {
-    const initAuth = async () => {
+    const initData = async () => {
+      // Check User
       const savedUser = MockDB.getCurrentUser();
-      if (savedUser) {
-        setUser(savedUser);
+      if (savedUser) setUser(savedUser);
+
+      // Fetch Services for Dynamic Routing
+      try {
+        const serviceList = await MockDB.getServices();
+        setServices(serviceList);
+      } catch (e) {
+        console.error("Failed to load routes", e);
       }
+      
       setLoading(false);
     };
-    initAuth();
+    initData();
   }, []);
 
   const login = async (email: string, password?: string) => {
@@ -47,6 +59,36 @@ function App() {
   const logout = async () => {
     await MockDB.logout();
     setUser(null);
+  };
+
+  // 🟢 2. The Route Factory: Decides which page to show based on the path
+  const getComponentForPath = (path: string, currentUser: User) => {
+    // Normalizing path (remove leading slash for cleaner checking)
+    const cleanPath = path.startsWith('/') ? path.substring(1) : path;
+
+    switch (cleanPath) {
+      case 'mess':
+        return (currentUser.role === UserRole.ADMIN || currentUser.role === UserRole.CANTEEN_STAFF) ? (
+          <Layout user={currentUser} onLogout={logout}>
+             <AdminDashboard />
+          </Layout>
+        ) : (
+          <Layout user={currentUser} onLogout={logout}>
+             <StudentDashboard user={currentUser} />
+          </Layout>
+        );
+      
+      case 'hostel':
+        return <HostelDashboard user={currentUser} />;
+      
+      case 'sports':
+      case 'gym': // 👈 Reuse Sports Dashboard for Gym!
+        return <SportsDashboard user={currentUser} />;
+      
+      default:
+        // If we don't have code for this service yet, show Coming Soon
+        return <ComingSoon />;
+    }
   };
 
   if (loading) {
@@ -66,36 +108,32 @@ function App() {
             element={!user ? <Login /> : <Navigate to="/" />} 
           />
           
-          {/* Protected Routes (User must be logged in) */}
+          {/* Protected Routes */}
           {user ? (
             <>
-              {/* 1. Main Hub - The "Super App" Home Screen */}
+              {/* Home Hub */}
               <Route path="/" element={<HomeHub />} />
 
-              {/* 2. Mess Module */}
-              <Route 
-                path="/mess" 
-                element={
-                  (user.role === UserRole.ADMIN || user.role === UserRole.CANTEEN_STAFF) ? (
-                    <Layout user={user} onLogout={logout}>
-                       <AdminDashboard user={user} />
-                    </Layout>
-                  ) : (
-                    <Layout user={user} onLogout={logout}>
-                       <StudentDashboard user={user} />
-                    </Layout>
-                  )
-                } 
-              />
+              {/* 🟢 3. Dynamic Routes Generation */}
+              {/* FIXED: We wrap Route in React.Fragment to handle the 'key' error */}
+              {services.map((service) => (
+                <React.Fragment key={service.id}>
+                  <Route 
+                    path={service.path} 
+                    element={getComponentForPath(service.path, user)} 
+                  />
+                </React.Fragment>
+              ))}
 
-              {/* 3. Hostel Module */}
-              <Route 
-                 path="/hostel" 
-                 element={<HostelDashboard user={user} />} 
-              />
+              {/* Fallback for hardcoded standard paths if DB fails or is empty */}
+              <Route path="/mess" element={getComponentForPath('/mess', user)} />
+              <Route path="/hostel" element={<HostelDashboard user={user} />} />
+              <Route path="/sports" element={<SportsDashboard user={user} />} />
+              
+              {/* 404 - If route doesn't exist at all */}
+              <Route path="*" element={<Navigate to="/" />} />
             </>
           ) : (
-            // If not logged in, go to login
             <Route path="*" element={<Navigate to="/login" />} />
           )}
         </Routes>

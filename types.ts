@@ -159,4 +159,41 @@ export interface ServiceModule {
   color: string;    // e.g. 'from-pink-500 to-rose-500'
   isActive: boolean; // true = Clickable, false = Coming Soon (Locked)
   isExternal?: boolean; // true if path is a website URL
+  order?: number; // 👈 NEW: Add this line
+}
+
+// ... (keep all existing code)
+
+// --- NEW: SPORTS MODULE TYPES ---
+export interface SportsEquipment {
+  id: string;
+  name: string;
+  category: 'Court' | 'Gear';
+  total: number;
+  available: number;
+  image?: string; 
+}
+
+export interface SportsBooking {
+  id: string;
+  equipmentId: string;
+  equipmentName: string;
+  userId: string;
+  userName: string;
+  startTime: string;
+  endTime: string;
+  date: string;
+  status: 'Active' | 'Completed';
+}
+
+export interface TeamRequest {
+  id: string;
+  sport: string; // e.g. "Cricket", "Badminton"
+  creatorName: string;
+  creatorId: string;
+  date: string;
+  time: string;
+  playersNeeded: number;
+  playersJoined: string[]; // List of names
+  description: string;
 }
