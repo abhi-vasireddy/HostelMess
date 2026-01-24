@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { User, DailyMenu, Announcement, AnnouncementType, Feedback, AppSettings, MealType, Dish, CanteenItem, TodoTask, TaskPriority, AdminNote, Suggestion, UserRole, ServiceModule } from '../types';
+import { User, DailyMenu, Announcement, AnnouncementType, Feedback, AppSettings, MealType, Dish, CanteenItem, TodoTask, TaskPriority, AdminNote, Suggestion, UserRole, ServiceModule, Gender } from '../types';
 import { MockDB } from '../services/mockDb';
 import { generateAIInsights } from '../services/geminiService';
 import { Button } from '../components/Button';
@@ -54,7 +54,7 @@ export const AdminDashboard: React.FC = () => {
   const [services, setServices] = useState<ServiceModule[]>([]);
   const [editingService, setEditingService] = useState<Partial<ServiceModule> | null>(null);
   const [showServiceModal, setShowServiceModal] = useState(false);
-  const [draggedServiceIndex, setDraggedServiceIndex] = useState<number | null>(null); // 🟢 For Drag & Drop
+  const [draggedServiceIndex, setDraggedServiceIndex] = useState<number | null>(null);
 
   // UI States
   const [showAddCanteenModal, setShowAddCanteenModal] = useState(false);
@@ -63,7 +63,10 @@ export const AdminDashboard: React.FC = () => {
   const [aiLoading, setAiLoading] = useState(false);
   const [newAnnouncement, setNewAnnouncement] = useState({ title: '', message: '', type: AnnouncementType.INFO, expiresOn: '' });
   const [isUserModalOpen, setIsUserModalOpen] = useState(false);
-  const [newUser, setNewUser] = useState({ email: '', displayName: '', password: 'password123', role: 'STUDENT' });
+  
+  // New User State with Gender & Room
+  const [newUser, setNewUser] = useState({ email: '', displayName: '', password: 'password123', role: 'STUDENT', gender: 'MALE', roomNumber: '' });
+  
   const [draggedTaskId, setDraggedTaskId] = useState<string | null>(null);
   const [newTodo, setNewTodo] = useState<{text: string, description: string, priority: TaskPriority, dueDate: string}>({text: '', description: '', priority: TaskPriority.MEDIUM, dueDate: ''});
   const [newNote, setNewNote] = useState<{title: string, content: string}>({title: '', content: ''});
@@ -197,30 +200,24 @@ export const AdminDashboard: React.FC = () => {
     } catch (error) { console.error(error); }
   };
 
-  // 🟢 NEW: DRAG AND DROP HANDLERS FOR SERVICES
   const handleServiceDragStart = (index: number) => {
     setDraggedServiceIndex(index);
   };
 
   const handleServiceDragOver = (e: React.DragEvent) => {
-    e.preventDefault(); // Necessary to allow dropping
+    e.preventDefault(); 
   };
 
   const handleServiceDrop = async (dropIndex: number) => {
     if (draggedServiceIndex === null || draggedServiceIndex === dropIndex) return;
 
-    // Create a copy of the list
     const updatedServices = [...services];
-    // Remove the dragged item
     const [draggedItem] = updatedServices.splice(draggedServiceIndex, 1);
-    // Insert it at the new position
     updatedServices.splice(dropIndex, 0, draggedItem);
 
-    // Update Local State (Immediate Feedback)
     setServices(updatedServices);
     setDraggedServiceIndex(null);
 
-    // Update DB (Persist Order)
     await MockDB.updateServiceOrder(updatedServices);
   };
 
@@ -235,6 +232,7 @@ export const AdminDashboard: React.FC = () => {
   // --- Announcement Handlers ---
   const handleCreateAnnouncement = async (e: React.FormEvent) => {
     e.preventDefault();
+    // 🟢 FIXED: Added 'date' property
     await MockDB.saveAnnouncement({
        id: Date.now().toString(),
        title: newAnnouncement.title,
@@ -242,7 +240,8 @@ export const AdminDashboard: React.FC = () => {
        type: newAnnouncement.type,
        expiresOn: newAnnouncement.expiresOn,
        isActive: true,
-       createdAt: Date.now()
+       createdAt: Date.now(),
+       date: new Date().toISOString() // 👈 This fixes your error
     });
     setNewAnnouncement({ title: '', message: '', type: AnnouncementType.INFO, expiresOn: '' });
     loadData();
@@ -326,10 +325,11 @@ export const AdminDashboard: React.FC = () => {
         const displayName = columns[1];
         const password = columns[2] || '123456';
         const role = columns[3] ? columns[3].toUpperCase() : 'STUDENT';
+        const gender = columns[4] || 'MALE'; 
         
-        if(email && displayName) return { email, displayName, password, role };
+        if(email && displayName) return { email, displayName, password, role, gender };
         return null;
-      }).filter(u => u !== null) as {email: string, displayName: string, password?: string, role?: string}[];
+      }).filter(u => u !== null) as any[];
 
       if (newUsers.length > 0) {
         if(window.confirm(`Found ${newUsers.length} users. Import them?`)) {
@@ -338,7 +338,7 @@ export const AdminDashboard: React.FC = () => {
             alert('Users are Loaded');
         }
       } else {
-        alert('No valid users found in CSV.\nFormat: email,displayName,password,role');
+        alert('No valid users found in CSV.\nFormat: email,displayName,password,role,gender');
       }
       
       if (fileInputRef.current) fileInputRef.current.value = '';
@@ -354,11 +354,13 @@ export const AdminDashboard: React.FC = () => {
         email: newUser.email,
         displayName: newUser.displayName,
         password: newUser.password,
-        role: newUser.role
+        role: newUser.role,
+        gender: newUser.gender, 
+        roomNumber: newUser.roomNumber 
     }]);
     
     setIsUserModalOpen(false);
-    setNewUser({ email: '', displayName: '', password: 'password123', role: 'STUDENT' });
+    setNewUser({ email: '', displayName: '', password: 'password123', role: 'STUDENT', gender: 'MALE', roomNumber: '' });
     alert("User created successfully!");
     loadData();
   };
@@ -2199,6 +2201,31 @@ export const AdminDashboard: React.FC = () => {
                         </select>
                      </div>
                   </div>
+                  
+                  {/* 🟢 NEW: GENDER & ROOM FIELDS */}
+                  <div className="flex gap-4">
+                     <div className="flex-1">
+                        <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Gender</label>
+                        <select 
+                           className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-3 outline-none dark:text-white"
+                           value={newUser.gender}
+                           onChange={e => setNewUser({...newUser, gender: e.target.value})}
+                        >
+                           <option value="MALE">Male</option>
+                           <option value="FEMALE">Female</option>
+                        </select>
+                     </div>
+                     <div className="flex-1">
+                        <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Room No.</label>
+                        <input 
+                           className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-3 outline-none dark:text-white"
+                           value={newUser.roomNumber}
+                           onChange={e => setNewUser({...newUser, roomNumber: e.target.value})}
+                           placeholder="101-A"
+                        />
+                     </div>
+                  </div>
+
                   <div>
                     <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Password</label>
                     <input 

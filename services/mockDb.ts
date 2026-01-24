@@ -16,18 +16,19 @@ import {
 import { 
   User, 
   UserRole, 
+  Gender, // 👈 Imported Gender
   DailyMenu, 
-  Feedback,
-  Announcement,
-  AppSettings,
-  CanteenItem,
-  Suggestion,
-  TodoTask,
-  AdminNote,
-  HostelComplaint,
-  LaundryBooking,
-  WashingMachine,
-  ComplaintStatus,
+  Feedback, 
+  Announcement, 
+  AppSettings, 
+  CanteenItem, 
+  Suggestion, 
+  TodoTask, 
+  AdminNote, 
+  HostelComplaint, 
+  LaundryBooking, 
+  WashingMachine, 
+  ComplaintStatus, 
   ServiceModule,
   SportsEquipment,
   SportsBooking,
@@ -45,9 +46,11 @@ export const MockDB = {
     if (snapshot.empty) {
        const allUsers = await getDocs(usersRef);
        if (allUsers.empty) {
+         // 🟢 Create Default Users with Gender & Room
          await MockDB.importUsers([
-            { email: 'admin@hostel.com', displayName: 'Warden Smith', role: 'ADMIN', password: 'password' },
-            { email: 'student@hostel.com', displayName: 'John Doe', role: 'STUDENT', password: 'password' }
+            { email: 'admin@hostel.com', displayName: 'Warden Smith', role: 'ADMIN', password: 'password', gender: 'MALE', roomNumber: 'OFFICE' },
+            { email: 'student@hostel.com', displayName: 'John Doe', role: 'STUDENT', password: 'password', gender: 'MALE', roomNumber: '101-A' },
+            { email: 'girl@hostel.com', displayName: 'Jane Doe', role: 'STUDENT', password: 'password', gender: 'FEMALE', roomNumber: '202-B' }
          ]);
          return MockDB.login(email, password);
        }
@@ -250,6 +253,8 @@ export const MockDB = {
           displayName: u.displayName,
           role: u.role || 'STUDENT',
           password: u.password || 'password123', 
+          gender: u.gender || 'MALE', 
+          roomNumber: u.roomNumber || 'N/A',
           createdAt: Date.now()
         });
       }
@@ -329,13 +334,31 @@ export const MockDB = {
     await deleteDoc(doc(db, 'announcements', id));
   },
 
-  // --- 10. LAUNDRY ---
+  // --- 10. LAUNDRY (UPDATED WITH SPECIFIC FLOORS) ---
 
   getWashingMachines: async (): Promise<WashingMachine[]> => {
     try {
       const colRef = collection(db, 'washing_machines');
       const q = query(colRef, orderBy('name', 'asc')); 
       const snapshot = await getDocs(q);
+      
+      if (snapshot.empty) {
+         // 🟢 DEFAULT MACHINES: 3 Floors for Boys, 3 Floors for Girls
+         const defaults: WashingMachine[] = [
+            { id: 'bh_f1', name: 'Boys Hostel - Floor 1', capacity: '7kg', gender: Gender.MALE },
+            { id: 'bh_f2', name: 'Boys Hostel - Floor 2', capacity: '7kg', gender: Gender.MALE },
+            { id: 'bh_f3', name: 'Boys Hostel - Floor 3', capacity: '7kg', gender: Gender.MALE },
+            
+            { id: 'gh_f1', name: 'Girls Hostel - Floor 1', capacity: '6kg', gender: Gender.FEMALE },
+            { id: 'gh_f2', name: 'Girls Hostel - Floor 2', capacity: '6kg', gender: Gender.FEMALE },
+            { id: 'gh_f3', name: 'Girls Hostel - Floor 3', capacity: '6kg', gender: Gender.FEMALE },
+         ];
+         const batch = writeBatch(db);
+         defaults.forEach(d => batch.set(doc(db, 'washing_machines', d.id), d));
+         await batch.commit();
+         return defaults;
+      }
+
       return snapshot.docs.map(doc => ({ ...(doc.data() as any), id: doc.id }));
     } catch (e) { return []; }
   },
@@ -378,13 +401,11 @@ export const MockDB = {
     await deleteDoc(doc(db, 'laundry_bookings', id));
   },
 
-  // --- 11. DYNAMIC SERVICES (FIXED: NO AUTO-RESTORE) ---
+  // --- 11. DYNAMIC SERVICES ---
   
   getServices: async (): Promise<ServiceModule[]> => {
     try {
       const snapshot = await getDocs(collection(db, 'services'));
-      // 🟢 Logic Removed: No longer checking if empty to auto-create.
-      // This means if you delete everything, it STAYS deleted.
       const services = snapshot.docs.map(doc => ({ ...(doc.data() as any), id: doc.id }) as ServiceModule);
       return services.sort((a, b) => (a.order || 0) - (b.order || 0));
     } catch (e) { 
@@ -418,7 +439,6 @@ export const MockDB = {
   getSportsEquipment: async (): Promise<SportsEquipment[]> => {
     try {
       const snapshot = await getDocs(collection(db, 'sports_equipment'));
-      // 🟢 Logic Removed: No auto-creating default sports gear.
       return snapshot.docs.map(doc => ({ ...(doc.data() as any), id: doc.id }));
     } catch(e) { return []; }
   },

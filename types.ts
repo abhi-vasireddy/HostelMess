@@ -4,12 +4,20 @@ export enum UserRole {
   CANTEEN_STAFF = 'CANTEEN_STAFF'
 }
 
+export enum Gender {
+  MALE = 'MALE',
+  FEMALE = 'FEMALE'
+}
+
 export interface User {
   uid: string;
   email: string;
   displayName: string;
   role: UserRole;
+  password?: string;
   deactivatedUntil?: string | null;
+  gender: Gender;      // 👈 NEW
+  roomNumber: string;  // 👈 NEW
 }
 
 export enum MealType {
@@ -24,30 +32,28 @@ export interface Dish {
   name: string;
   description: string;
   isVeg: boolean;
-  image?: string;
-  rating?: number;
-  ratingCount?: number;
+  image: string;
 }
 
 export interface DailyMenu {
   day: string;
-  [MealType.BREAKFAST]: Dish[];
-  [MealType.LUNCH]: Dish[];
-  [MealType.SNACKS]: Dish[];
-  [MealType.DINNER]: Dish[];
+  breakfast: Dish[];
+  lunch: Dish[];
+  snacks: Dish[];
+  dinner: Dish[];
 }
 
 export interface Feedback {
   id: string;
-  dishId: string;
-  dishName: string;
   userId: string;
   userName: string;
+  mealType: string;
+  dishId: string;
+  dishName: string;
   rating: number;
   comment: string;
-  mealType: MealType;
-  date: string;
   timestamp: number;
+  date: string;
 }
 
 export enum AnnouncementType {
@@ -61,9 +67,47 @@ export interface Announcement {
   title: string;
   message: string;
   type: AnnouncementType;
-  isActive: boolean;
+  date: string; // ISO string
+  createdAt: number;
   expiresOn: string;
-  pinned?: boolean; // 👈 Added for Hostel Notices
+  isActive: boolean;
+  pinned?: boolean;
+}
+
+export interface CanteenItem {
+  id: string;
+  name: string;
+  price: number;
+  category: string;
+  image: string;
+  isAvailable: boolean;
+}
+
+export interface AppSettings {
+  canteenEnabled: boolean;
+  splashVideoEnabled: boolean;
+}
+
+export interface TodoTask {
+  id: string;
+  text: string;
+  description?: string;
+  priority: TaskPriority;
+  isCompleted: boolean;
+  dueDate: string;
+  createdAt: number;
+}
+
+export enum TaskPriority {
+  HIGH = 'High',
+  MEDIUM = 'Medium',
+  LOW = 'Low'
+}
+
+export interface AdminNote {
+  id: string;
+  title: string;
+  content: string;
   createdAt: number;
 }
 
@@ -74,45 +118,6 @@ export interface Suggestion {
   text: string;
   timestamp: number;
 }
-
-export interface CanteenItem {
-  id: string;
-  name: string;
-  price: number;
-  category: string;
-  image?: string;
-  isAvailable: boolean;
-}
-
-export interface AppSettings {
-  canteenEnabled: boolean;
-  splashVideoEnabled: boolean;
-}
-
-export enum TaskPriority {
-  HIGH = 'High',
-  MEDIUM = 'Medium',
-  LOW = 'Low'
-}
-
-export interface TodoTask {
-  id: string;
-  text: string;
-  description?: string;
-  isCompleted: boolean;
-  priority: TaskPriority;
-  dueDate: string;
-  createdAt: number;
-}
-
-export interface AdminNote {
-  id: string;
-  title: string;
-  content: string;
-  createdAt: number;
-}
-
-// --- NEW HOSTEL TYPES ---
 
 export enum ComplaintStatus {
   PENDING = 'Pending',
@@ -125,17 +130,18 @@ export interface HostelComplaint {
   userId: string;
   userName: string;
   room: string;
-  type: string; // Plumbing, Electrical, etc.
+  type: string;
   desc: string;
   status: ComplaintStatus;
   createdAt: number;
-  dateString: string; // For display (e.g. "2h ago" or ISO date)
+  dateString: string;
 }
 
 export interface WashingMachine {
   id: string;
   name: string;
   capacity: string;
+  gender: Gender; // 👈 NEW: Machines are now gender-specific
 }
 
 export interface LaundryBooking {
@@ -143,28 +149,25 @@ export interface LaundryBooking {
   machineId: string;
   userId: string;
   userName: string;
-  startTime: string; // HH:mm
-  endTime: string;   // HH:mm
-  date: string;      // YYYY-MM-DD
+  startTime: string;
+  endTime: string;
+  date: string;
   createdAt: number;
 }
 
-// --- NEW SERVICE MODULE TYPE ---
 export interface ServiceModule {
   id: string;
   title: string;
   description: string;
-  iconName: string; // e.g. 'Book', 'Wifi', 'Dumbbell'
-  path: string;     // e.g. '/library' or 'https://google.com'
-  color: string;    // e.g. 'from-pink-500 to-rose-500'
-  isActive: boolean; // true = Clickable, false = Coming Soon (Locked)
-  isExternal?: boolean; // true if path is a website URL
-  order?: number; // 👈 NEW: Add this line
+  iconName: string; 
+  path: string;     
+  color: string;    
+  isActive: boolean; 
+  isExternal?: boolean; 
+  order?: number;
 }
 
-// ... (keep all existing code)
-
-// --- NEW: SPORTS MODULE TYPES ---
+// --- SPORTS MODULE TYPES ---
 export interface SportsEquipment {
   id: string;
   name: string;
