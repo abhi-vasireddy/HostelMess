@@ -1,18 +1,20 @@
 import React, { useState } from 'react';
 import { useAuth } from '../App';
 import { Eye, EyeOff, Loader2, AlertCircle, User, Lock, ArrowRight } from 'lucide-react';
-import { LottiePlayer } from '../components/LottiePlayer'; // Import LottiePlayer
-import foodThali from '../assets/animations/food-thali.png'; 
+import { LottiePlayer } from '../components/LottiePlayer';
+import foodThali from '../assets/animations/food-thali.png';
 
 export const Login = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
-  // New state for Critical/Network errors
+
+  // Network error state
   const [isNetworkError, setIsNetworkError] = useState(false);
-  
+
   const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
   const { login } = useAuth();
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -25,12 +27,14 @@ export const Login = () => {
       await login(email, password);
     } catch (err: any) {
       const msg = err.message || 'Failed to login';
-      
-      // Check if it's a critical network/connection error
-      if (msg.toLowerCase().includes('network') || msg.toLowerCase().includes('connection') || msg.toLowerCase().includes('offline')) {
+
+      if (
+        msg.toLowerCase().includes('network') ||
+        msg.toLowerCase().includes('connection') ||
+        msg.toLowerCase().includes('offline')
+      ) {
         setIsNetworkError(true);
       } else {
-        // Standard error (wrong password, user not found)
         setError(msg);
       }
     } finally {
@@ -38,17 +42,19 @@ export const Login = () => {
     }
   };
 
-  // --- CRITICAL ERROR VIEW (ANIMATION) ---
+  // --- NETWORK ERROR VIEW ---
   if (isNetworkError) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-white p-6 text-center animate-in fade-in">
         <LottiePlayer type="404" className="w-64 h-64 mb-4" />
-        <h2 className="text-2xl font-bold text-slate-800 mb-2">Connection Failed</h2>
+        <h2 className="text-2xl font-bold text-slate-800 mb-2">
+          Connection Failed
+        </h2>
         <p className="text-slate-500 mb-8 max-w-xs mx-auto">
           We couldn't connect to the server. Please check your internet.
         </p>
-        <button 
-          onClick={() => setIsNetworkError(false)} 
+        <button
+          onClick={() => setIsNetworkError(false)}
           className="bg-orange-500 hover:bg-orange-600 text-white font-bold py-3 px-8 rounded-xl shadow-lg transition-all active:scale-95"
         >
           Retry Login
@@ -57,46 +63,68 @@ export const Login = () => {
     );
   }
 
-  // --- STANDARD LOGIN VIEW ---
+  // --- LOGIN SCREEN ---
   return (
     <div className="min-h-screen bg-[#F5F5F5] font-sans flex items-center justify-center relative overflow-hidden">
+
+      {/* ✅ BITCOUNT PROP SINGLE FONT IMPORT */}
       <style>
-        {`@import url('https://fonts.googleapis.com/css2?family=Pacifico&display=swap');`}
+        {`@import url('https://fonts.googleapis.com/css2?family=Bitcount+Prop+Single&display=swap');`}
       </style>
 
       {/* 1. TOP ORANGE HEADER */}
       <div className="absolute top-0 left-0 w-full h-[220px] bg-[#FF6B1A] rounded-b-[100px] z-0 flex flex-col items-center pt-[32px]">
+
+        {/* LOGO */}
         <div className="w-[90px] h-[90px] bg-white rounded-full flex items-center justify-center shadow-md mb-2">
-          <img 
-            src="https://res.cloudinary.com/dev55x8f7/image/upload/v1767472236/Screenshot_2026-01-04_at_1.59.55_AM_e4pe4i.png" 
-            alt="Mess Connect Logo" 
+          <img
+            src="https://res.cloudinary.com/dev55x8f7/image/upload/v1767472236/Screenshot_2026-01-04_at_1.59.55_AM_e4pe4i.png"
+            alt="Mess Connect Logo"
             className="w-[55px] h-[55px] object-contain"
           />
         </div>
-        <h1 
-          className="text-white text-[32px] leading-tight" 
-          style={{ fontFamily: "'Pacifico', cursive", fontWeight: 400 }}
+
+        {/* ✅ TITLE */}
+        <h1
+          className="text-white text-[32px] leading-tight"
+          style={{
+            fontFamily: "'Bitcount Prop Single', sans-serif",
+            fontWeight: 400,
+          }}
         >
           Mess Connect
         </h1>
-        <p className="text-white text-[16px] font-medium opacity-90 mt-0">Hostel Food Management</p>
+
+        {/* ✅ SUBTITLE */}
+        <p
+          className="text-white text-[16px] font-medium opacity-90 mt-0"
+          style={{
+            fontFamily: "'Bitcount Prop Single', sans-serif",
+            fontWeight: 400,
+          }}
+        >
+          Hostel Food Management
+        </p>
       </div>
 
-      {/* 2. LEFT DECORATION */}
+      {/* 2. LEFT DECORATION IMAGE */}
       <div className="hidden lg:block absolute bottom-0 left-0 z-0">
-         <img 
-           src={foodThali} 
-           alt="Food Thali" 
-           className="w-[300px] h-[300px] object-cover rounded-full drop-shadow-2xl translate-y-[15%] translate-x-[-40%]"
-         />
+        <img
+          src={foodThali}
+          alt="Food Thali"
+          className="w-[300px] h-[300px] object-cover rounded-full drop-shadow-2xl translate-y-[15%] translate-x-[-40%]"
+        />
       </div>
 
       {/* 3. LOGIN CARD */}
       <div className="w-[85%] sm:w-full sm:max-w-[400px] bg-white rounded-[24px] shadow-[0_20px_60px_rgba(0,0,0,0.15)] p-[24px] sm:p-[32px] relative z-10 translate-y-20">
-        
-        <h2 className="text-[28px] font-bold text-[#1F2937] mb-[24px]">Welcome Back!</h2>
+
+        <h2 className="text-[28px] font-bold text-[#1F2937] mb-[24px]">
+          Welcome Back!
+        </h2>
 
         <form onSubmit={handleLogin}>
+          {/* ERROR MESSAGE */}
           {error && (
             <div className="mb-4 p-3 rounded-lg bg-red-50 border border-red-100 flex items-start gap-3">
               <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
@@ -104,7 +132,7 @@ export const Login = () => {
             </div>
           )}
 
-          {/* EMAIL ID Field */}
+          {/* EMAIL FIELD */}
           <div className="mb-0 relative group">
             <label className="block text-[11px] font-bold text-[#9CA3AF] uppercase tracking-[1px] mb-1">
               EMAIL ID
@@ -124,7 +152,7 @@ export const Login = () => {
             </div>
           </div>
 
-          {/* PASSWORD Field */}
+          {/* PASSWORD FIELD */}
           <div className="mt-[20px] relative group">
             <label className="block text-[11px] font-bold text-[#9CA3AF] uppercase tracking-[1px] mb-1">
               PASSWORD
@@ -133,6 +161,7 @@ export const Login = () => {
               <div className="absolute left-0 top-[12px] pointer-events-none">
                 <Lock className="w-5 h-5 text-[#9CA3AF] group-focus-within:text-[#FF6B1A] transition-colors" />
               </div>
+
               <input
                 type={showPassword ? 'text' : 'password'}
                 required
@@ -141,6 +170,7 @@ export const Login = () => {
                 className="w-full bg-transparent border-b-2 border-[#E5E7EB] focus:border-[#FF6B1A] outline-none text-[#1F2937] placeholder-gray-400 text-sm py-[12px] pl-[36px] pr-[36px] transition-colors"
                 placeholder="••••••••"
               />
+
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
@@ -155,7 +185,7 @@ export const Login = () => {
             </div>
           </div>
 
-          {/* Continue Button */}
+          {/* CONTINUE BUTTON */}
           <button
             type="submit"
             disabled={isSubmitting}
@@ -171,12 +201,16 @@ export const Login = () => {
           </button>
         </form>
 
+        {/* FOOTER */}
         <div className="flex flex-col items-center">
-          <p className="text-[12px] text-[#9CA3AF] text-center mb-[8px]">From the students of</p>
-          <img 
-            src="https://res.cloudinary.com/dev55x8f7/image/upload/v1767470159/Screenshot_2026-01-04_at_1.24.07_AM_otawu8.png" 
-            alt="NIAT Logo" 
-            className="h-[40px] w-auto object-contain mix-blend-multiply opacity-90"
+          <p className="text-[12px] text-[#9CA3AF] text-center mb-[8px]">
+            From the students of
+          </p>
+
+          <img
+            src="https://res.cloudinary.com/dev55x8f7/image/upload/v1769229418/ni_y6hh12.png"
+            alt="NIAT Logo"
+            className="h-[40px] w-[150px] object-contain mix-blend-multiply opacity-90"
           />
         </div>
       </div>
