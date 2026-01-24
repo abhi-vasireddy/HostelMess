@@ -6,10 +6,11 @@ import { AdminDashboard } from './pages/AdminDashboard';
 import { HomeHub } from './pages/HomeHub';
 import { HostelDashboard } from './pages/HostelDashboard';
 import { SportsDashboard } from './pages/SportsDashboard';
-import { ComingSoon } from './pages/ComingSoon'; // 👈 Import new page
+import { ComingSoon } from './pages/ComingSoon';
 import { MockDB } from './services/mockDb';
 import { User, UserRole, ServiceModule } from './types';
 import { Layout } from './components/Layout'; 
+import { InstallPrompt } from './components/InstallPrompt'; // 👈 1. Import this
 
 interface AuthContextType {
   user: User | null;
@@ -31,7 +32,7 @@ function App() {
   const [loading, setLoading] = useState(true);
   const [services, setServices] = useState<ServiceModule[]>([]);
 
-  // 🟢 1. Initialize Auth AND Fetch Services
+  // 1. Initialize Auth AND Fetch Services
   useEffect(() => {
     const initData = async () => {
       // Check User
@@ -61,9 +62,8 @@ function App() {
     setUser(null);
   };
 
-  // 🟢 2. The Route Factory: Decides which page to show based on the path
+  // 2. The Route Factory
   const getComponentForPath = (path: string, currentUser: User) => {
-    // Normalizing path (remove leading slash for cleaner checking)
     const cleanPath = path.startsWith('/') ? path.substring(1) : path;
 
     switch (cleanPath) {
@@ -82,11 +82,10 @@ function App() {
         return <HostelDashboard user={currentUser} />;
       
       case 'sports':
-      case 'gym': // 👈 Reuse Sports Dashboard for Gym!
+      case 'gym': 
         return <SportsDashboard user={currentUser} />;
       
       default:
-        // If we don't have code for this service yet, show Coming Soon
         return <ComingSoon />;
     }
   };
@@ -102,6 +101,9 @@ function App() {
   return (
     <AuthContext.Provider value={{ user, login, logout, loading }}>
       <HashRouter>
+        {/* 🟢 2. Add the Install Prompt here so it appears globally */}
+        <InstallPrompt />
+        
         <Routes>
           <Route 
             path="/login" 
@@ -111,11 +113,9 @@ function App() {
           {/* Protected Routes */}
           {user ? (
             <>
-              {/* Home Hub */}
               <Route path="/" element={<HomeHub />} />
 
-              {/* 🟢 3. Dynamic Routes Generation */}
-              {/* FIXED: We wrap Route in React.Fragment to handle the 'key' error */}
+              {/* 3. Dynamic Routes */}
               {services.map((service) => (
                 <React.Fragment key={service.id}>
                   <Route 
@@ -125,12 +125,11 @@ function App() {
                 </React.Fragment>
               ))}
 
-              {/* Fallback for hardcoded standard paths if DB fails or is empty */}
+              {/* Fallbacks */}
               <Route path="/mess" element={getComponentForPath('/mess', user)} />
               <Route path="/hostel" element={<HostelDashboard user={user} />} />
               <Route path="/sports" element={<SportsDashboard user={user} />} />
               
-              {/* 404 - If route doesn't exist at all */}
               <Route path="*" element={<Navigate to="/" />} />
             </>
           ) : (

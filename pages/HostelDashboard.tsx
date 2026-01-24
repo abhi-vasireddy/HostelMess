@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { ArrowLeft, Plus, History, CheckCircle2, Clock, AlertCircle, Trash2, Megaphone, X, LayoutDashboard, Building, WashingMachine, Calendar, Timer, Pencil, Filter, ArrowUpDown, ChevronRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { User, UserRole, ComplaintStatus, HostelComplaint, Announcement, LaundryBooking, WashingMachine as MachineType } from '../types';
+import { User, UserRole, ComplaintStatus, HostelComplaint, Announcement, LaundryBooking, WashingMachine as MachineType, Gender } from '../types';
 import { Button } from '../components/Button';
 import { MockDB } from '../services/mockDb';
 import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Legend } from 'recharts';
@@ -43,7 +43,8 @@ export const HostelDashboard = ({ user }: { user: User }) => {
 
   // --- LAUNDRY MACHINE MANAGEMENT ---
   const [showMachineModal, setShowMachineModal] = useState(false);
-  const [machineForm, setMachineForm] = useState({ id: '', name: '', capacity: '' });
+  // 🟢 Updated machine form to include gender
+  const [machineForm, setMachineForm] = useState({ id: '', name: '', capacity: '', gender: 'MALE' as Gender });
   const [activeMachineForBooking, setActiveMachineForBooking] = useState<string | null>(null);
   const [bookingTimes, setBookingTimes] = useState({ start: '', end: '' });
 
@@ -92,11 +93,26 @@ export const HostelDashboard = ({ user }: { user: User }) => {
        return a.createdAt - b.createdAt;
     });
 
+  // 🟢 NEW: Filter Machines by Gender (unless Admin)
+  const displayedMachines = isAdmin 
+    ? machines 
+    : machines.filter(m => m.gender === user.gender);
+
   // --- HANDLERS ---
   const handleRaiseComplaint = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newComplaint.desc) return;
-    const complaint: HostelComplaint = { id: Date.now().toString(), userId: user.uid, userName: user.displayName || 'Student', room: '304-B', type: newComplaint.type, desc: newComplaint.desc, status: ComplaintStatus.PENDING, createdAt: Date.now(), dateString: new Date().toLocaleDateString() };
+    const complaint: HostelComplaint = { 
+      id: Date.now().toString(), 
+      userId: user.uid, 
+      userName: user.displayName || 'Student', 
+      room: user.roomNumber || 'N/A', // 🟢 Use real room number
+      type: newComplaint.type, 
+      desc: newComplaint.desc, 
+      status: ComplaintStatus.PENDING, 
+      createdAt: Date.now(), 
+      dateString: new Date().toLocaleDateString() 
+    };
     await MockDB.submitHostelComplaint(complaint);
     setNewComplaint({ type: 'Plumbing', desc: '' }); setShowComplaintForm(false); loadData();
   };
@@ -109,7 +125,18 @@ export const HostelDashboard = ({ user }: { user: User }) => {
   const handlePostNotice = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newNotice.title || !newNotice.message) return;
-    await MockDB.saveAnnouncement({ id: '', title: newNotice.title, message: newNotice.message, type: 'info' as any, isActive: true, expiresOn: '', createdAt: Date.now(), pinned: true });
+    // 🟢 FIXED: Added 'date' property here
+    await MockDB.saveAnnouncement({ 
+        id: '', 
+        title: newNotice.title, 
+        message: newNotice.message, 
+        type: 'info' as any, 
+        isActive: true, 
+        expiresOn: '', 
+        createdAt: Date.now(), 
+        pinned: true,
+        date: new Date().toISOString() 
+    });
     setNewNotice({ title: '', message: '' }); setShowNoticeForm(false); loadData();
   };
 
@@ -132,11 +159,12 @@ export const HostelDashboard = ({ user }: { user: User }) => {
     if (confirm("Cancel this booking?")) { await MockDB.cancelLaundryBooking(id); loadData(); }
   };
 
-  const handleOpenAddMachine = () => { setMachineForm({ id: '', name: '', capacity: '' }); setShowMachineModal(true); };
-  const handleOpenEditMachine = (m: MachineType) => { setMachineForm({ id: m.id, name: m.name, capacity: m.capacity }); setShowMachineModal(true); };
+  const handleOpenAddMachine = () => { setMachineForm({ id: '', name: '', capacity: '', gender: 'MALE' }); setShowMachineModal(true); };
+  const handleOpenEditMachine = (m: MachineType) => { setMachineForm({ id: m.id, name: m.name, capacity: m.capacity, gender: m.gender }); setShowMachineModal(true); };
+  
   const handleSaveMachine = async (e: React.FormEvent) => {
     e.preventDefault(); if(!machineForm.name) return;
-    await MockDB.saveWashingMachine({ id: machineForm.id, name: machineForm.name, capacity: machineForm.capacity || '6kg' });
+    await MockDB.saveWashingMachine({ id: machineForm.id, name: machineForm.name, capacity: machineForm.capacity || '6kg', gender: machineForm.gender });
     setShowMachineModal(false); loadData();
   };
   const handleDeleteMachine = async (id: string) => { if(confirm("Delete this washing machine?")) { await MockDB.deleteWashingMachine(id); loadData(); } };
@@ -144,7 +172,6 @@ export const HostelDashboard = ({ user }: { user: User }) => {
   const formatTime = (time: string) => { const [h, m] = time.split(':'); const hour = parseInt(h); const ampm = hour >= 12 ? 'PM' : 'AM'; const hour12 = hour % 12 || 12; return `${hour12}:${m} ${ampm}`; };
   const getStatusColor = (status: string) => { switch(status) { case ComplaintStatus.RESOLVED: return 'bg-emerald-100 text-emerald-700 border-emerald-200'; case ComplaintStatus.IN_PROGRESS: return 'bg-blue-100 text-blue-700 border-blue-200'; default: return 'bg-amber-100 text-amber-700 border-amber-200'; } };
 
-  // 🟢 NEW: NAVIGATION ITEMS FOR BOTTOM BAR
   const navItems = [
     { id: 'overview', label: isAdmin ? 'Overview' : 'Home', icon: LayoutDashboard },
     { id: 'issues', label: isAdmin ? 'Issues' : 'Help', icon: AlertCircle },
@@ -155,17 +182,19 @@ export const HostelDashboard = ({ user }: { user: User }) => {
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 pb-32 animate-in fade-in">
       
-      {/* 🟢 HEADER (Like Mess Connect) */}
+      {/* 🟢 HEADER */}
       <div className="pt-6 px-6 pb-2">
          <div className="flex justify-between items-center mb-4">
              <div>
                 <h1 className="text-3xl font-black text-slate-800 dark:text-white flex items-center gap-2">
                    <Building className="text-indigo-600"/> Hostel<span className="text-indigo-600">Connect</span>
                 </h1>
-                <p className="text-slate-500 font-medium text-sm ml-1">Room 304-B • Block A</p>
+                {/* 🟢 Show Real Room Number */}
+                <p className="text-slate-500 font-medium text-sm ml-1">
+                   {isAdmin ? 'Admin View' : `Room ${user.roomNumber || 'N/A'}`}
+                </p>
              </div>
              
-             {/* Profile/Date Pill */}
              <div className="hidden md:block bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 px-4 py-2 rounded-xl shadow-sm">
                 <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Today</p>
                 <p className="font-bold text-slate-800 dark:text-white">{new Date().toLocaleDateString('en-US', { weekday: 'short', day: 'numeric', month: 'short'})}</p>
@@ -359,13 +388,17 @@ export const HostelDashboard = ({ user }: { user: User }) => {
                   {/* STUDENT HEADER */}
                   {!isAdmin && (
                      <div className="flex items-center justify-between mb-4">
-                        <h3 className="font-bold text-2xl text-slate-800 dark:text-white flex items-center gap-2">Laundry Slots</h3>
+                        <div>
+                           <h3 className="font-bold text-2xl text-slate-800 dark:text-white flex items-center gap-2">Laundry Slots</h3>
+                           <p className="text-xs text-slate-500">Showing machines for: <strong>{user.gender === Gender.MALE ? 'Boys' : 'Girls'}</strong></p>
+                        </div>
                         <span className="text-xs font-bold bg-indigo-50 text-indigo-700 px-3 py-1 rounded-full border border-indigo-100">Today</span>
                      </div>
                   )}
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                     {machines.map(machine => {
+                     {/* 🟢 Displaying Filtered Machines */}
+                     {displayedMachines.map(machine => {
                         const targetDate = isAdmin ? adminSelectedDate : todayDate;
                         const machineBookings = laundryBookings.filter(b => b.machineId === machine.id && b.date === targetDate).sort((a,b) => a.startTime.localeCompare(b.startTime));
                         
@@ -374,7 +407,10 @@ export const HostelDashboard = ({ user }: { user: User }) => {
                               <div className="bg-slate-50 dark:bg-slate-800/50 p-5 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center">
                                  <div className="flex items-center gap-4">
                                     <div className="w-12 h-12 rounded-2xl bg-white dark:bg-slate-800 flex items-center justify-center border border-slate-200 dark:border-slate-700 shadow-sm text-indigo-500"><WashingMachine size={24} /></div>
-                                    <div><h4 className="font-bold text-slate-900 dark:text-white text-base">{machine.name}</h4><p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Capacity: {machine.capacity}</p></div>
+                                    <div>
+                                       <h4 className="font-bold text-slate-900 dark:text-white text-base">{machine.name}</h4>
+                                       <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Capacity: {machine.capacity} • {machine.gender === Gender.MALE ? 'Boys' : 'Girls'}</p>
+                                    </div>
                                  </div>
                                  {isAdmin ? (
                                     <div className="flex gap-1">
@@ -444,7 +480,7 @@ export const HostelDashboard = ({ user }: { user: User }) => {
             )}
       </main>
 
-      {/* 🟢 FLOATING BOTTOM NAVIGATION (Just like Mess Connect) */}
+      {/* 🟢 FLOATING BOTTOM NAVIGATION */}
       <div className="fixed bottom-6 left-6 right-6 md:left-1/2 md:-translate-x-1/2 md:w-auto md:min-w-[400px] z-40">
         <div className="bg-black/80 dark:bg-white/10 backdrop-blur-xl border border-white/10 dark:border-white/20 rounded-full px-6 py-4 shadow-2xl flex justify-between items-center gap-4 md:gap-8">
           {navItems.map((item) => (
@@ -488,7 +524,7 @@ export const HostelDashboard = ({ user }: { user: User }) => {
       )}
 
       {showMachineModal && (
-         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm"><div className="bg-white dark:bg-slate-900 rounded-[2rem] w-full max-w-sm p-6 shadow-2xl animate-in zoom-in-95 border border-slate-200 dark:border-slate-800"><div className="flex justify-between items-center mb-6"><h3 className="font-bold text-xl text-slate-900 dark:text-white">{machineForm.id ? 'Edit Machine' : 'Add Machine'}</h3><button onClick={() => setShowMachineModal(false)}><X size={20} className="text-slate-400 hover:text-slate-600"/></button></div><form onSubmit={handleSaveMachine} className="space-y-5"><div><label className="text-xs font-bold text-slate-500 uppercase ml-1">Machine Name</label><input className="w-full mt-1 p-3 bg-slate-50 dark:bg-slate-950 border-none rounded-xl font-medium outline-none focus:ring-2 focus:ring-indigo-500" placeholder="e.g. Machine 1 (Ground Floor)" value={machineForm.name} onChange={e => setMachineForm({...machineForm, name: e.target.value})} required /></div><div><label className="text-xs font-bold text-slate-500 uppercase ml-1">Capacity</label><input className="w-full mt-1 p-3 bg-slate-50 dark:bg-slate-950 border-none rounded-xl font-medium outline-none focus:ring-2 focus:ring-indigo-500" placeholder="e.g. 6kg" value={machineForm.capacity} onChange={e => setMachineForm({...machineForm, capacity: e.target.value})} required /></div><Button fullWidth type="submit" className="py-3 rounded-xl">Save Machine</Button></form></div></div>
+         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm"><div className="bg-white dark:bg-slate-900 rounded-[2rem] w-full max-w-sm p-6 shadow-2xl animate-in zoom-in-95 border border-slate-200 dark:border-slate-800"><div className="flex justify-between items-center mb-6"><h3 className="font-bold text-xl text-slate-900 dark:text-white">{machineForm.id ? 'Edit Machine' : 'Add Machine'}</h3><button onClick={() => setShowMachineModal(false)}><X size={20} className="text-slate-400 hover:text-slate-600"/></button></div><form onSubmit={handleSaveMachine} className="space-y-5"><div><label className="text-xs font-bold text-slate-500 uppercase ml-1">Machine Name</label><input className="w-full mt-1 p-3 bg-slate-50 dark:bg-slate-950 border-none rounded-xl font-medium outline-none focus:ring-2 focus:ring-indigo-500" placeholder="e.g. Machine 1 (Ground Floor)" value={machineForm.name} onChange={e => setMachineForm({...machineForm, name: e.target.value})} required /></div><div className="grid grid-cols-2 gap-4"><div><label className="text-xs font-bold text-slate-500 uppercase ml-1">Capacity</label><input className="w-full mt-1 p-3 bg-slate-50 dark:bg-slate-950 border-none rounded-xl font-medium outline-none focus:ring-2 focus:ring-indigo-500" placeholder="e.g. 6kg" value={machineForm.capacity} onChange={e => setMachineForm({...machineForm, capacity: e.target.value})} required /></div><div><label className="text-xs font-bold text-slate-500 uppercase ml-1">Gender</label><select className="w-full mt-1 p-3 bg-slate-50 dark:bg-slate-950 border-none rounded-xl font-medium outline-none focus:ring-2 focus:ring-indigo-500" value={machineForm.gender} onChange={e => setMachineForm({...machineForm, gender: e.target.value as Gender})}><option value={Gender.MALE}>Boys</option><option value={Gender.FEMALE}>Girls</option></select></div></div><Button fullWidth type="submit" className="py-3 rounded-xl">Save Machine</Button></form></div></div>
       )}
     </div>
   );
