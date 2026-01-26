@@ -482,5 +482,23 @@ export const MockDB = {
   
   addPlayerToTeam: async (requestId: string, newPlayerList: string[]): Promise<void> => {
      await updateDoc(doc(db, 'team_requests', requestId), { playersJoined: newPlayerList });
-  }
+  },
+
+  // Add this inside the MockDB object in services/mockDb.ts
+
+  // Add this inside the MockDB object in services/mockDb.ts
+
+  updatePassword: async (uid: string, newPassword: string): Promise<void> => {
+    // 1. Update the password in the Firebase 'users' collection
+    const userRef = doc(db, 'users', uid);
+    await updateDoc(userRef, { password: newPassword });
+    
+    // 2. Update the local session so the app stays in sync
+    const stored = localStorage.getItem('hft_current_user');
+    if (stored) {
+      const userData = JSON.parse(stored);
+      userData.password = newPassword;
+      localStorage.setItem('hft_current_user', JSON.stringify(userData));
+    }
+  },
 };
