@@ -1,0 +1,8 @@
+[{
+      "relation": ["delegate_permission/common.handle_all_urls"],
+      "target": {
+        "namespace": "android_app",
+        "package_name": "app.vercel.hostel_mess_ten.twa",
+        "sha256_cert_fingerprints": ["34:ED:E5:CC:97:78:9F:89:90:2E:F9:7E:68:83:9A:EB:3B:13:30:8C:D1:EE:54:3D:C6:E8:44:E3:97:EE:77:C2"]
+      }
+    }]
