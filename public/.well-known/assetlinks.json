@@ -3,6 +3,6 @@
       "target": {
         "namespace": "android_app",
         "package_name": "app.vercel.hostel_mess_ten.twa",
-        "sha256_cert_fingerprints": ["34:ED:E5:CC:97:78:9F:89:90:2E:F9:7E:68:83:9A:EB:3B:13:30:8C:D1:EE:54:3D:C6:E8:44:E3:97:EE:77:C2"]
+        "sha256_cert_fingerprints": ["5F:D2:99:D8:6B:B1:01:08:54:2F:65:BA:11:8C:36:06:25:6E:48:9B:6B:AA:67:37:35:55:3B:02:94:74:88:9B"]
       }
-    }]
+}]
