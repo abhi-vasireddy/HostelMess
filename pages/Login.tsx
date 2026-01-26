@@ -67,9 +67,9 @@ export const Login = () => {
   return (
     <div className="min-h-screen bg-[#F5F5F5] font-sans flex items-center justify-center relative overflow-hidden">
 
-      {/* ✅ BITCOUNT PROP SINGLE FONT IMPORT */}
+      {/* ✅ IMPORTING NEW FONTS */}
       <style>
-        {`@import url('https://fonts.googleapis.com/css2?family=Bitcount+Prop+Single&display=swap');`}
+        {`@import url('https://fonts.googleapis.com/css2?family=Bungee+Inline&family=Saira:wght@400;500&display=swap');`}
       </style>
 
       {/* 1. TOP ORANGE HEADER */}
@@ -79,31 +79,30 @@ export const Login = () => {
         <div className="w-[90px] h-[90px] bg-white rounded-full flex items-center justify-center shadow-md mb-2">
           <img
             src="https://res.cloudinary.com/dev55x8f7/image/upload/v1767472236/Screenshot_2026-01-04_at_1.59.55_AM_e4pe4i.png"
-            alt="Mess Connect Logo"
+            alt="Campus Hub Logo"
             className="w-[55px] h-[55px] object-contain"
           />
         </div>
 
-        {/* ✅ TITLE */}
+        {/* ✅ TITLE: UPDATED TO CAMPUS HUB */}
         <h1
           className="text-white text-[32px] leading-tight"
           style={{
-            fontFamily: "'Bitcount Prop Single', sans-serif",
-            fontWeight: 400,
+            fontFamily: "'Bungee Inline', cursive",
           }}
         >
-          Mess Connect
+          Campus Hub
         </h1>
 
-        {/* ✅ SUBTITLE */}
+        {/* ✅ SUBTITLE: UPDATED TO STUDENT-CAMPUS-COORDINATION */}
         <p
           className="text-white text-[16px] font-medium opacity-90 mt-0"
           style={{
-            fontFamily: "'Bitcount Prop Single', sans-serif",
+            fontFamily: "'Saira', sans-serif",
             fontWeight: 400,
           }}
         >
-          Hostel Food Management
+          Student-Campus-Coordination
         </p>
       </div>
 
