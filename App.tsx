@@ -10,7 +10,10 @@ import { ComingSoon } from './pages/ComingSoon';
 import { MockDB } from './services/mockDb';
 import { User, UserRole, ServiceModule } from './types';
 import { Layout } from './components/Layout'; 
-import { InstallPrompt } from './components/InstallPrompt'; // 👈 1. Import this
+import { InstallPrompt } from './components/InstallPrompt';
+
+// 👇 1. Import Notification Services
+import { requestForToken, onMessageListener } from './services/notificationService';
 
 interface AuthContextType {
   user: User | null;
@@ -32,7 +35,27 @@ function App() {
   const [loading, setLoading] = useState(true);
   const [services, setServices] = useState<ServiceModule[]>([]);
 
-  // 1. Initialize Auth AND Fetch Services
+  // 👇 2. Add Notification Initialization Effect
+  useEffect(() => {
+    // A. Request Permission & Get Token
+    requestForToken();
+
+    // B. Listen for messages when the app is OPEN (Foreground)
+    const unsubscribe = onMessageListener()
+      .then((payload: any) => {
+        console.log('Foreground Message received:', payload);
+        // Simple alert for now - you can replace this with a custom Toast component later
+        alert(`New Message: ${payload?.notification?.title}\n${payload?.notification?.body}`);
+      })
+      .catch((err) => console.log('failed: ', err));
+
+    // Cleanup isn't strictly necessary for the promise, but good practice if using a listener
+    return () => {
+      // If onMessageListener returned a proper unsubscribe function, we would call it here.
+    };
+  }, []);
+
+  // 3. Initialize Auth AND Fetch Services
   useEffect(() => {
     const initData = async () => {
       // Check User
@@ -62,7 +85,7 @@ function App() {
     setUser(null);
   };
 
-  // 2. The Route Factory
+  // 4. The Route Factory
   const getComponentForPath = (path: string, currentUser: User) => {
     const cleanPath = path.startsWith('/') ? path.substring(1) : path;
 
@@ -101,7 +124,7 @@ function App() {
   return (
     <AuthContext.Provider value={{ user, login, logout, loading }}>
       <HashRouter>
-        {/* 🟢 2. Add the Install Prompt here so it appears globally */}
+        {/* Install Prompt appears globally */}
         <InstallPrompt />
         
         <Routes>
@@ -115,7 +138,7 @@ function App() {
             <>
               <Route path="/" element={<HomeHub />} />
 
-              {/* 3. Dynamic Routes */}
+              {/* Dynamic Routes */}
               {services.map((service) => (
                 <React.Fragment key={service.id}>
                   <Route 

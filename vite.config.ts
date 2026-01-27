@@ -9,9 +9,9 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.ico', 'apple-touch-icon.png'],
       manifest: {
-        name: 'Mess Connect',
-        short_name: 'Mess Connect',
-        description: 'Smart Mess Connect Management System',
+        name: 'Campus Hub',
+        short_name: 'Campus Hub',
+        description: 'Smart Campus Hub Management System',
         theme_color: '#ffffff',
         background_color: '#ffffff',
         display: 'standalone',
