@@ -5,7 +5,8 @@ import { generateAIInsights } from '../services/geminiService';
 import { Button } from '../components/Button';
 import { useAuth } from '../App';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
-import { AlertTriangle, TrendingUp, Users, Menu as MenuIcon, Sparkles, Trash2, Plus, CheckCircle2, Pencil, X, MessageSquare, Search, UtensilsCrossed, Calendar, Upload, CheckSquare, StickyNote, Clock, Check, Filter, Info, Download, Lightbulb, ChevronDown, GripVertical, Bold, Italic, List, Video, Lock, Settings, ArrowLeft, LayoutGrid, Copy } from 'lucide-react';
+// 👇 Added Bell icon for the broadcast tab
+import { AlertTriangle, TrendingUp, Users, Menu as MenuIcon, Sparkles, Trash2, Plus, CheckCircle2, Pencil, X, MessageSquare, Search, UtensilsCrossed, Calendar, Upload, CheckSquare, StickyNote, Clock, Check, Filter, Info, Download, Lightbulb, ChevronDown, GripVertical, Bold, Italic, List, Video, Lock, Settings, ArrowLeft, LayoutGrid, Copy, Bell, Send } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { getCurrentDayName, getTodayDateString } from '../services/timeUtils';
 import { ICON_MAP, GRADIENT_OPTIONS } from '../services/iconMap';
@@ -14,6 +15,10 @@ import { ICON_MAP, GRADIENT_OPTIONS } from '../services/iconMap';
 import { LottiePlayer } from '../components/LottiePlayer';
 import Lottie from 'lottie-react';
 import loadingAnimation from '../assets/animations/loading.json';
+
+// 👇 IMPORTS FOR FIREBASE NOTIFICATIONS
+import { db } from '../services/firebase';
+import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 
 // PREDEFINED TEMPLATES
 const SERVICE_TEMPLATES = [
@@ -31,7 +36,8 @@ export const AdminDashboard: React.FC = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
   
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'menu' | 'users' | 'announcements' | 'feedback' | 'canteen' | 'todos' | 'notes' | 'suggestions' | 'services'>(
+  // 👇 Added 'broadcast' to the activeTab type
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'menu' | 'users' | 'announcements' | 'feedback' | 'canteen' | 'todos' | 'notes' | 'suggestions' | 'services' | 'broadcast'>(
     user?.role === UserRole.CANTEEN_STAFF ? 'canteen' : 'dashboard'
   );
   
@@ -57,13 +63,17 @@ export const AdminDashboard: React.FC = () => {
   const [draggedServiceIndex, setDraggedServiceIndex] = useState<number | null>(null);
 
   // UI States
-  const [showAddCanteenModal, setShowAddCanteenModal] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false); 
   const [aiInsights, setAiInsights] = useState<{summary: string, suggestions: string[]} | null>(null);
   const [aiLoading, setAiLoading] = useState(false);
   const [newAnnouncement, setNewAnnouncement] = useState({ title: '', message: '', type: AnnouncementType.INFO, expiresOn: '' });
   const [isUserModalOpen, setIsUserModalOpen] = useState(false);
   
+  // Notification State
+  const [notifTitle, setNotifTitle] = useState('');
+  const [notifBody, setNotifBody] = useState('');
+  const [sendingNotif, setSendingNotif] = useState(false);
+
   // New User State with Gender & Room
   const [newUser, setNewUser] = useState({ email: '', displayName: '', password: 'password123', role: 'STUDENT', gender: 'MALE', roomNumber: '' });
   
@@ -141,6 +151,32 @@ export const AdminDashboard: React.FC = () => {
     } catch (error) {
       console.error("Failed to update settings:", error);
       alert("Error saving settings.");
+    }
+  };
+
+  // --- NOTIFICATION HANDLER ---
+  const handleSendNotification = async () => {
+    if (!notifTitle || !notifBody) return alert("Please fill in both fields");
+    
+    setSendingNotif(true);
+    try {
+      // Create a document in 'broadcasts' collection. 
+      // The Cloud Function will trigger on this.
+      await addDoc(collection(db, "broadcasts"), {
+        title: notifTitle,
+        body: notifBody,
+        createdAt: serverTimestamp(),
+        createdBy: user?.displayName || "Admin" 
+      });
+      
+      alert("Notification queued successfully! Users will receive it shortly.");
+      setNotifTitle('');
+      setNotifBody('');
+    } catch (error) {
+      console.error("Error sending notification:", error);
+      alert("Failed to send notification. Check console for details.");
+    } finally {
+      setSendingNotif(false);
     }
   };
 
@@ -232,7 +268,6 @@ export const AdminDashboard: React.FC = () => {
   // --- Announcement Handlers ---
   const handleCreateAnnouncement = async (e: React.FormEvent) => {
     e.preventDefault();
-    // 🟢 FIXED: Added 'date' property
     await MockDB.saveAnnouncement({
        id: Date.now().toString(),
        title: newAnnouncement.title,
@@ -241,7 +276,7 @@ export const AdminDashboard: React.FC = () => {
        expiresOn: newAnnouncement.expiresOn,
        isActive: true,
        createdAt: Date.now(),
-       date: new Date().toISOString() // 👈 This fixes your error
+       date: new Date().toISOString()
     });
     setNewAnnouncement({ title: '', message: '', type: AnnouncementType.INFO, expiresOn: '' });
     loadData();
@@ -718,7 +753,7 @@ export const AdminDashboard: React.FC = () => {
         {/* Sidebar Content (Hidden on mobile unless open) */}
         <div className={`${isSidebarOpen ? 'block' : 'hidden'} md:block space-y-6 animate-in slide-in-from-top-4 duration-300 md:animate-none max-h-[80vh] overflow-y-auto md:max-h-none md:overflow-visible custom-scrollbar`}>
             
-            {/* NEW BACK BUTTON IS HERE */}
+            {/* Back Button */}
             <div className="px-3 mb-2">
               <button 
                 onClick={() => navigate('/')}
@@ -730,9 +765,10 @@ export const AdminDashboard: React.FC = () => {
 
             <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 p-3 overflow-hidden">
               <nav className="space-y-1">
-                {/* CHANGED: Filter menu items based on Role */}
+                {/* 🟢 Sidebar Menu Items - Added Broadcast */}
                   {[
                   { id: 'dashboard', icon: TrendingUp, label: 'Dashboard' },
+                  { id: 'broadcast', icon: Bell, label: 'Broadcast' }, // 👈 Added Broadcast here
                   { id: 'menu', icon: MenuIcon, label: 'Menu Mgmt' },
                   { id: 'canteen', icon: UtensilsCrossed, label: 'Canteen' },
                   { id: 'users', icon: Users, label: 'Users' },
@@ -741,7 +777,7 @@ export const AdminDashboard: React.FC = () => {
                   { id: 'announcements', icon: AlertTriangle, label: 'Announcements' },
                   { id: 'todos', icon: CheckSquare, label: 'To-Do List' },
                   { id: 'notes', icon: StickyNote, label: 'Notes' },
-                  { id: 'services', icon: LayoutGrid, label: 'Service Modules' }, // NEW ITEM
+                  { id: 'services', icon: LayoutGrid, label: 'Service Modules' },
                   ].filter(item => {
                   // If user is Canteen Staff, ONLY show the Canteen tab
                   if (user?.role === UserRole.CANTEEN_STAFF) {
@@ -873,6 +909,69 @@ export const AdminDashboard: React.FC = () => {
                 </div>
               </div>
             </div>
+          </div>
+        )}
+
+        {/* --- 🟢 NEW: BROADCAST TAB --- */}
+        {activeTab === 'broadcast' && (
+          <div className="max-w-3xl mx-auto space-y-6 animate-in fade-in">
+             <div className="bg-white dark:bg-slate-900 p-8 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800">
+                <div className="flex items-center gap-4 mb-6">
+                  <div className="w-12 h-12 rounded-full bg-orange-100 dark:bg-orange-900/30 flex items-center justify-center text-orange-600 dark:text-orange-400">
+                    <Bell size={24} />
+                  </div>
+                  <div>
+                    <h2 className="text-2xl font-bold text-slate-900 dark:text-white">Send Push Notification</h2>
+                    <p className="text-slate-500 dark:text-slate-400">Instantly reach all students via mobile alerts.</p>
+                  </div>
+                </div>
+
+                <div className="space-y-6">
+                  <div>
+                    <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">
+                      Notification Title
+                    </label>
+                    <input 
+                      type="text" 
+                      value={notifTitle}
+                      onChange={(e) => setNotifTitle(e.target.value)}
+                      placeholder="e.g., Lunch is Ready! 🍛"
+                      className="w-full p-4 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl focus:ring-2 focus:ring-orange-500 outline-none font-medium dark:text-white"
+                    />
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">
+                      Message Body
+                    </label>
+                    <textarea 
+                      value={notifBody}
+                      onChange={(e) => setNotifBody(e.target.value)}
+                      placeholder="e.g., Chicken Biryani is being served now. Don't be late!"
+                      rows={4}
+                      className="w-full p-4 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl focus:ring-2 focus:ring-orange-500 outline-none dark:text-white resize-none"
+                    />
+                  </div>
+
+                  <button
+                    onClick={handleSendNotification}
+                    disabled={sendingNotif}
+                    className="w-full bg-orange-600 hover:bg-orange-700 disabled:opacity-50 disabled:cursor-not-allowed text-white py-4 rounded-xl font-bold text-lg shadow-lg shadow-orange-500/20 transition-all flex items-center justify-center gap-3"
+                  >
+                    {sendingNotif ? (
+                      <>Sending...</>
+                    ) : (
+                      <>
+                        <Send size={20} /> Send Broadcast
+                      </>
+                    )}
+                  </button>
+
+                  <p className="text-xs text-center text-slate-400">
+                    Note: This will be sent to all users who have enabled notifications on their devices.
+                  </p>
+                </div>
+             </div>
           </div>
         )}
 

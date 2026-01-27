@@ -2,6 +2,7 @@
 import { initializeApp } from "firebase/app";
 import { getFirestore } from "firebase/firestore";
 import { getAuth } from "firebase/auth";
+import { getMessaging, Messaging } from "firebase/messaging"; // 👈 Import Messaging type
 
 // PASTE YOUR CONFIG FROM FIREBASE CONSOLE HERE
 const firebaseConfig = {
@@ -17,5 +18,19 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 
 // Initialize Services
-export const db = getFirestore(app); // The Database
-export const auth = getAuth(app);    // The Authentication (Login system)
+export const db = getFirestore(app);
+export const auth = getAuth(app);
+
+// 👇 SAFE INITIALIZATION OF MESSAGING
+let messaging: Messaging | null = null;
+try {
+  // Only initialize if we are in a browser environment
+  if (typeof window !== "undefined") {
+    messaging = getMessaging(app);
+  }
+} catch (error) {
+  console.warn("Firebase Messaging is not supported in this browser/environment.", error);
+  // App continues working without notifications
+}
+
+export { messaging };
