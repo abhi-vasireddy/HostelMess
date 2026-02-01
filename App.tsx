@@ -35,27 +35,29 @@ function App() {
   const [loading, setLoading] = useState(true);
   const [services, setServices] = useState<ServiceModule[]>([]);
 
-  // 👇 2. Add Notification Initialization Effect
+  // 👇 2. Request Token ONLY after User is Logged In
   useEffect(() => {
-    // A. Request Permission & Get Token
-    requestForToken();
+    if (user?.uid) {
+      console.log("User logged in, requesting Notification Token...");
+      // We pass the userId so the service knows where to save the token in the DB
+      requestForToken(user.uid);
+    }
+  }, [user]); // Run this every time 'user' state changes
 
-    // B. Listen for messages when the app is OPEN (Foreground)
-    const unsubscribe = onMessageListener()
+  // 👇 3. Listen for Messages when App is Open (Foreground)
+  useEffect(() => {
+    onMessageListener()
       .then((payload: any) => {
         console.log('Foreground Message received:', payload);
-        // Simple alert for now - you can replace this with a custom Toast component later
-        alert(`New Message: ${payload?.notification?.title}\n${payload?.notification?.body}`);
+        // Display a browser alert or custom toast
+        if (payload?.notification) {
+          alert(`New Message: ${payload.notification.title}\n${payload.notification.body}`);
+        }
       })
       .catch((err) => console.log('failed: ', err));
-
-    // Cleanup isn't strictly necessary for the promise, but good practice if using a listener
-    return () => {
-      // If onMessageListener returned a proper unsubscribe function, we would call it here.
-    };
   }, []);
 
-  // 3. Initialize Auth AND Fetch Services
+  // 4. Initialize Data & Fetch Services
   useEffect(() => {
     const initData = async () => {
       // Check User
@@ -85,7 +87,7 @@ function App() {
     setUser(null);
   };
 
-  // 4. The Route Factory
+  // 5. The Route Factory
   const getComponentForPath = (path: string, currentUser: User) => {
     const cleanPath = path.startsWith('/') ? path.substring(1) : path;
 

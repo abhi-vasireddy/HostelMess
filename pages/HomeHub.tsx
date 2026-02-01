@@ -119,7 +119,7 @@ const [showConfirmPassword, setShowConfirmPassword] = useState(false);
       <div className="flex justify-between items-center mb-8">
         <div>
           <h1 className="text-3xl font-black text-slate-800 dark:text-white">
-            Campus<span className="text-orange-500">Hub</span>
+            Camp<span className="text-orange-500">Dex</span>
           </h1>
           <p className="text-slate-500 font-medium">
             Welcome back, {firstName}
@@ -139,7 +139,7 @@ const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
           {/* Popup Card */}
           {showCard && (
-            <div className="absolute right-6 top-20 w-[280px] p-4 bg-[#FFF7ED] rounded-xl shadow-lg z-50 ">
+            <div className="absolute right-6 top-20 w-[160px] p-4 bg-[#FFF7ED] rounded-xl shadow-lg z-50 ">
 
               {/* Header Row */}
               <div className="flex flex-col items-start gap-2 items-center mb-4">
