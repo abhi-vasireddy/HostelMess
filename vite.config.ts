@@ -9,9 +9,9 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.ico', 'apple-touch-icon.png'],
       manifest: {
-        name: 'Campus Hub',
-        short_name: 'Campus Hub',
-        description: 'Smart Campus Hub Management System',
+        name: 'CampDex',
+        short_name: 'CampDex',
+        description: 'Smart campdex Management System',
         theme_color: '#ffffff',
         background_color: '#ffffff',
         display: 'standalone',
