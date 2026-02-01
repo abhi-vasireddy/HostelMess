@@ -91,7 +91,7 @@ export const Login = () => {
             fontFamily: "'Bungee Inline', cursive",
           }}
         >
-          Campus Hub
+          CampDex
         </h1>
 
         {/* ✅ SUBTITLE: UPDATED TO STUDENT-CAMPUS-COORDINATION */}
