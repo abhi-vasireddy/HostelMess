@@ -78,9 +78,9 @@ export const Login = () => {
         {/* LOGO */}
         <div className="w-[90px] h-[90px] bg-white rounded-full flex items-center justify-center shadow-md mb-2">
           <img
-            src="https://res.cloudinary.com/dev55x8f7/image/upload/v1767472236/Screenshot_2026-01-04_at_1.59.55_AM_e4pe4i.png"
+            src="https://res.cloudinary.com/dev55x8f7/image/upload/v1770043770/1770042122253_ha7itu.png"
             alt="Campus Hub Logo"
-            className="w-[55px] h-[55px] object-contain"
+            className="w-[60px] h-[60px] object-contain"
           />
         </div>
 
