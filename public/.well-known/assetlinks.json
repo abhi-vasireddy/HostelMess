@@ -1,11 +1,8 @@
-[
-  {
-    "relation": ["delegate_permission/common.handle_all_urls"],
-    "target":
-      {
+[{
+      "relation": ["delegate_permission/common.handle_all_urls"],
+      "target": {
         "namespace": "android_app",
-        "package_name": "app.vercel.hostel_mess_ten.twa",
-        "sha256_cert_fingerprints": ["99:55:5C:CE:10:3E:70:70:CA:2B:2D:FA:41:76:A6:D2:E9:67:DA:40:61:6D:AF:DA:26:2B:C3:74:D1:CE:DD:8F"]
+        "package_name": "app.vercel.campdex.niat.twa",
+        "sha256_cert_fingerprints": ["39:C6:64:AF:89:A7:6B:A8:49:C9:FA:D2:98:EA:88:DF:33:42:FD:20:7C:26:D4:0A:16:63:EC:B6:5F:6C:13:90"]
       }
-  }
-]
+    }]
