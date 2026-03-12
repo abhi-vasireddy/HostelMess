@@ -3,6 +3,6 @@
       "target": {
         "namespace": "android_app",
         "package_name": "app.vercel.campdex.niat.twa",
-        "sha256_cert_fingerprints": ["39:C6:64:AF:89:A7:6B:A8:49:C9:FA:D2:98:EA:88:DF:33:42:FD:20:7C:26:D4:0A:16:63:EC:B6:5F:6C:13:90"]
+        "sha256_cert_fingerprints": ["SHA256: 75:1D:37:FB:45:3A:2B:6C:F0:7F:13:86:41:41:40:C7:D0:D0:99:53:8F:37:AB:4C:77:87:32:CC:E7:4F:10:1A"]
       }
     }]
