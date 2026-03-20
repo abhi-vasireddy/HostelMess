@@ -768,6 +768,7 @@ export const AdminDashboard: React.FC = () => {
                 {/* 🟢 Sidebar Menu Items - Added Broadcast */}
                   {[
                   { id: 'dashboard', icon: TrendingUp, label: 'Dashboard' },
+                  { id: 'ai-assistant', icon: Sparkles, label: 'AI Assistant' }, // 👈 New Section
                   { id: 'broadcast', icon: Bell, label: 'Broadcast' }, // 👈 Added Broadcast here
                   { id: 'menu', icon: MenuIcon, label: 'Menu Mgmt' },
                   { id: 'canteen', icon: UtensilsCrossed, label: 'Canteen' },
@@ -911,6 +912,39 @@ export const AdminDashboard: React.FC = () => {
             </div>
           </div>
         )}
+
+        {/* --- AI ASSISTANT TAB --- */}
+         {activeTab === 'ai-assistant' && (
+         <div className="flex flex-col lg:flex-row gap-6 h-[calc(100vh-12rem)] animate-in fade-in">
+            
+            {/* Left Side: History Sidebar */}
+            <div className="w-full lg:w-72 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 flex flex-col overflow-hidden">
+               <div className="p-4 border-b border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50">
+               <h4 className="font-bold text-slate-800 dark:text-white flex items-center gap-2">
+                  <Clock size={16} className="text-orange-500" /> Chat History
+               </h4>
+               </div>
+               <div className="flex-1 overflow-y-auto p-2 space-y-2 custom-scrollbar">
+               {/* We will map through history here later */}
+               <div className="p-3 rounded-xl bg-orange-50 dark:bg-orange-900/20 border border-orange-100 dark:border-orange-800 cursor-pointer">
+                  <p className="text-xs font-bold text-orange-600 dark:text-orange-400">Current Session</p>
+                  <p className="text-xs text-slate-500 truncate">Analyzing Mess Ratings...</p>
+               </div>
+               <p className="text-[10px] text-center text-slate-400 mt-4 uppercase font-bold tracking-widest">Previous Days</p>
+               <div className="p-3 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 cursor-not-allowed opacity-50">
+                  <p className="text-xs font-bold text-slate-600 dark:text-slate-400">March 12, 2026</p>
+                  <p className="text-xs text-slate-400 truncate">Monthly Sentiment Report</p>
+               </div>
+               </div>
+            </div>
+
+            {/* Right Side: Full Chat Interface */}
+            <div className="flex-1 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col relative overflow-hidden">
+               {/* Use the updated AdminChatBot component here, but styled for full-screen */}
+               <AdminChatBot feedback={feedback} users={users} menu={menu} isFullScreen={true} />
+            </div>
+         </div>
+         )}
 
         {/* --- 🟢 NEW: BROADCAST TAB --- */}
         {activeTab === 'broadcast' && (

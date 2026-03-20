@@ -2,9 +2,16 @@
 <html lang="en" class="h-full">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <title>CampDex</title>
+    
+    <meta name="theme-color" content="#fffaf5"> 
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default"> 
+    
     <link rel="icon" href="/favicon.ico" />
+    <link rel="manifest" href="/manifest.json" />
+    
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
       tailwind.config = {
@@ -25,31 +32,46 @@
       }
     </script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
     <style>
-      body { font-family: 'Inter', sans-serif; }
+      body { 
+        font-family: 'Inter', sans-serif; 
+        /* Important: Adds padding at the top so content isn't hidden by the status bar/time */
+        padding-top: env(safe-area-inset-top); 
+        margin: 0;
+      }
+
       /* Custom scrollbar for cleaner UI */
       ::-webkit-scrollbar { width: 6px; }
       ::-webkit-scrollbar-track { background: transparent; }
       ::-webkit-scrollbar-thumb { background: #fdba74; border-radius: 3px; }
       .dark ::-webkit-scrollbar-thumb { background: #fb923c; }
       ::-webkit-scrollbar-thumb:hover { background: #f97316; }
+
+      /* Global background colors to ensure consistency even before React loads */
+      html, body {
+        background-color: #fffaf5; /* Matches tailwind bg-orange-50 */
+      }
+      html.dark, html.dark body {
+        background-color: #020617; /* Matches tailwind bg-slate-950 */
+      }
     </style>
-  <script type="importmap">
-{
-  "imports": {
-    "recharts": "https://aistudiocdn.com/recharts@^3.5.1",
-    "react/": "https://aistudiocdn.com/react@^19.2.1/",
-    "react": "https://aistudiocdn.com/react@^19.2.1",
-    "lucide-react": "https://aistudiocdn.com/lucide-react@^0.556.0",
-    "@google/genai": "https://aistudiocdn.com/@google/genai@^1.32.0",
-    "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.1/"
-  }
-}
-</script>
-<link rel="stylesheet" href="/index.css">
-</head>
+
+    <script type="importmap">
+    {
+      "imports": {
+        "recharts": "https://aistudiocdn.com/recharts@^3.5.1",
+        "react/": "https://aistudiocdn.com/react@^19.2.1/",
+        "react": "https://aistudiocdn.com/react@^19.2.1",
+        "lucide-react": "https://aistudiocdn.com/lucide-react@^0.556.0",
+        "@google/genai": "https://aistudiocdn.com/@google/genai@^1.32.0",
+        "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.1/"
+      }
+    }
+    </script>
+  </head>
   <body class="h-full bg-orange-50 dark:bg-slate-950 text-slate-900 dark:text-slate-50 transition-colors duration-200">
     <div id="root" class="h-full"></div>
-  <script type="module" src="/index.tsx"></script>
-</body>
+    <script type="module" src="/index.tsx"></script>
+  </body>
 </html>
