@@ -4,6 +4,8 @@ import { MockDB } from '../services/mockDb';
 import { generateAIInsights } from '../services/geminiService';
 import { Button } from '../components/Button';
 import { useAuth } from '../App';
+import AdminChatBot from './AdminChatBot';
+
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
 // 👇 Added Bell icon for the broadcast tab
 import { AlertTriangle, TrendingUp, Users, Menu as MenuIcon, Sparkles, Trash2, Plus, CheckCircle2, Pencil, X, MessageSquare, Search, UtensilsCrossed, Calendar, Upload, CheckSquare, StickyNote, Clock, Check, Filter, Info, Download, Lightbulb, ChevronDown, GripVertical, Bold, Italic, List, Video, Lock, Settings, ArrowLeft, LayoutGrid, Copy, Bell, Send } from 'lucide-react';
