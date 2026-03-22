@@ -33,6 +33,8 @@ const AdminChatBot: React.FC<AdminChatBotProps> = ({ feedback, users, menu }) =>
     setInput('');
     setIsLoading(true);
 
+    console.log("Checking Key:", import.meta.env.VITE_GEMINI_API_KEY ? "Key Found ✅" : "Key Missing ❌");
+
     try {
       // 1. Initialize Gemini with your Vite Env Variable
       const genAI = new GoogleGenerativeAI(import.meta.env.VITE_GEMINI_API_KEY);
