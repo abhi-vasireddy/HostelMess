@@ -38,8 +38,8 @@ const AdminChatBot: React.FC<AdminChatBotProps> = ({ feedback, users, menu }) =>
 
       // ✅ SAFE MODEL (fixes your error)
       const model = genAI.getGenerativeModel({
-        model: "models/gemini-1.5-flash"
-      });
+        model: "gemini-1.5-flash-latest"
+        });
 
       const systemContext = `
 You are the "Mess Connect AI Assistant". You help administrators manage hostel mess data.
