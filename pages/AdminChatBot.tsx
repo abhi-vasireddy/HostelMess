@@ -19,8 +19,6 @@ const AdminChatBot: React.FC<AdminChatBotProps> = ({ feedback, users, menu }) =>
   const [isLoading, setIsLoading] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  const API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
-
   useEffect(() => {
     scrollRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
@@ -28,25 +26,19 @@ const AdminChatBot: React.FC<AdminChatBotProps> = ({ feedback, users, menu }) =>
   const handleSendMessage = async () => {
     if (!input.trim() || isLoading) return;
 
-    if (!API_KEY) {
-      setMessages(prev => [...prev, {
-        role: 'ai',
-        text: "❌ API Key missing. Check Vercel environment variables."
-      }]);
-      return;
-    }
-
     const userMsg = input;
     setMessages(prev => [...prev, { role: 'user', text: userMsg }]);
     setInput('');
     setIsLoading(true);
 
-    try {
-      const genAI = new GoogleGenerativeAI(API_KEY);
+    console.log("Checking Key:", import.meta.env.VITE_GEMINI_API_KEY ? "Key Found ✅" : "Key Missing ❌");
 
-      // ✅ FIXED MODEL (NO "models/" prefix)
+    try {
+      const genAI = new GoogleGenerativeAI(import.meta.env.VITE_GEMINI_API_KEY);
+
+      // ✅ SAFE MODEL (fixes your error)
       const model = genAI.getGenerativeModel({
-        model: "gemini-1.5-flash"
+        model: "models/gemini-1.5-flash"
       });
 
       const systemContext = `
@@ -68,28 +60,19 @@ INSTRUCTIONS:
       const prompt = `${systemContext}\n\nAdmin Request: ${userMsg}`;
 
       const result = await model.generateContent(prompt);
-      const response = await result.response;
-      const text = response.text();
+      const text = result.response.text();
 
-      // ✅ Smooth UX delay
-      await new Promise(res => setTimeout(res, 400));
+      // small delay for smooth UX
+      await new Promise(res => setTimeout(res, 500));
 
       setMessages(prev => [...prev, { role: 'ai', text }]);
 
-    } catch (error: any) {
+    } catch (error) {
       console.error("Gemini Error:", error);
-
-      let errorMessage = "⚠️ AI failed. Try again.";
-
-      if (error.message?.includes("API key")) {
-        errorMessage = "❌ Invalid API Key.";
-      } else if (error.message?.includes("quota")) {
-        errorMessage = "⚠️ API quota exceeded.";
-      }
 
       setMessages(prev => [...prev, {
         role: 'ai',
-        text: errorMessage
+        text: "⚠️ AI failed. Try again or check API key/model."
       }]);
     } finally {
       setIsLoading(false);
@@ -157,11 +140,7 @@ INSTRUCTIONS:
             placeholder="Ask something..."
             className="flex-1 border p-2 rounded-lg"
           />
-          <button 
-            onClick={handleSendMessage} 
-            disabled={isLoading}
-            className="bg-indigo-600 text-white p-2 rounded-lg disabled:opacity-50"
-          >
+          <button onClick={handleSendMessage} className="bg-indigo-600 text-white p-2 rounded-lg">
             <Send size={18} />
           </button>
         </div>
