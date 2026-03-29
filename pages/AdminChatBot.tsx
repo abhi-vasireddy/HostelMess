@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Send, Bot, X, Maximize2, Minimize2, Loader2, ShieldCheck } from 'lucide-react';
-import { GoogleGenerativeAI } from "@google/generative-ai";
 
 interface AdminChatBotProps {
   feedback: any[];
@@ -34,12 +33,7 @@ const AdminChatBot: React.FC<AdminChatBotProps> = ({ feedback, users, menu }) =>
     console.log("Checking Key:", import.meta.env.VITE_GEMINI_API_KEY ? "Key Found ✅" : "Key Missing ❌");
 
     try {
-      const genAI = new GoogleGenerativeAI(import.meta.env.VITE_GEMINI_API_KEY);
-
-      // ✅ SAFE MODEL (fixes your error)
-      const model = genAI.getGenerativeModel({
-        model: "gemini-1.5-flash", // <-- Use a stable model
-        });
+      const API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
 
       const systemContext = `
 You are the "Mess Connect AI Assistant". You help administrators manage hostel mess data.
@@ -59,10 +53,35 @@ INSTRUCTIONS:
 
       const prompt = `${systemContext}\n\nAdmin Request: ${userMsg}`;
 
-      const result = await model.generateContent(prompt);
-      const text = result.response.text();
+      // ✅ WORKING REST API CALL (v1)
+      const response = await fetch(
+        `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${API_KEY}`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            contents: [
+              {
+                parts: [
+                  {
+                    text: prompt,
+                  },
+                ],
+              },
+            ],
+          }),
+        }
+      );
 
-      // small delay for smooth UX
+      const data = await response.json();
+
+      const text =
+        data?.candidates?.[0]?.content?.parts?.[0]?.text ||
+        "No response from AI";
+
+      // smooth delay
       await new Promise(res => setTimeout(res, 500));
 
       setMessages(prev => [...prev, { role: 'ai', text }]);
@@ -72,7 +91,7 @@ INSTRUCTIONS:
 
       setMessages(prev => [...prev, {
         role: 'ai',
-        text: "⚠️ AI failed. Try again or check API key/model."
+        text: "⚠️ AI failed. Please check API key or network."
       }]);
     } finally {
       setIsLoading(false);
