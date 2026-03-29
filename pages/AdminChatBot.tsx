@@ -38,7 +38,7 @@ const AdminChatBot: React.FC<AdminChatBotProps> = ({ feedback, users, menu }) =>
 
       // ✅ SAFE MODEL (fixes your error)
       const model = genAI.getGenerativeModel({
-        model: "models/text-bison-001"
+        model: "gemini-1.5-flash", // <-- Use a stable model
         });
 
       const systemContext = `
