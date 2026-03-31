@@ -16,7 +16,7 @@ import {
 import { 
   User, 
   UserRole, 
-  Gender, // 👈 Imported Gender
+  Gender,
   DailyMenu, 
   Feedback, 
   Announcement, 
@@ -46,7 +46,6 @@ export const MockDB = {
     if (snapshot.empty) {
        const allUsers = await getDocs(usersRef);
        if (allUsers.empty) {
-         // 🟢 Create Default Users with Gender & Room
          await MockDB.importUsers([
             { email: 'admin@hostel.com', displayName: 'Warden Smith', role: 'ADMIN', password: 'password', gender: 'MALE', roomNumber: 'OFFICE' },
             { email: 'student@hostel.com', displayName: 'John Doe', role: 'STUDENT', password: 'password', gender: 'MALE', roomNumber: '101-A' },
@@ -304,7 +303,6 @@ export const MockDB = {
   deleteNote: async (id: string) => { await deleteDoc(doc(db, 'notes', id)); },
 
   // --- 9. HOSTEL MODULE ---
-
   getHostelComplaints: async (): Promise<HostelComplaint[]> => {
     try {
       const q = query(collection(db, 'hostel_complaints'), orderBy('createdAt', 'desc'));
@@ -334,8 +332,7 @@ export const MockDB = {
     await deleteDoc(doc(db, 'announcements', id));
   },
 
-  // --- 10. LAUNDRY (UPDATED WITH SPECIFIC FLOORS) ---
-
+  // --- 10. LAUNDRY ---
   getWashingMachines: async (): Promise<WashingMachine[]> => {
     try {
       const colRef = collection(db, 'washing_machines');
@@ -343,12 +340,10 @@ export const MockDB = {
       const snapshot = await getDocs(q);
       
       if (snapshot.empty) {
-         // 🟢 DEFAULT MACHINES: 3 Floors for Boys, 3 Floors for Girls
          const defaults: WashingMachine[] = [
             { id: 'bh_f1', name: 'Boys Hostel - Floor 1', capacity: '7kg', gender: Gender.MALE },
             { id: 'bh_f2', name: 'Boys Hostel - Floor 2', capacity: '7kg', gender: Gender.MALE },
             { id: 'bh_f3', name: 'Boys Hostel - Floor 3', capacity: '7kg', gender: Gender.MALE },
-            
             { id: 'gh_f1', name: 'Girls Hostel - Floor 1', capacity: '6kg', gender: Gender.FEMALE },
             { id: 'gh_f2', name: 'Girls Hostel - Floor 2', capacity: '6kg', gender: Gender.FEMALE },
             { id: 'gh_f3', name: 'Girls Hostel - Floor 3', capacity: '6kg', gender: Gender.FEMALE },
@@ -358,7 +353,6 @@ export const MockDB = {
          await batch.commit();
          return defaults;
       }
-
       return snapshot.docs.map(doc => ({ ...(doc.data() as any), id: doc.id }));
     } catch (e) { return []; }
   },
@@ -384,12 +378,9 @@ export const MockDB = {
       } else {
         q = query(collection(db, 'laundry_bookings'), orderBy('date', 'desc'));
       }
-      
       const snapshot = await getDocs(q);
       return snapshot.docs.map(doc => ({ ...(doc.data() as any), id: doc.id }) as LaundryBooking);
-    } catch (e) { 
-      return []; 
-    }
+    } catch (e) { return []; }
   },
 
   bookLaundrySlot: async (booking: LaundryBooking): Promise<void> => {
@@ -402,15 +393,12 @@ export const MockDB = {
   },
 
   // --- 11. DYNAMIC SERVICES ---
-  
   getServices: async (): Promise<ServiceModule[]> => {
     try {
       const snapshot = await getDocs(collection(db, 'services'));
       const services = snapshot.docs.map(doc => ({ ...(doc.data() as any), id: doc.id }) as ServiceModule);
       return services.sort((a, b) => (a.order || 0) - (b.order || 0));
-    } catch (e) { 
-        return []; 
-    }
+    } catch (e) { return []; }
   },
 
   saveService: async (service: ServiceModule): Promise<void> => {
@@ -435,7 +423,6 @@ export const MockDB = {
   },
 
   // --- 12. SPORTS MODULE ---
-  
   getSportsEquipment: async (): Promise<SportsEquipment[]> => {
     try {
       const snapshot = await getDocs(collection(db, 'sports_equipment'));
@@ -476,24 +463,13 @@ export const MockDB = {
      await addDoc(collection(db, 'team_requests'), req);
   },
 
-  joinTeam: async (requestId: string, playerName: string): Promise<void> => {
-     // Placeholder
-  },
-  
   addPlayerToTeam: async (requestId: string, newPlayerList: string[]): Promise<void> => {
      await updateDoc(doc(db, 'team_requests', requestId), { playersJoined: newPlayerList });
   },
 
-  // Add this inside the MockDB object in services/mockDb.ts
-
-  // Add this inside the MockDB object in services/mockDb.ts
-
   updatePassword: async (uid: string, newPassword: string): Promise<void> => {
-    // 1. Update the password in the Firebase 'users' collection
     const userRef = doc(db, 'users', uid);
     await updateDoc(userRef, { password: newPassword });
-    
-    // 2. Update the local session so the app stays in sync
     const stored = localStorage.getItem('hft_current_user');
     if (stored) {
       const userData = JSON.parse(stored);
@@ -501,4 +477,50 @@ export const MockDB = {
       localStorage.setItem('hft_current_user', JSON.stringify(userData));
     }
   },
+
+  // --- 13. SETTINGS & CATEGORIES (UPDATED TO PREVENT DUPLICATES) ---
+
+  /**
+   * Fetches all complaint categories and their subcategories from Firestore.
+   * Only returns what is currently in the database without re-adding defaults.
+   */
+  getHostelCategories: async (): Promise<any[]> => {
+    try {
+      const colRef = collection(db, 'hostel_categories');
+      const snapshot = await getDocs(colRef);
+      
+      // If empty, just return an empty array instead of re-adding defaults
+      if (snapshot.empty) {
+        return [];
+      }
+      
+      const categories = snapshot.docs.map(doc => ({ ...(doc.data() as any), id: doc.id }));
+
+      // Clean up local duplicates by name before returning to UI
+      const uniqueMap = new Map();
+      categories.forEach(cat => {
+        if (!uniqueMap.has(cat.name)) {
+          uniqueMap.set(cat.name, cat);
+        }
+      });
+      
+      return Array.from(uniqueMap.values());
+    } catch (e) {
+      console.error("Error fetching categories:", e);
+      return [];
+    }
+  },
+
+  updateHostelCategory: async (id: string, updatedData: { name: string, subcategories: string[] }): Promise<void> => {
+    const catRef = doc(db, 'hostel_categories', id);
+    await updateDoc(catRef, updatedData);
+  },
+
+  addHostelCategory: async (category: { name: string; subcategories: string[]; order?: number }) => { // 👈 Update this line
+  await addDoc(collection(db, 'hostel_categories'), category);
+  },
+
+  deleteHostelCategory: async (id: string): Promise<void> => {
+    await deleteDoc(doc(db, 'hostel_categories', id));
+  }
 };

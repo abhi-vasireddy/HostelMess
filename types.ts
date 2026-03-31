@@ -155,6 +155,13 @@ export interface LaundryBooking {
   createdAt: number;
 }
 
+export interface HostelCategory {
+  id?: string;
+  name: string;
+  subcategories: string[];
+  order?: number; // 👈 Add this line to allow the order property
+}
+
 export interface ServiceModule {
   id: string;
   title: string;

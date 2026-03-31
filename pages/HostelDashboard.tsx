@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { ArrowLeft, Plus, History, CheckCircle2, Clock, AlertCircle, Trash2, Megaphone, X, LayoutDashboard, Building, WashingMachine, Calendar, Timer, Pencil, Filter, ArrowUpDown, ChevronRight } from 'lucide-react';
+import { ArrowLeft, Plus, History, CheckCircle2, Clock, AlertCircle, Trash2, Megaphone, X, LayoutDashboard, Building, WashingMachine, Calendar, Timer, Pencil, Filter, ArrowUpDown, ChevronRight, Settings, ChevronUp, ChevronDown, List } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { User, UserRole, ComplaintStatus, HostelComplaint, Announcement, LaundryBooking, WashingMachine as MachineType, Gender } from '../types';
 import { Button } from '../components/Button';
@@ -14,6 +14,173 @@ const getLocalDateString = () => {
   return localDate.toISOString().split('T')[0];
 };
 
+/**
+ * 🟢 ADMIN ONLY COMPONENT: Category & Subcategory Manager
+ * Allows Admins to view/manage and REORDER the dynamic lists stored in Firestore
+ */
+export const AdminCategoryManager = () => {
+  const [categories, setCategories] = useState<any[]>([]);
+  const [selectedCatId, setSelectedCatId] = useState('');
+  const [newCatName, setNewCatName] = useState('');
+  const [newSubName, setNewSubName] = useState('');
+
+  const loadCategories = async () => {
+    // Fetches unique categories from MockDB
+    const data = await MockDB.getHostelCategories();
+    // Ensure they are sorted by their 'order' property for the UI
+    setCategories(data.sort((a, b) => (a.order || 0) - (b.order || 0)));
+  };
+
+  useEffect(() => { loadCategories(); }, []);
+
+  const handleAddCategory = async () => {
+    if (!newCatName) return;
+    // Set order to the end of the current list
+    await MockDB.addHostelCategory({ 
+      name: newCatName, 
+      subcategories: [], 
+      order: categories.length 
+    });
+    setNewCatName('');
+    loadCategories();
+  };
+
+  const handleAddSubcategory = async () => {
+    const cat = categories.find(c => c.id === selectedCatId);
+    if (!cat || !newSubName) return;
+    const updatedSubs = [...cat.subcategories, newSubName];
+    await MockDB.updateHostelCategory(cat.id, { ...cat, subcategories: updatedSubs });
+    setNewSubName('');
+    loadCategories();
+  };
+
+  const handleDeleteCategory = async (id: string) => {
+    if (confirm("Delete this category?")) {
+      await MockDB.deleteHostelCategory(id);
+      loadCategories();
+    }
+  };
+
+  const handleDeleteSubcategory = async (subToDelete: string) => {
+    const cat = categories.find(c => c.id === selectedCatId);
+    if (!cat) return;
+    const updatedSubs = cat.subcategories.filter((s: string) => s !== subToDelete);
+    await MockDB.updateHostelCategory(cat.id, { ...cat, subcategories: updatedSubs });
+    loadCategories();
+  };
+
+  // --- REORDERING LOGIC ---
+  const handleMoveCategory = async (index: number, direction: 'up' | 'down') => {
+    const newItems = [...categories];
+    const targetIndex = direction === 'up' ? index - 1 : index + 1;
+    
+    if (targetIndex < 0 || targetIndex >= newItems.length) return;
+
+    // Swap items in the local array
+    [newItems[index], newItems[targetIndex]] = [newItems[targetIndex], newItems[index]];
+
+    // Update 'order' property for each affected category and save to DB
+    await Promise.all(newItems.map((cat, idx) => 
+      MockDB.updateHostelCategory(cat.id, { ...cat, order: idx })
+    ));
+    
+    loadCategories();
+  };
+
+  const handleMoveSubcategory = async (index: number, direction: 'up' | 'down') => {
+    const cat = categories.find(c => c.id === selectedCatId);
+    if (!cat) return;
+
+    const newSubs = [...cat.subcategories];
+    const targetIndex = direction === 'up' ? index - 1 : index + 1;
+
+    if (targetIndex < 0 || targetIndex >= newSubs.length) return;
+
+    // Swap subcategories in the local array
+    [newSubs[index], newSubs[targetIndex]] = [newSubs[targetIndex], newSubs[index]];
+
+    // Save the new array sequence to the category document
+    await MockDB.updateHostelCategory(cat.id, { ...cat, subcategories: newSubs });
+    loadCategories();
+  };
+
+  return (
+    <div className="mt-8 bg-white dark:bg-slate-900 p-6 rounded-[2rem] border border-slate-200 dark:border-slate-800 shadow-sm">
+      <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-6 flex items-center gap-2">
+        <Settings size={20} className="text-indigo-600"/> Manage & Reorder Categories
+      </h3>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+        {/* Category List with Reordering */}
+        <div className="space-y-4">
+          <label className="block text-xs font-bold text-slate-500 uppercase">Primary Categories</label>
+          <div className="flex gap-2">
+            <input 
+              className="flex-1 p-3 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500"
+              placeholder="New Category Name"
+              value={newCatName}
+              onChange={(e) => setNewCatName(e.target.value)}
+            />
+            <Button onClick={handleAddCategory}><Plus size={18}/></Button>
+          </div>
+
+          <div className="space-y-2 max-h-64 overflow-y-auto pr-2 custom-scrollbar">
+            {categories.map((cat, idx) => (
+              <div key={cat.id} className="flex justify-between items-center p-3 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-100 dark:border-slate-800">
+                <span className="font-bold text-sm text-slate-700 dark:text-slate-200">{cat.name}</span>
+                <div className="flex items-center gap-1">
+                  <button onClick={() => handleMoveCategory(idx, 'up')} disabled={idx === 0} className="p-1 text-slate-400 hover:text-indigo-500 disabled:opacity-20"><ChevronUp size={16}/></button>
+                  <button onClick={() => handleMoveCategory(idx, 'down')} disabled={idx === categories.length - 1} className="p-1 text-slate-400 hover:text-indigo-500 disabled:opacity-20"><ChevronDown size={16}/></button>
+                  <button onClick={() => handleDeleteCategory(cat.id)} className="p-1 text-slate-400 hover:text-red-500 ml-1"><Trash2 size={16}/></button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Subcategory List with Reordering */}
+        <div className="space-y-4">
+          <label className="block text-xs font-bold text-slate-500 uppercase">Manage Subcategories</label>
+          <select 
+            className="w-full p-3 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500 font-medium"
+            value={selectedCatId}
+            onChange={(e) => setSelectedCatId(e.target.value)}
+          >
+            <option value="">Select a Category</option>
+            {categories.map(cat => <option key={cat.id} value={cat.id}>{cat.name}</option>)}
+          </select>
+
+          {selectedCatId && (
+            <div className="animate-in fade-in slide-in-from-top-2">
+              <div className="flex gap-2 mb-4">
+                <input 
+                  className="flex-1 p-3 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500"
+                  placeholder="New Sub-item"
+                  value={newSubName}
+                  onChange={(e) => setNewSubName(e.target.value)}
+                />
+                <Button onClick={handleAddSubcategory} variant="outline"><Plus size={18}/></Button>
+              </div>
+              <div className="space-y-2">
+                {categories.find(c => c.id === selectedCatId)?.subcategories.map((sub: string, idx: number, arr: string[]) => (
+                  <div key={sub} className="flex justify-between items-center p-2 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-400 rounded-lg text-xs font-bold border border-indigo-100 dark:border-indigo-800">
+                    <span>{sub}</span>
+                    <div className="flex items-center gap-1">
+                      <button onClick={() => handleMoveSubcategory(idx, 'up')} disabled={idx === 0} className="p-1 hover:text-indigo-600 disabled:opacity-20"><ChevronUp size={14}/></button>
+                      <button onClick={() => handleMoveSubcategory(idx, 'down')} disabled={idx === arr.length - 1} className="p-1 hover:text-indigo-600 disabled:opacity-20"><ChevronDown size={14}/></button>
+                      <button onClick={() => handleDeleteSubcategory(sub)} className="p-1 hover:text-red-500 ml-1"><X size={14}/></button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
 export const HostelDashboard = ({ user }: { user: User }) => {
   const navigate = useNavigate();
   const isAdmin = user.role === UserRole.ADMIN;
@@ -25,6 +192,7 @@ export const HostelDashboard = ({ user }: { user: User }) => {
   const [laundryBookings, setLaundryBookings] = useState<LaundryBooking[]>([]);
   const [machines, setMachines] = useState<MachineType[]>([]);
   const [totalStudents, setTotalStudents] = useState<number>(0);
+  const [availableCategories, setAvailableCategories] = useState<any[]>([]); // 🟢 Dynamic categories
   
   // --- UI STATE ---
   const [loading, setLoading] = useState(true);
@@ -38,12 +206,11 @@ export const HostelDashboard = ({ user }: { user: User }) => {
   // --- FORMS & MODALS ---
   const [showComplaintForm, setShowComplaintForm] = useState(false);
   const [showNoticeForm, setShowNoticeForm] = useState(false); 
-  const [newComplaint, setNewComplaint] = useState({ type: 'Plumbing', desc: '' });
+  const [newComplaint, setNewComplaint] = useState({ category: '', subcategory: '', desc: '' });
   const [newNotice, setNewNotice] = useState({ title: '', message: '' });
 
   // --- LAUNDRY MACHINE MANAGEMENT ---
   const [showMachineModal, setShowMachineModal] = useState(false);
-  // 🟢 Updated machine form to include gender
   const [machineForm, setMachineForm] = useState({ id: '', name: '', capacity: '', gender: 'MALE' as Gender });
   const [activeMachineForBooking, setActiveMachineForBooking] = useState<string | null>(null);
   const [bookingTimes, setBookingTimes] = useState({ start: '', end: '' });
@@ -52,18 +219,20 @@ export const HostelDashboard = ({ user }: { user: User }) => {
   const loadData = async () => {
     setLoading(true);
     try {
-      const [c, n, m, b, allUsers] = await Promise.all([
+      const [c, n, m, b, allUsers, cats] = await Promise.all([
         MockDB.getHostelComplaints(),
         MockDB.getHostelNotices(),
         MockDB.getWashingMachines(),
         MockDB.getLaundryBookings(),
-        MockDB.getAllUsers()
+        MockDB.getAllUsers(),
+        MockDB.getHostelCategories() // 🟢 Fetch categories from DB
       ]);
       setComplaints(c);
       setNotices(n);
       setMachines(m);
       setLaundryBookings(b);
       setTotalStudents(allUsers.filter(u => u.role === UserRole.STUDENT).length);
+      setAvailableCategories(cats);
     } catch (e) { console.error("Failed to load dashboard data", e); } 
     finally { setLoading(false); }
   };
@@ -85,7 +254,6 @@ export const HostelDashboard = ({ user }: { user: User }) => {
   const myComplaints = complaints.filter(c => c.userId === user.uid);
   const myPendingIssues = myComplaints.filter(c => c.status !== ComplaintStatus.RESOLVED).length;
 
-  // Apply Filters & Sorting
   const displayedComplaints = (isAdmin ? complaints : myComplaints)
     .filter(c => filterStatus === 'ALL' || c.status === filterStatus)
     .sort((a, b) => {
@@ -93,7 +261,6 @@ export const HostelDashboard = ({ user }: { user: User }) => {
        return a.createdAt - b.createdAt;
     });
 
-  // 🟢 NEW: Filter Machines by Gender (unless Admin)
   const displayedMachines = isAdmin 
     ? machines 
     : machines.filter(m => m.gender === user.gender);
@@ -101,20 +268,22 @@ export const HostelDashboard = ({ user }: { user: User }) => {
   // --- HANDLERS ---
   const handleRaiseComplaint = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newComplaint.desc) return;
+    if (!newComplaint.desc || !newComplaint.subcategory) return;
     const complaint: HostelComplaint = { 
       id: Date.now().toString(), 
       userId: user.uid, 
       userName: user.displayName || 'Student', 
-      room: user.roomNumber || 'N/A', // 🟢 Use real room number
-      type: newComplaint.type, 
+      room: user.roomNumber || 'N/A',
+      type: `${newComplaint.category}: ${newComplaint.subcategory}`, // 🟢 Combined dynamic type
       desc: newComplaint.desc, 
       status: ComplaintStatus.PENDING, 
       createdAt: Date.now(), 
       dateString: new Date().toLocaleDateString() 
     };
     await MockDB.submitHostelComplaint(complaint);
-    setNewComplaint({ type: 'Plumbing', desc: '' }); setShowComplaintForm(false); loadData();
+    setNewComplaint({ category: '', subcategory: '', desc: '' }); 
+    setShowComplaintForm(false); 
+    loadData();
   };
 
   const handleStatusChange = async (id: string, newStatus: ComplaintStatus) => {
@@ -125,7 +294,6 @@ export const HostelDashboard = ({ user }: { user: User }) => {
   const handlePostNotice = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newNotice.title || !newNotice.message) return;
-    // 🟢 FIXED: Added 'date' property here
     await MockDB.saveAnnouncement({ 
         id: '', 
         title: newNotice.title, 
@@ -182,14 +350,12 @@ export const HostelDashboard = ({ user }: { user: User }) => {
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 pb-32 animate-in fade-in">
       
-      {/* 🟢 HEADER */}
       <div className="pt-6 px-6 pb-2">
          <div className="flex justify-between items-center mb-4">
              <div>
                 <h1 className="text-3xl font-black text-slate-800 dark:text-white flex items-center gap-2">
                    <Building className="text-indigo-600"/> Hostel<span className="text-indigo-600">Connect</span>
                 </h1>
-                {/* 🟢 Show Real Room Number */}
                 <p className="text-slate-500 font-medium text-sm ml-1">
                    {isAdmin ? 'Admin View' : `Room ${user.roomNumber || 'N/A'}`}
                 </p>
@@ -211,9 +377,6 @@ export const HostelDashboard = ({ user }: { user: User }) => {
 
       <main className="px-4 md:px-8 max-w-7xl mx-auto">
             
-            {/* ======================= */}
-            {/* TAB: OVERVIEW        */}
-            {/* ======================= */}
             {activeTab === 'overview' && (
                <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
                   
@@ -281,23 +444,25 @@ export const HostelDashboard = ({ user }: { user: User }) => {
                   )}
 
                   {isAdmin && (
-                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                        <div className="bg-white dark:bg-slate-900 p-6 rounded-[2rem] border border-slate-200 dark:border-slate-800 shadow-sm h-80">
-                           <h3 className="font-bold text-slate-800 dark:text-white mb-4">Status Distribution</h3>
-                           <ResponsiveContainer width="100%" height="100%"><PieChart><Pie data={statusData} cx="50%" cy="50%" innerRadius={60} outerRadius={80} paddingAngle={5} dataKey="value">{statusData.map((entry, index) => (<Cell key={`cell-${index}`} fill={entry.color} />))}</Pie><Tooltip/><Legend/></PieChart></ResponsiveContainer>
+                     <>
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                           <div className="bg-white dark:bg-slate-900 p-6 rounded-[2rem] border border-slate-200 dark:border-slate-800 shadow-sm h-80">
+                              <h3 className="font-bold text-slate-800 dark:text-white mb-4">Status Distribution</h3>
+                              <ResponsiveContainer width="100%" height="100%"><PieChart><Pie data={statusData} cx="50%" cy="50%" innerRadius={60} outerRadius={80} paddingAngle={5} dataKey="value">{statusData.map((entry, index) => (<Cell key={`cell-${index}`} fill={entry.color} />))}</Pie><Tooltip/><Legend/></PieChart></ResponsiveContainer>
+                           </div>
+                           <div className="bg-white dark:bg-slate-900 p-6 rounded-[2rem] border border-slate-200 dark:border-slate-800 shadow-sm h-80">
+                              <h3 className="font-bold text-slate-800 dark:text-white mb-4">Categories</h3>
+                              <ResponsiveContainer width="100%" height="100%"><BarChart data={categoryData} layout="vertical"><XAxis type="number" hide/><YAxis dataKey="name" type="category" width={80} tick={{fontSize: 12}}/><Tooltip/><Bar dataKey="count" fill="#8884d8" radius={[0, 4, 4, 0]} barSize={20}>{categoryData.map((e, i) => <Cell key={i} fill={['#6366f1', '#8b5cf6', '#ec4899'][i%3]}/>)}</Bar></BarChart></ResponsiveContainer>
+                           </div>
                         </div>
-                        <div className="bg-white dark:bg-slate-900 p-6 rounded-[2rem] border border-slate-200 dark:border-slate-800 shadow-sm h-80">
-                           <h3 className="font-bold text-slate-800 dark:text-white mb-4">Categories</h3>
-                           <ResponsiveContainer width="100%" height="100%"><BarChart data={categoryData} layout="vertical"><XAxis type="number" hide/><YAxis dataKey="name" type="category" width={80} tick={{fontSize: 12}}/><Tooltip/><Bar dataKey="count" fill="#8884d8" radius={[0, 4, 4, 0]} barSize={20}>{categoryData.map((e, i) => <Cell key={i} fill={['#6366f1', '#8b5cf6', '#ec4899'][i%3]}/>)}</Bar></BarChart></ResponsiveContainer>
-                        </div>
-                     </div>
+                        
+                        {/* 🟢 Admin Specific Category Manager in Overview */}
+                        <AdminCategoryManager />
+                     </>
                   )}
                </div>
             )}
 
-            {/* ======================= */}
-            {/* TAB: ISSUES          */}
-            {/* ======================= */}
             {activeTab === 'issues' && (
                <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
                   <div className="flex justify-between items-center mb-4">
@@ -305,7 +470,6 @@ export const HostelDashboard = ({ user }: { user: User }) => {
                      <Button onClick={() => setShowComplaintForm(true)} size="sm" className="flex items-center gap-2"><Plus size={16}/> Report Issue</Button>
                   </div>
                   
-                  {/* Filter Bar */}
                   <div className="flex justify-end gap-3 mb-2">
                      <div className="flex items-center gap-2 bg-white dark:bg-slate-900 px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
                         <Filter size={14} className="text-slate-400" />
@@ -365,13 +529,8 @@ export const HostelDashboard = ({ user }: { user: User }) => {
                </div>
             )}
 
-            {/* ======================= */}
-            {/* TAB: LAUNDRY         */}
-            {/* ======================= */}
             {activeTab === 'laundry' && (
                <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-                  
-                  {/* ADMIN CONTROLS */}
                   {isAdmin && (
                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-indigo-50 dark:bg-indigo-900/20 p-4 rounded-[2rem] border border-indigo-100 dark:border-indigo-800/50">
                         <div>
@@ -385,7 +544,6 @@ export const HostelDashboard = ({ user }: { user: User }) => {
                      </div>
                   )}
 
-                  {/* STUDENT HEADER */}
                   {!isAdmin && (
                      <div className="flex items-center justify-between mb-4">
                         <div>
@@ -397,7 +555,6 @@ export const HostelDashboard = ({ user }: { user: User }) => {
                   )}
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                     {/* 🟢 Displaying Filtered Machines */}
                      {displayedMachines.map(machine => {
                         const targetDate = isAdmin ? adminSelectedDate : todayDate;
                         const machineBookings = laundryBookings.filter(b => b.machineId === machine.id && b.date === targetDate).sort((a,b) => a.startTime.localeCompare(b.startTime));
@@ -447,9 +604,6 @@ export const HostelDashboard = ({ user }: { user: User }) => {
                </div>
             )}
 
-            {/* ======================= */}
-            {/* TAB: NOTICES         */}
-            {/* ======================= */}
             {activeTab === 'notices' && (
                <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
                   <div className="flex justify-between items-center mb-4">
@@ -480,7 +634,6 @@ export const HostelDashboard = ({ user }: { user: User }) => {
             )}
       </main>
 
-      {/* 🟢 FLOATING BOTTOM NAVIGATION */}
       <div className="fixed bottom-6 left-6 right-6 md:left-1/2 md:-translate-x-1/2 md:w-auto md:min-w-[400px] z-40">
         <div className="bg-black/80 dark:bg-white/10 backdrop-blur-xl border border-white/10 dark:border-white/20 rounded-full px-6 py-4 shadow-2xl flex justify-between items-center gap-4 md:gap-8">
           {navItems.map((item) => (
@@ -510,9 +663,63 @@ export const HostelDashboard = ({ user }: { user: User }) => {
         </div>
       </div>
 
-      {/* --- MODALS --- */}
+      {/* 🟢 DYNAMIC COMPLAINT FORM MODAL */}
       {showComplaintForm && (
-         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm"><div className="bg-white dark:bg-slate-900 rounded-[2rem] w-full max-w-sm p-6 shadow-2xl animate-in zoom-in-95 border border-slate-200 dark:border-slate-800"><div className="flex justify-between items-center mb-6"><h3 className="font-bold text-xl text-slate-900 dark:text-white">Report Issue</h3><button onClick={() => setShowComplaintForm(false)}><X size={20} className="text-slate-400 hover:text-slate-600"/></button></div><form onSubmit={handleRaiseComplaint} className="space-y-5"><div><label className="text-xs font-bold text-slate-500 uppercase ml-1">Category</label><select className="w-full mt-1 p-3 bg-slate-50 dark:bg-slate-950 border-none rounded-xl font-medium outline-none focus:ring-2 focus:ring-blue-500" value={newComplaint.type} onChange={e => setNewComplaint({...newComplaint, type: e.target.value})}><option>Plumbing</option><option>Electrical</option><option>Carpentry</option><option>Internet</option><option>Cleaning</option></select></div><div><label className="text-xs font-bold text-slate-500 uppercase ml-1">Description</label><textarea className="w-full mt-1 p-3 bg-slate-50 dark:bg-slate-950 border-none rounded-xl font-medium outline-none focus:ring-2 focus:ring-blue-500 resize-none h-32" placeholder="Describe the problem..." value={newComplaint.desc} onChange={e => setNewComplaint({...newComplaint, desc: e.target.value})} /></div><Button fullWidth type="submit" className="py-3 rounded-xl">Submit Complaint</Button></form></div></div>
+         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+           <div className="bg-white dark:bg-slate-900 rounded-[2rem] w-full max-w-sm p-6 shadow-2xl animate-in zoom-in-95 border border-slate-200 dark:border-slate-800">
+             <div className="flex justify-between items-center mb-6">
+                <h3 className="font-bold text-xl text-slate-900 dark:text-white">Report Issue</h3>
+                <button onClick={() => setShowComplaintForm(false)}><X size={20} className="text-slate-400 hover:text-slate-600"/></button>
+             </div>
+             
+             <form onSubmit={handleRaiseComplaint} className="space-y-4">
+                <div>
+                  <label className="text-xs font-bold text-slate-500 uppercase ml-1">Category</label>
+                  <select 
+                    className="w-full mt-1 p-3 bg-slate-50 dark:bg-slate-950 border-none rounded-xl font-medium outline-none focus:ring-2 focus:ring-indigo-500" 
+                    value={newComplaint.category} 
+                    onChange={e => setNewComplaint({...newComplaint, category: e.target.value, subcategory: ''})}
+                    required
+                  >
+                    <option value="">Select Category</option>
+                    {availableCategories.map(cat => (
+                      <option key={cat.id} value={cat.name}>{cat.name}</option>
+                    ))}
+                  </select>
+                </div>
+
+                {newComplaint.category && (
+                  <div className="animate-in slide-in-from-top-2">
+                    <label className="text-xs font-bold text-slate-500 uppercase ml-1">Sub-Category</label>
+                    <select 
+                      className="w-full mt-1 p-3 bg-slate-50 dark:bg-slate-950 border-none rounded-xl font-medium outline-none focus:ring-2 focus:ring-indigo-500" 
+                      value={newComplaint.subcategory} 
+                      onChange={e => setNewComplaint({...newComplaint, subcategory: e.target.value})}
+                      required
+                    >
+                      <option value="">Select Sub-Category</option>
+                      {availableCategories.find(c => c.name === newComplaint.category)?.subcategories.map((sub: string) => (
+                        <option key={sub} value={sub}>{sub}</option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+
+                <div>
+                  <label className="text-xs font-bold text-slate-500 uppercase ml-1">Description</label>
+                  <textarea 
+                    className="w-full mt-1 p-3 bg-slate-50 dark:bg-slate-950 border-none rounded-xl font-medium outline-none focus:ring-2 focus:ring-indigo-500 resize-none h-32" 
+                    placeholder="Provide specific details..." 
+                    value={newComplaint.desc} 
+                    onChange={e => setNewComplaint({...newComplaint, desc: e.target.value})} 
+                    required
+                  />
+                </div>
+                
+                <Button fullWidth type="submit" className="py-3 rounded-xl">Submit Complaint</Button>
+             </form>
+           </div>
+         </div>
       )}
 
       {showNoticeForm && (
