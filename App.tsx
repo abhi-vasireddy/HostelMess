@@ -11,6 +11,7 @@ import { MockDB } from './services/mockDb';
 import { User, UserRole, ServiceModule } from './types';
 import { Layout } from './components/Layout'; 
 import { InstallPrompt } from './components/InstallPrompt';
+import { App as CapApp } from '@capacitor/app';
 
 // 👇 1. Import Notification Services
 import { requestForToken, onMessageListener } from './services/notificationService';
