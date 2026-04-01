@@ -313,15 +313,55 @@ export const HostelDashboard = ({ user }: { user: User }) => {
   };
 
   // --- LAUNDRY HANDLERS ---
-  const handleBookLaundry = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!activeMachineForBooking || !bookingTimes.start || !bookingTimes.end) return;
-    if (bookingTimes.start >= bookingTimes.end) { alert("End time must be after start time."); return; }
-    const hasOverlap = laundryBookings.some(b => { if (b.machineId !== activeMachineForBooking) return false; if (b.date !== todayDate) return false; return (bookingTimes.start < b.endTime && bookingTimes.end > b.startTime); });
-    if (hasOverlap) { alert("Time slot overlaps with an existing booking today."); return; }
-    await MockDB.bookLaundrySlot({ id: '', machineId: activeMachineForBooking, userId: user.uid, userName: user.displayName || 'Student', startTime: bookingTimes.start, endTime: bookingTimes.end, date: todayDate, createdAt: Date.now() });
-    setActiveMachineForBooking(null); setBookingTimes({ start: '', end: '' }); loadData();
-  };
+   const handleBookLaundry = async (e: React.FormEvent) => {
+   e.preventDefault();
+   
+   // 1. Basic validation: ensure a machine and times are selected
+   if (!activeMachineForBooking || !bookingTimes.start || !bookingTimes.end) return;
+
+   // 2. Logic validation: Ensure the end time is after the start time
+   if (bookingTimes.start >= bookingTimes.end) { 
+      alert("End time must be after start time."); 
+      return; 
+   }
+
+   // 3. Security Check: Find the machine and verify gender compatibility
+   const selectedMachine = machines.find(m => m.id === activeMachineForBooking);
+   
+   // If the user is not an Admin, they must match the machine's designated gender
+   if (!isAdmin && selectedMachine && selectedMachine.gender !== user.gender) {
+      alert(`This machine is designated for ${selectedMachine.gender === 'MALE' ? 'Boys' : 'Girls'}. You cannot book it.`);
+      return;
+   }
+
+   // 4. Availability Check: Ensure the slot doesn't overlap with existing bookings for this machine today
+   const hasOverlap = laundryBookings.some(b => { 
+      if (b.machineId !== activeMachineForBooking) return false; 
+      if (b.date !== todayDate) return false; 
+      return (bookingTimes.start < b.endTime && bookingTimes.end > b.startTime); 
+   });
+
+   if (hasOverlap) { 
+      alert("Time slot overlaps with an existing booking today."); 
+      return; 
+   }
+
+   // 5. Finalize Booking: Save to database and reset UI
+   await MockDB.bookLaundrySlot({ 
+      id: '', 
+      machineId: activeMachineForBooking, 
+      userId: user.uid, 
+      userName: user.displayName || 'Student', 
+      startTime: bookingTimes.start, 
+      endTime: bookingTimes.end, 
+      date: todayDate, 
+      createdAt: Date.now() 
+   });
+
+   setActiveMachineForBooking(null); 
+   setBookingTimes({ start: '', end: '' }); 
+   loadData();
+   };
 
   const handleCancelBooking = async (id: string) => {
     if (confirm("Cancel this booking?")) { await MockDB.cancelLaundryBooking(id); loadData(); }
@@ -731,8 +771,64 @@ export const HostelDashboard = ({ user }: { user: User }) => {
       )}
 
       {showMachineModal && (
-         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm"><div className="bg-white dark:bg-slate-900 rounded-[2rem] w-full max-w-sm p-6 shadow-2xl animate-in zoom-in-95 border border-slate-200 dark:border-slate-800"><div className="flex justify-between items-center mb-6"><h3 className="font-bold text-xl text-slate-900 dark:text-white">{machineForm.id ? 'Edit Machine' : 'Add Machine'}</h3><button onClick={() => setShowMachineModal(false)}><X size={20} className="text-slate-400 hover:text-slate-600"/></button></div><form onSubmit={handleSaveMachine} className="space-y-5"><div><label className="text-xs font-bold text-slate-500 uppercase ml-1">Machine Name</label><input className="w-full mt-1 p-3 bg-slate-50 dark:bg-slate-950 border-none rounded-xl font-medium outline-none focus:ring-2 focus:ring-indigo-500" placeholder="e.g. Machine 1 (Ground Floor)" value={machineForm.name} onChange={e => setMachineForm({...machineForm, name: e.target.value})} required /></div><div className="grid grid-cols-2 gap-4"><div><label className="text-xs font-bold text-slate-500 uppercase ml-1">Capacity</label><input className="w-full mt-1 p-3 bg-slate-50 dark:bg-slate-950 border-none rounded-xl font-medium outline-none focus:ring-2 focus:ring-indigo-500" placeholder="e.g. 6kg" value={machineForm.capacity} onChange={e => setMachineForm({...machineForm, capacity: e.target.value})} required /></div><div><label className="text-xs font-bold text-slate-500 uppercase ml-1">Gender</label><select className="w-full mt-1 p-3 bg-slate-50 dark:bg-slate-950 border-none rounded-xl font-medium outline-none focus:ring-2 focus:ring-indigo-500" value={machineForm.gender} onChange={e => setMachineForm({...machineForm, gender: e.target.value as Gender})}><option value={Gender.MALE}>Boys</option><option value={Gender.FEMALE}>Girls</option></select></div></div><Button fullWidth type="submit" className="py-3 rounded-xl">Save Machine</Button></form></div></div>
-      )}
+         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+            <div className="bg-white dark:bg-slate-900 rounded-[2rem] w-full max-w-sm p-6 shadow-2xl animate-in zoom-in-95 border border-slate-200 dark:border-slate-800">
+               <div className="flex justify-between items-center mb-6">
+               <h3 className="font-bold text-xl text-slate-900 dark:text-white">
+                  {machineForm.id ? 'Edit Machine' : 'Add Machine'}
+               </h3>
+               <button onClick={() => setShowMachineModal(false)}>
+                  <X size={20} className="text-slate-400 hover:text-slate-600"/>
+               </button>
+               </div>
+
+               <form onSubmit={handleSaveMachine} className="space-y-5">
+               <div>
+                  <label className="text-xs font-bold text-slate-500 uppercase ml-1">Machine Name</label>
+                  <input 
+                     className="w-full mt-1 p-3 bg-slate-50 dark:bg-slate-950 border-none rounded-xl font-medium outline-none focus:ring-2 focus:ring-indigo-500" 
+                     placeholder="e.g. Machine 1 (Ground Floor)" 
+                     value={machineForm.name} 
+                     onChange={e => setMachineForm({...machineForm, name: e.target.value})} 
+                     required 
+                  />
+               </div>
+
+               <div className="grid grid-cols-2 gap-4">
+                  <div>
+                     <label className="text-xs font-bold text-slate-500 uppercase ml-1">Capacity</label>
+                     <input 
+                     className="w-full mt-1 p-3 bg-slate-50 dark:bg-slate-950 border-none rounded-xl font-medium outline-none focus:ring-2 focus:ring-indigo-500" 
+                     placeholder="e.g. 6kg" 
+                     value={machineForm.capacity} 
+                     onChange={e => setMachineForm({...machineForm, capacity: e.target.value})} 
+                     required 
+                     />
+                  </div>
+
+                  <div>
+                     <label className="text-xs font-bold text-slate-500 uppercase ml-1">Gender</label>
+                     <select 
+                     className="w-full mt-1 p-3 bg-slate-50 dark:bg-slate-950 border-none rounded-xl font-medium outline-none focus:ring-2 focus:ring-indigo-500" 
+                     // Ensure value is never undefined by providing a fallback
+                     value={machineForm.gender || 'MALE'} 
+                     onChange={e => setMachineForm({...machineForm, gender: e.target.value as Gender})}
+                     required
+                     >
+                     {/* These values MUST match your Gender enum exactly */}
+                     <option value="MALE">Boys</option>
+                     <option value="FEMALE">Girls</option>
+                     </select>
+                  </div>
+               </div>
+
+               <Button fullWidth type="submit" className="py-3 rounded-xl">
+                  Save Machine
+               </Button>
+               </form>
+            </div>
+         </div>
+         )}
     </div>
   );
 };

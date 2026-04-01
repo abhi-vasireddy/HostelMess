@@ -357,12 +357,35 @@ export const MockDB = {
     } catch (e) { return []; }
   },
 
+  // --- 10. LAUNDRY (UPDATED FOR GENDER PERSISTENCE) ---
+
   saveWashingMachine: async (machine: WashingMachine): Promise<void> => {
+    // Destructure to separate the ID from the actual data fields
     const { id, ...data } = machine;
-    if (id) {
-       await updateDoc(doc(db, 'washing_machines', id), data);
-    } else {
-       await addDoc(collection(db, 'washing_machines'), data);
+    
+    // Create a clean data object to ensure no 'undefined' values are sent to Firestore
+    const machineData = {
+      name: data.name,
+      capacity: data.capacity || '6kg',
+      gender: data.gender || 'MALE', // Fallback to 'MALE' if gender is missing
+      updatedAt: Date.now()
+    };
+
+    try {
+      if (id && id.trim() !== '') {
+        // Update an existing machine document
+        const machineRef = doc(db, 'washing_machines', id);
+        await updateDoc(machineRef, machineData);
+      } else {
+        // Add a brand new machine document to the collection
+        await addDoc(collection(db, 'washing_machines'), {
+          ...machineData,
+          createdAt: Date.now()
+        });
+      }
+    } catch (error) {
+      console.error("Error saving washing machine to Firestore:", error);
+      throw error;
     }
   },
 
