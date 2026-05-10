@@ -61,7 +61,7 @@ export const MockDB = {
     
     if (userData.password !== password) throw new Error("Incorrect password");
     if (userData.deactivatedUntil && new Date() < new Date(userData.deactivatedUntil)) {
-      throw new Error(`Account Deactivated until ${new Date(userData.deactivatedUntil).toLocaleDateString()}`);
+      throw new Error(`Something went wrong. Please contact support.`);
     }
 
     const userSession = { ...userData, uid: userDoc.id } as User;
