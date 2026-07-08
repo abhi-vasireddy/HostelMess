@@ -1,0 +1,8 @@
+[{
+      "relation": ["delegate_permission/common.handle_all_urls"],
+      "target": {
+        "namespace": "android_app",
+        "package_name": "app.vercel.campdex.niat.twa",
+        "sha256_cert_fingerprints": ["SHA256: 75:1D:37:FB:45:3A:2B:6C:F0:7F:13:86:41:41:40:C7:D0:D0:99:53:8F:37:AB:4C:77:87:32:CC:E7:4F:10:1A"]
+      }
+    }]

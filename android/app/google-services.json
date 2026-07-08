@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "799731915471",
+    "project_id": "campdex-59fb3",
+    "storage_bucket": "campdex-59fb3.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:799731915471:android:eccd49928ce9c8f368b5ba",
+        "android_client_info": {
+          "package_name": "com.CampDex.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAgLdi8KcwS9I8XOOKBGTwGlHTbXMdA6pE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:799731915471:android:51b349b9fec8f78168b5ba",
+        "android_client_info": {
+          "package_name": "com.campDex.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAgLdi8KcwS9I8XOOKBGTwGlHTbXMdA6pE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
