@@ -12,8 +12,13 @@ const db = admin.firestore();
  * ------------------------------------------------------------------
  * 1. BROADCAST NOTIFICATIONS (Connects to Admin Dashboard)
  * ------------------------------------------------------------------
- * This function triggers automatically when you add a document to 
+ * This function triggers automatically when you add a document to
  * the "broadcasts" collection in the Admin Dashboard.
+ *
+ * Supports:
+ *   - Standard notification (title + body)
+ *   - Deep-link route in data payload (route property)
+ *   - Automatic cleanup of invalid/expired tokens
  */
 export const sendBroadcastNotification = functions.firestore
   .document("broadcasts/{broadcastId}")
@@ -21,19 +26,26 @@ export const sendBroadcastNotification = functions.firestore
     const data = snapshot.data();
     const title = data.title;
     const body = data.body;
+    const route = data.route || "/hostel"; // Default deep-link route
 
     // 1. Get ALL user tokens
     const usersSnapshot = await db.collection("users").get();
-    
+
     const tokens: string[] = [];
+    const userTokenMap = new Map<string, string[]>(); // userId -> [tokens...]
+
     usersSnapshot.forEach((doc) => {
       const userData = doc.data();
       if (userData.fcmTokens && Array.isArray(userData.fcmTokens)) {
-        tokens.push(...userData.fcmTokens);
+        const validTokens = userData.fcmTokens.filter((t: any) => typeof t === "string" && t.length > 20);
+        if (validTokens.length > 0) {
+          tokens.push(...validTokens);
+          userTokenMap.set(doc.id, validTokens);
+        }
       }
     });
 
-    // 2. Remove duplicates (one person might have 2 tokens)
+    // 2. Remove duplicates
     const uniqueTokens = [...new Set(tokens)];
 
     if (uniqueTokens.length === 0) {
@@ -41,31 +53,58 @@ export const sendBroadcastNotification = functions.firestore
       return;
     }
 
-    // 3. Construct the Message
-    const message = {
-      notification: {
-        title: title,
-        body: body,
-      },
-      tokens: uniqueTokens,
-    };
+    console.log(`Sending broadcast to ${uniqueTokens.length} devices.`);
 
-    // 4. Send the Batch using the NEW v12 API
+    // 3. Construct and send the message (with data payload for deep-linking)
     try {
-      // The new method takes { tokens: [], notification: {}, data: {} } 
-      // strictly typed as a MulticastMessage
       const response = await admin.messaging().sendEachForMulticast({
         tokens: uniqueTokens,
         notification: {
           title: title,
           body: body,
-        }
+        },
+        data: {
+          route: route,
+          click_action: "FLUTTER_NOTIFICATION_CLICK", // Helps Android open the correct activity
+        },
       });
 
-      console.log(`Broadcast sent successfully to ${response.successCount} devices.`);
-      
+      console.log(`Broadcast sent: ${response.successCount} succeeded, ${response.failureCount} failed.`);
+
+      // 4. Clean up invalid tokens from Firestore
       if (response.failureCount > 0) {
-        console.log(`Failed to send to ${response.failureCount} devices.`);
+        const invalidTokens = new Set<string>();
+
+        response.responses.forEach((resp, idx) => {
+          if (!resp.success && resp.error) {
+            const errorCode = resp.error.code;
+            // These error codes mean the token is permanently invalid
+            if (
+              errorCode === "messaging/invalid-registration-token" ||
+              errorCode === "messaging/registration-token-not-registered" ||
+              errorCode === "messaging/mismatched-credential" ||
+              errorCode === "messaging/invalid-argument"
+            ) {
+              invalidTokens.add(uniqueTokens[idx]);
+            }
+          }
+        });
+
+        if (invalidTokens.size > 0) {
+          console.log(`Cleaning up ${invalidTokens.size} invalid tokens from Firestore...`);
+
+          const batch = db.batch();
+          userTokenMap.forEach((userTokens, userId) => {
+            const filtered = userTokens.filter((t) => !invalidTokens.has(t));
+            if (filtered.length !== userTokens.length) {
+              const userRef = db.collection("users").doc(userId);
+              batch.update(userRef, { fcmTokens: filtered });
+            }
+          });
+
+          await batch.commit();
+          console.log("Token cleanup complete.");
+        }
       }
     } catch (error) {
       console.error("Error sending broadcast:", error);
@@ -110,7 +149,7 @@ export const scheduledSundaySnacks = functions.pubsub.schedule('1 0 * * 0')
  */
 export const importUsers = functions.https.onCall(async (data, context) => {
    // Security Check: Ensure the requester is an Admin
-   // Note: You must set Custom Claims for this to work perfectly, 
+   // Note: You must set Custom Claims for this to work perfectly,
    // or remove this check for development testing.
    /* if (!context.auth || context.auth.token.role !== 'ADMIN') {
       throw new functions.https.HttpsError('permission-denied', 'Only admins can import users');
@@ -129,10 +168,10 @@ export const importUsers = functions.https.onCall(async (data, context) => {
          password: user.password,
          displayName: user.displayName
        });
-       
+
        // B. Set Default Role
        await admin.auth().setCustomUserClaims(userRecord.uid, { role: 'STUDENT' });
-       
+
        // C. Create Database Record
        const userRef = db.collection('users').doc(userRecord.uid);
        batch.set(userRef, {
@@ -140,7 +179,7 @@ export const importUsers = functions.https.onCall(async (data, context) => {
          email: user.email,
          displayName: user.displayName,
          role: 'STUDENT',
-         gender: user.gender || 'MALE', // Default to MALE if missing
+         gender: user.gender || 'MALE',
          roomNumber: user.roomNumber || '',
          createdAt: admin.firestore.FieldValue.serverTimestamp()
        });

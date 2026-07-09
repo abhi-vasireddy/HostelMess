@@ -735,9 +735,9 @@ export const AdminDashboard: React.FC = () => {
 
   // --- RENDER: MAIN DASHBOARD ---
   return (
-    <div className="flex flex-col md:flex-row gap-8">
+    <div className="flex flex-col lg:flex-row gap-6 flex-1 h-screen min-h-0">
       {/* Sidebar - Collapsible on Mobile, Sticky on Desktop */}
-      <aside className="w-full md:w-64 flex-shrink-0 sticky top-2 md:top-24 h-fit z-40 transition-all duration-300">
+      <aside className="w-full lg:w-56 2xl:w-64 flex-shrink-0 sticky top-0 self-start max-h-screen z-40 transition-all duration-300">
         
         {/* Mobile Toggle Header (Visible only on mobile) */}
         <div className="md:hidden flex justify-between items-center bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl p-4 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 mb-4 transition-all duration-300">
@@ -754,24 +754,18 @@ export const AdminDashboard: React.FC = () => {
 
         {/* Sidebar Content (Hidden on mobile unless open) */}
         <div className={`${isSidebarOpen ? 'block' : 'hidden'} md:block space-y-6 animate-in slide-in-from-top-4 duration-300 md:animate-none max-h-[80vh] overflow-y-auto md:max-h-none md:overflow-visible custom-scrollbar`}>
-            
-            {/* Back Button */}
-            <div className="px-3 mb-2">
+            <div className="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden">
               <button 
                 onClick={() => navigate('/')}
-                className="flex items-center gap-3 px-4 py-3 w-full text-left rounded-xl text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all border border-transparent hover:border-slate-200 dark:hover:border-slate-700 font-medium"
+                className="flex items-center gap-2.5 px-4 py-3 w-full text-left text-sm text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-all border-b border-slate-100 dark:border-slate-800 font-medium"
               >
-                <ArrowLeft size={18} /> Back to Hub
+                <ArrowLeft size={15} /> Back to Hub
               </button>
-            </div>
-
-            <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 p-3 overflow-hidden">
-              <nav className="space-y-1">
-                {/* 🟢 Sidebar Menu Items - Added Broadcast */}
+              <nav className="p-2 space-y-0.5">
                   {[
                   { id: 'dashboard', icon: TrendingUp, label: 'Dashboard' },
-                  { id: 'ai-assistant', icon: Sparkles, label: 'AI Assistant' }, // 👈 New Section
-                  { id: 'broadcast', icon: Bell, label: 'Broadcast' }, // 👈 Added Broadcast here
+                  { id: 'ai-assistant', icon: Sparkles, label: 'AI Assistant' },
+                  { id: 'broadcast', icon: Bell, label: 'Broadcast' },
                   { id: 'menu', icon: MenuIcon, label: 'Menu Mgmt' },
                   { id: 'canteen', icon: UtensilsCrossed, label: 'Canteen' },
                   { id: 'users', icon: Users, label: 'Users' },
@@ -780,40 +774,52 @@ export const AdminDashboard: React.FC = () => {
                   { id: 'announcements', icon: AlertTriangle, label: 'Announcements' },
                   { id: 'todos', icon: CheckSquare, label: 'To-Do List' },
                   { id: 'notes', icon: StickyNote, label: 'Notes' },
-                  { id: 'services', icon: LayoutGrid, label: 'Service Modules' },
+                  { id: 'services', icon: LayoutGrid, label: 'Services' },
                   ].filter(item => {
-                  // If user is Canteen Staff, ONLY show the Canteen tab
                   if (user?.role === UserRole.CANTEEN_STAFF) {
                      return item.id === 'canteen';
                   }
-                  // Otherwise (Admin), show everything
                   return true;
-                  }).map(item => (
+                  }).map(item => {
+                    const isActive = activeTab === item.id;
+                    return (
                   <button 
                      key={item.id}
                      onClick={() => {
                         setActiveTab(item.id as any);
                         setIsSidebarOpen(false);
                      }} 
-                     className={`flex items-center gap-3 px-4 py-3 w-full text-left rounded-xl transition-all ${
-                        activeTab === item.id 
-                        ? 'bg-orange-50 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300 font-semibold' 
-                        : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800'
+                     className={`flex items-center gap-3 w-full text-left rounded-lg transition-all px-3 py-2.5 text-sm ${
+                       isActive 
+                        ? 'bg-orange-50 dark:bg-orange-900/25 text-orange-700 dark:text-orange-300 font-semibold shadow-sm' 
+                        : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800/50 hover:text-slate-800 dark:hover:text-slate-200'
                      }`}
                   >
-                     <item.icon size={18} /> {item.label}
+                     <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 transition-colors ${
+                       isActive 
+                         ? 'bg-orange-100 dark:bg-orange-800/40 text-orange-600 dark:text-orange-300' 
+                         : 'bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-500'
+                     }`}>
+                       <item.icon size={15} />
+                     </div>
+                     <span className="truncate">{item.label}</span>
                   </button>
-                  ))}
+                    );
+                    })}
               </nav>
             </div>
-            
-            <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 p-5">
-              <h4 className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-4">Quick Settings</h4>
-               <div className="flex items-center justify-between mt-4">
-                  <span className="text-sm font-medium text-slate-700 dark:text-slate-300">Splash Video</span>
+            <div className="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-slate-200 dark:border-slate-800 p-4">
+              <h4 className="text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-3">Quick Settings</h4>
+               <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-7 h-7 rounded-lg bg-purple-50 dark:bg-purple-900/20 flex items-center justify-center text-purple-500">
+                      <Video size={14} />
+                    </div>
+                    <span className="text-sm font-medium text-slate-700 dark:text-slate-300">Splash Video</span>
+                  </div>
                   <button 
                      onClick={() => handleUpdateSettings({ ...settings, splashVideoEnabled: !settings.splashVideoEnabled })}
-                     className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-300 ${settings.splashVideoEnabled ? 'bg-purple-500' : 'bg-slate-200 dark:bg-slate-700'}`}
+                     className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-300 flex-shrink-0 ${settings.splashVideoEnabled ? 'bg-purple-500' : 'bg-slate-200 dark:bg-slate-700'}`}
                   >
                      <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow-sm transition-transform duration-300 ${settings.splashVideoEnabled ? 'translate-x-6' : 'translate-x-1'}`} />
                   </button>
@@ -823,36 +829,62 @@ export const AdminDashboard: React.FC = () => {
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 min-w-0">
+      <main className="flex-1 min-w-0 overflow-y-auto custom-scrollbar">
         
         {/* --- DASHBOARD TAB --- */}
         {activeTab === 'dashboard' && (
           <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
             {/* Stats Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-               <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+               <div className="relative bg-white dark:bg-slate-900 p-5 rounded-xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden group hover:shadow-md hover:border-orange-200 dark:hover:border-orange-800 transition-all">
+                  <div className="absolute top-0 right-0 w-20 h-20 bg-gradient-to-bl from-blue-500/10 to-transparent rounded-bl-full" />
+                  <div className="flex items-start justify-between mb-2">
+                    <div className="w-10 h-10 rounded-xl bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center text-blue-600 dark:text-blue-400 ring-1 ring-blue-100 dark:ring-blue-800">
+                      <Users size={20} />
+                    </div>
+                  </div>
                   <p className="text-sm font-medium text-slate-500 dark:text-slate-400">Total Users</p>
-                  <p className="text-3xl font-bold text-slate-900 dark:text-white mt-2">{users.length}</p>
+                  <p className="text-3xl font-bold text-slate-900 dark:text-white mt-1">{users.length}</p>
                </div>
-               <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800">
+               <div className="relative bg-white dark:bg-slate-900 p-5 rounded-xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden group hover:shadow-md hover:border-orange-200 dark:hover:border-orange-800 transition-all">
+                  <div className="absolute top-0 right-0 w-20 h-20 bg-gradient-to-bl from-orange-500/10 to-transparent rounded-bl-full" />
+                  <div className="flex items-start justify-between mb-2">
+                    <div className="w-10 h-10 rounded-xl bg-orange-50 dark:bg-orange-900/20 flex items-center justify-center text-orange-600 dark:text-orange-400 ring-1 ring-orange-100 dark:ring-orange-800">
+                      <MessageSquare size={20} />
+                    </div>
+                  </div>
                   <p className="text-sm font-medium text-slate-500 dark:text-slate-400">Feedback Today</p>
-                  <p className="text-3xl font-bold text-orange-600 dark:text-orange-400 mt-2">{todayFeedback.length}</p>
+                  <p className="text-3xl font-bold text-orange-600 dark:text-orange-400 mt-1">{todayFeedback.length}</p>
                </div>
-               <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800">
+               <div className="relative bg-white dark:bg-slate-900 p-5 rounded-xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden group hover:shadow-md hover:border-orange-200 dark:hover:border-orange-800 transition-all">
+                  <div className="absolute top-0 right-0 w-20 h-20 bg-gradient-to-bl from-emerald-500/10 to-transparent rounded-bl-full" />
+                  <div className="flex items-start justify-between mb-2">
+                    <div className="w-10 h-10 rounded-xl bg-emerald-50 dark:bg-emerald-900/20 flex items-center justify-center text-emerald-600 dark:text-emerald-400 ring-1 ring-emerald-100 dark:ring-emerald-800">
+                      <TrendingUp size={20} />
+                    </div>
+                  </div>
                   <p className="text-sm font-medium text-slate-500 dark:text-slate-400">Avg Rating Today</p>
-                  <div className="flex items-end gap-2 mt-2">
+                  <div className="flex items-end gap-2 mt-1">
                      <p className="text-3xl font-bold text-emerald-600 dark:text-emerald-400">
                         {(todayFeedback.reduce((a, b) => a + b.rating, 0) / (todayFeedback.length || 1)).toFixed(1)}
                      </p>
-                     <span className="text-sm text-slate-400 mb-1">/ 5.0</span>
+                     <span className="text-sm text-slate-400 mb-1 font-medium">/ 5.0</span>
                   </div>
                </div>
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {/* Chart */}
-              <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800">
-                 <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-6">Meal Ratings Overview</h3>
+              <div className="bg-white dark:bg-slate-900 p-5 rounded-xl shadow-sm border border-slate-200 dark:border-slate-800">
+                 <div className="flex items-center gap-3 mb-5 pb-3 border-b border-slate-100 dark:border-slate-800">
+                    <div className="w-9 h-9 rounded-xl bg-orange-50 dark:bg-orange-900/20 flex items-center justify-center text-orange-600 dark:text-orange-400 ring-1 ring-orange-100 dark:ring-orange-800">
+                      <TrendingUp size={18} />
+                    </div>
+                    <div>
+                      <h3 className="font-bold text-slate-900 dark:text-white">Meal Ratings Overview</h3>
+                      <p className="text-xs text-slate-500 dark:text-slate-400">Today's average per meal type</p>
+                    </div>
+                 </div>
                  <div className="h-64 w-full">
                    <ResponsiveContainer width="100%" height="100%">
                      <BarChart data={chartData}>
@@ -870,30 +902,36 @@ export const AdminDashboard: React.FC = () => {
               </div>
 
               {/* AI Section */}
-              <div className="bg-gradient-to-br from-orange-500 to-yellow-600 p-6 rounded-2xl shadow-lg text-white relative overflow-hidden">
-                <div className="absolute top-0 right-0 -mt-4 -mr-4 w-24 h-24 bg-white opacity-10 rounded-full blur-2xl"></div>
+              <div className="bg-gradient-to-br from-orange-500 via-orange-600 to-amber-700 p-5 rounded-xl shadow-md text-white relative overflow-hidden">
+                <div className="absolute top-0 right-0 w-40 h-40 bg-white opacity-5 rounded-full -mr-10 -mt-10 blur-3xl"></div>
+                <div className="absolute bottom-0 left-0 w-32 h-32 bg-yellow-300 opacity-5 rounded-full -ml-10 -mb-10 blur-3xl"></div>
                 
                 <div className="relative z-10 h-full flex flex-col">
-                  <div className="flex justify-between items-start mb-6">
-                      <div>
-                        <h3 className="text-xl font-bold flex items-center gap-2"><Sparkles className="w-5 h-5 text-yellow-200"/> AI Insights</h3>
-                        <p className="text-orange-100 text-sm mt-1">Analyze student sentiment instantly.</p>
+                  <div className="flex items-start justify-between mb-4">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-xl bg-white/15 flex items-center justify-center backdrop-blur-sm ring-1 ring-white/20">
+                          <Sparkles className="w-5 h-5 text-yellow-200" />
+                        </div>
+                        <div>
+                          <h3 className="font-bold text-white text-base">AI Insights</h3>
+                          <p className="text-orange-200 text-xs mt-0.5">Student sentiment analysis</p>
+                        </div>
                       </div>
                       <Button 
                         variant="secondary" 
                         size="sm" 
                         onClick={handleGenerateAI} 
                         disabled={aiLoading}
-                        className="bg-white/20 text-white border-none hover:bg-white/30 backdrop-blur-sm"
+                        className="bg-white/15 text-white border-white/20 hover:bg-white/25 backdrop-blur-sm shadow-none"
                       >
                         {aiLoading ? 'Thinking...' : 'Generate Report'}
                       </Button>
                   </div>
                   
                   {aiInsights ? (
-                    <div className="bg-white/10 backdrop-blur-md p-4 rounded-xl border border-white/20 flex-1 overflow-y-auto custom-scrollbar">
+                    <div className="bg-white/10 backdrop-blur-md p-4 rounded-xl border border-white/15 flex-1 overflow-y-auto custom-scrollbar">
                        <h4 className="font-bold text-yellow-200 text-xs uppercase tracking-wider mb-2">Summary</h4>
-                       <p className="text-sm mb-4 leading-relaxed">{aiInsights.summary}</p>
+                       <p className="text-sm mb-4 leading-relaxed text-orange-50">{aiInsights.summary}</p>
                        <h4 className="font-bold text-emerald-200 text-xs uppercase tracking-wider mb-2">Suggestions</h4>
                        <ul className="space-y-2">
                          {aiInsights.suggestions.map((s, i) => (
@@ -905,8 +943,9 @@ export const AdminDashboard: React.FC = () => {
                        </ul>
                     </div>
                   ) : (
-                    <div className="flex-1 flex items-center justify-center text-orange-100/60 text-sm border-2 border-dashed border-orange-200/30 rounded-xl">
-                      No report generated yet.
+                    <div className="flex-1 flex flex-col items-center justify-center text-orange-100/70 text-sm rounded-xl bg-white/5">
+                      <Sparkles className="w-8 h-8 text-orange-200/50 mb-2" />
+                      <p>Click <strong>Generate Report</strong> to analyze feedback data</p>
                     </div>
                   )}
                 </div>
@@ -917,33 +956,9 @@ export const AdminDashboard: React.FC = () => {
 
         {/* --- AI ASSISTANT TAB --- */}
          {activeTab === 'ai-assistant' && (
-         <div className="flex flex-col lg:flex-row gap-6 h-[calc(100vh-12rem)] animate-in fade-in">
-            
-            {/* Left Side: History Sidebar */}
-            <div className="w-full lg:w-72 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 flex flex-col overflow-hidden">
-               <div className="p-4 border-b border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50">
-               <h4 className="font-bold text-slate-800 dark:text-white flex items-center gap-2">
-                  <Clock size={16} className="text-orange-500" /> Chat History
-               </h4>
-               </div>
-               <div className="flex-1 overflow-y-auto p-2 space-y-2 custom-scrollbar">
-               {/* We will map through history here later */}
-               <div className="p-3 rounded-xl bg-orange-50 dark:bg-orange-900/20 border border-orange-100 dark:border-orange-800 cursor-pointer">
-                  <p className="text-xs font-bold text-orange-600 dark:text-orange-400">Current Session</p>
-                  <p className="text-xs text-slate-500 truncate">Analyzing Mess Ratings...</p>
-               </div>
-               <p className="text-[10px] text-center text-slate-400 mt-4 uppercase font-bold tracking-widest">Previous Days</p>
-               <div className="p-3 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 cursor-not-allowed opacity-50">
-                  <p className="text-xs font-bold text-slate-600 dark:text-slate-400">March 12, 2026</p>
-                  <p className="text-xs text-slate-400 truncate">Monthly Sentiment Report</p>
-               </div>
-               </div>
-            </div>
-
-            {/* Right Side: Full Chat Interface */}
-            <div className="flex-1 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col relative overflow-hidden">
-               {/* Use the updated AdminChatBot component here, but styled for full-screen */}
-               <AdminChatBot feedback={feedback} users={users} menu={menu} isFullScreen={true} />
+         <div className="h-full animate-in fade-in">
+            <div className="h-full bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
+               <AdminChatBot />
             </div>
          </div>
          )}

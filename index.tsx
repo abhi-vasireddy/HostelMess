@@ -19,25 +19,19 @@ root.render(
   </React.StrictMode>
 );
 
-// Register Service Worker
+// Register Service Workers
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
+    // 3a. Register PWA Workbox Service Worker (from vite-plugin-pwa)
     navigator.serviceWorker
       .register('/sw.js')
-      .then((reg) => console.log('✅ Service Worker registered:', reg))
-      .catch((err) => console.log('❌ Service Worker failed:', err));
-  });
-}
+      .then((reg) => console.log('✅ PWA Service Worker registered:', reg.scope))
+      .catch((err) => console.error('❌ PWA Service Worker failed:', err));
 
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
+    // 3b. Register Firebase Messaging Service Worker (for background push)
     navigator.serviceWorker
-      .register('/sw.js')
-      .then((reg) => {
-        console.log('✅ Service Worker registered:', reg.scope);
-      })
-      .catch((err) => {
-        console.error('❌ Service Worker failed:', err);
-      });
+      .register('/firebase-messaging-sw.js')
+      .then((reg) => console.log('✅ Firebase Messaging SW registered:', reg.scope))
+      .catch((err) => console.error('❌ Firebase Messaging SW failed:', err));
   });
 }
