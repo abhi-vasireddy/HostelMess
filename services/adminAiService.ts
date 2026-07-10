@@ -143,6 +143,16 @@ function classifyIntent(query: string): {
   }
 
   // ── User search — "anyone named John Doe", "find user X", etc. ──
+  // Also detects email-based lookups: "get details of student@hostel.com"
+  const emailPattern = /([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/i;
+  const emailMatch = q.match(emailPattern);
+  if (
+    emailMatch &&
+    /detail|info|about|find|search|user|who|look|get|fetch|show/i.test(q)
+  ) {
+    return { intent: 'user_search', searchName: emailMatch[1] };
+  }
+
   // Extract the search name from the query for downstream use
   const nameSearchMatch = q.match(
     /(?:name\s+(?:of\s+)?|named\s+|called\s+|user\s+(?:named\s+|called\s+|with\s+name\s+)?)(.+?)(?:\s+in\s+.+)?$/i
@@ -1905,6 +1915,14 @@ export async function processQuery(
   _query: string,
   history: ChatMessage[]
 ): Promise<AIResponse> {
+  // ── Security filter: never reveal passwords, credentials, or sensitive auth data ──
+  const passwordPatterns = /\b(password|passwd|pwd|credentials?|secret|auth\s*token|session|login\s*cred|sign\s*in)\b/i;
+  if (passwordPatterns.test(_query)) {
+    return {
+      text: "🔒 **I can't share that.**\n\nI'm sorry, but I can't share passwords or other confidential credentials. Please contact the system administrator if you need account access.",
+    };
+  }
+
   try {
     const { intent, mealFocus, dayFocus, searchName, searchDish, complaintDetail } = classifyIntent(_query);
 
