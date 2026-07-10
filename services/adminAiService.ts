@@ -218,7 +218,7 @@ function classifyIntent(query: string): {
   }
 
   // ── Full menu request — "give me the whole menu", "full menu", "weekly menu" ──
-  if (/(?:whole|full|complete|entire)\s+menu|weekly\s+menu|menu.*week/i.test(q)) {
+  if (/(?:whole|full|complete|entire|week|weekly)\s+menu|menu\s+(?:list|schedule|items)|menu.*week|week.*menu/i.test(q)) {
     return { intent: 'day_menu', dayFocus: '__all__' };
   }
 
@@ -1153,147 +1153,34 @@ function generateLocalAnswer(intent: Intent, data: any, query: string, complaint
       const dayName = data.dayFocus || 'That day';
       const mealName = data.mealFocus;
       const menuData = data.menu;
-      const mealLabels: Record<string, string> = {
-        breakfast: '☀️ Breakfast',
-        lunch: '🌤️ Lunch',
-        snacks: '🍪 Snacks',
-        dinner: '🌙 Dinner',
-      };
-      const dayOrder = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
-      // ── "all days" mode (weekly meal list) ──
       if (dayName === '__all__') {
-        // menuData is the full weekly DailyMenu[] array
         if (!menuData || !Array.isArray(menuData) || menuData.length === 0) {
           return '📭 No weekly menu data available.';
         }
-        if (mealName) {
-          // Show that meal type across all days
-          const lines: string[] = [`📋 **${mealName} Menu — This Week**\n`];
-          const sorted = [...menuData].sort((a, b) => dayOrder.indexOf(a.day) - dayOrder.indexOf(b.day));
-          for (const day of sorted) {
-            const mealKey = mealName.toLowerCase();
-            const cappedKey = mealName.charAt(0).toUpperCase() + mealName.slice(1).toLowerCase();
-            const items: any[] = (day as any)[mealKey] || (day as any)[cappedKey] || [];
-            if (items.length === 0) continue;
-            lines.push(`**${day.day}**`);
-            items.forEach((d: any) => lines.push(`  • ${d.name}${d.isVeg !== false ? ' 🟢' : ' 🔴'}`));
-            lines.push('');
-          }
-          if (lines.length === 1) return `📭 **${mealName}** is not listed in this week's menu.`;
-          return lines.join('\n').trimEnd();
-        }
-        // Show full weekly overview
-        const lines: string[] = ['📋 **Weekly Menu Overview**\n'];
-        const sorted = [...menuData].sort((a, b) => dayOrder.indexOf(a.day) - dayOrder.indexOf(b.day));
-        for (const day of sorted) {
-          lines.push(`**${day.day}**`);
-          for (const [label, heading] of Object.entries(mealLabels)) {
-            const capped = label.charAt(0).toUpperCase() + label.slice(1);
-            const items: any[] = (day as any)[label] || (day as any)[capped] || [];
-            if (items.length === 0) continue;
-            lines.push(`  ${heading}: ${items.map((d: any) => d.name).join(', ')}`);
-          }
-          lines.push('');
-        }
-        return lines.join('\n').trimEnd();
+        const count = menuData.reduce((acc, d) => {
+          const keys = ['breakfast', 'lunch', 'snacks', 'dinner', 'Breakfast', 'Lunch', 'Snacks', 'Dinner'];
+          return acc + keys.reduce((sum, k) => sum + ((d)[k]?.length || 0), 0);
+        }, 0);
+        return '📋 **Weekly Menu** — ' + count + ' items across ' + menuData.length + ' days.';
       }
 
-      // ── Single day mode ──
       if (!menuData || !menuData.dishes || !menuData.dishes.length) {
         const note = mealName
-          ? `No menu data available for **${mealName}** on **${dayName}**.`
-          : `No menu data available for **${dayName}**.`;
-        return `📭 ${note}`;
+          ? 'No menu data available for **' + mealName + '** on **' + dayName + '**.'
+          : 'No menu data available for **' + dayName + '**.';
+        return '📭 ' + note;
       }
 
+      const total = menuData.dishes.length;
       if (mealName) {
-        const mealItems = menuData.dishes.filter(
-          (d: any) => d.mealType.toLowerCase() === mealName.toLowerCase()
-        );
+        const mealItems = menuData.dishes.filter((d) => d.mealType.toLowerCase() === mealName.toLowerCase());
         if (mealItems.length === 0) {
-          return `📭 **${mealName}** is not listed in the menu for **${dayName}**.`;
+          return '📭 **' + mealName + '** is not listed in the menu for **' + dayName + '**.';
         }
-        return (
-          `🍽️ **${dayName} ${mealName} Menu**\n\n` +
-          mealItems.map((d: any) => `• ${d.name}${d.isVeg ? ' 🟢' : ' 🔴'}`).join('\n')
-        );
+        return '🍽️ **' + dayName + ' ' + mealName + ' Menu** — ' + mealItems.length + ' items';
       }
-
-      const lines: string[] = [`📋 **${dayName} — Full Menu**\n`];
-      for (const [label, heading] of Object.entries(mealLabels)) {
-        const items = menuData.dishes.filter((d: any) => d.mealType === label);
-        if (items.length === 0) continue;
-        lines.push(`**${heading}**`);
-        items.forEach((d: any) => lines.push(`• ${d.name}${d.isVeg ? ' 🟢' : ' 🔴'}`));
-        lines.push('');
-      }
-      if (lines.length === 1) {
-        return `📭 No menu data available for **${dayName}**.`;
-      }
-      return lines.join('\n').trimEnd();
-    }
-
-    // ── Suggestions Count ──────────────────────────────────────────────
-    case 'suggestions_count': {
-      const s = data.suggestions || [];
-      const count = s.length;
-      const tfLabel =
-        data.timeframe === 'week'
-          ? 'the past week'
-          : data.timeframe === 'month'
-          ? 'the past month'
-          : data.timeframe === 'day'
-          ? 'the past 24 hours'
-          : 'all time';
-      if (count === 0) {
-        return "📭 No suggestions were submitted in " + tfLabel + ".";
-      }
-      const lines = ["💡 **" + count + " suggestion" + (count === 1 ? "" : "s") + "** submitted in " + tfLabel + "."];
-      s.slice(0, 10).forEach((sg, i) => {
-        const d = sg.timestamp ? new Date(sg.timestamp) : null;
-        const dateStr = d ? d.getDate() + " " + d.toLocaleString('en-US', { month: 'short' }) : "";
-        lines.push("" + (i + 1) + ". **" + (sg.userName || 'Anonymous') + "**" + (dateStr ? " (" + dateStr + ")" : "") + ': "' + sg.text.replace(/"/g, "'") + '"');
-      });
-      if (s.length > 10) lines.push("*...and " + (s.length - 10) + " more*");
-      return lines.join('\n');
-    }
-
-    // ── Suggestion Dish Analysis ─────────────────────────────────────
-        case 'suggestion_dishes': {
-      const dishResults = data.dishResults || [];
-      const total = data.totalSuggestions || 0;
-      if (dishResults.length === 0) {
-        return "📭 No suggestions mention specific dishes by name.";
-      }
-      const sorted = [...dishResults].sort((a, b) => (b.positive || 0) - (a.positive || 0));
-      const lines = ["📋 **Dishes mentioned in student suggestions** (" + total + " suggestions scanned)"];
-      sorted.slice(0, 10).forEach((d, i) => {
-        const quote = d.texts[0] ? ' — "' + d.texts[0].replace(/"/g, "'") + '"' : '';
-        const sentiment = (d.positive || 0) > (d.negative || 0) ? '✅' : (d.negative || 0) > 0 ? '⚠️' : '📋';
-        lines.push((i + 1) + '. ' + sentiment + ' **' + d.name.charAt(0).toUpperCase() + d.name.slice(1) + '** (mentioned ' + d.count + ' time' + (d.count === 1 ? ')' : 's)') + quote);
-      });
-      return lines.join('\n');
-    }
-
-    
-
-    // ── Feedback Count ──────────────────────────────────────────────────
-    case 'feedback_count': {
-      const fb = data.feedbacks || [];
-      const count = fb.length;
-      const tfLabel =
-        data.timeframe === 'week'
-          ? 'the past week'
-          : data.timeframe === 'month'
-          ? 'the past month'
-          : data.timeframe === 'day'
-          ? 'the past 24 hours'
-          : 'all time';
-      if (count === 0) {
-        return "📭 No feedback was submitted in " + tfLabel + ".";
-      }
-      return "📊 **" + count + " feedback** submission" + (count === 1 ? "" : "s") + " in " + tfLabel + ".";
+      return '📋 **' + dayName + ' Menu** — ' + total + ' items';
     }
 
         // ── General / Fallback ───────────────────────────────────────────────
@@ -1991,7 +1878,6 @@ function generateChartData(intent: Intent, data: any, _query: string): ChartConf
       break;
     }
 
-    default:
           // ── Dish Search ──
     case 'dish_search': {
       const fbHits = data.feedbackHits || [];
@@ -2020,7 +1906,62 @@ function generateChartData(intent: Intent, data: any, _query: string): ChartConf
       break;
     }
 
-    // No charts for unknown, user_search, dish_search, day_menu, unusual_trends
+    // ── Day Menu (weekly overview) ──
+    case 'day_menu': {
+      const menuData = data.menu;
+      const dayFocus = data.dayFocus;
+      const rows = [];
+      const mealLabels = { breakfast: 'Breakfast', lunch: 'Lunch', snacks: 'Snacks', dinner: 'Dinner' };
+      const mealKeys = ['breakfast', 'lunch', 'snacks', 'dinner'];
+
+      if (dayFocus === '__all__' && menuData && Array.isArray(menuData)) {
+        const dayOrder = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+        const sorted = [...menuData].sort((a, b) => dayOrder.indexOf(a.day) - dayOrder.indexOf(b.day));
+        for (const day of sorted) {
+          for (const mk of mealKeys) {
+            const items = (day as any)[mk] || (day)[mk.charAt(0).toUpperCase() + mk.slice(1)] || [];
+            for (const dish of items) {
+              if (dish && dish.name) {
+                rows.push({ day: day.day || '—', meal: mealLabels[mk] || mk, dish: dish.name });
+              }
+            }
+          }
+        }
+        if (rows.length > 0) {
+          charts.push({
+            kind: 'table',
+            title: 'Weekly Menu',
+            columns: [
+              { key: 'day', label: 'Day' },
+              { key: 'meal', label: 'Meal' },
+              { key: 'dish', label: 'Dish' },
+            ],
+            rows,
+          });
+        }
+      } else if (menuData && menuData.dishes) {
+        for (const dish of menuData.dishes) {
+          if (dish && dish.name) {
+            rows.push({ day: dayFocus || menuData.day || '—', meal: mealLabels[dish.mealType && dish.mealType.toLowerCase()] || dish.mealType || '—', dish: dish.name });
+          }
+        }
+        if (rows.length > 0) {
+          charts.push({
+            kind: 'table',
+            title: (dayFocus || menuData.day || 'Menu') + ' Menu',
+            columns: [
+              { key: 'day', label: 'Day' },
+              { key: 'meal', label: 'Meal' },
+              { key: 'dish', label: 'Dish' },
+            ],
+            rows,
+          });
+        }
+      }
+      break;
+    }
+
+    default:
       break;
   }
 
