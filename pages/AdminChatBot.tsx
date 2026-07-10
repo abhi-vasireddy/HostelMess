@@ -154,7 +154,7 @@ const AdminChatBot: React.FC<AdminChatBotProps> = ({ externalHistory, onHistoryC
         // Strip chart data and limit to keep storage tiny
         const lean = messages
           .slice(-MAX_SAVED_MSGS)
-          .map(({ role, text }) => ({ role, text } as ChatMessage));
+          .map(({ role, text, charts }) => ({ role, text, charts } as ChatMessage));
         localStorage.setItem(STORAGE_KEY, JSON.stringify(lean));
       } catch {
         // localStorage full or unavailable — silently skip
