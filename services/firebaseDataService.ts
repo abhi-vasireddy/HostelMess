@@ -647,6 +647,20 @@ export async function fetchMonthlyReportData(): Promise<{
   };
 }
 
+export async function fetchCanteenItems() {
+  const cached = getCached('canteen');
+  if (cached) return cached;
+  try {
+    const snapshot = await getDocs(collection(db, 'canteen'));
+    const items = snapshot.docs.map((doc) => ({ ...(doc.data()), id: doc.id }));
+    setCache('canteen', items, 30_000);
+    return items;
+  } catch (e) {
+    console.error('fetchCanteenItems error:', e);
+    return [];
+  }
+}
+
 // ─── Cache invalidation helper ───────────────────────────────────────────────
 
 export function clearDataCache(): void {

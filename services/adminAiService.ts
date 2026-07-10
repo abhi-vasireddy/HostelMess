@@ -35,6 +35,7 @@ import {
   fetchFeedbackByBlock,
   fetchWeekComparison,
   fetchMonthlyReportData,
+  fetchCanteenItems,
 } from './firebaseDataService';
 import type { Feedback, HostelComplaint } from '../types';
 
@@ -104,6 +105,7 @@ type Intent =
   | 'suggestions_count'
   | 'suggestion_dishes'
   | 'feedback_count'
+  | 'canteen_items'
   | 'general_analysis'
   | 'unknown';
 
@@ -147,6 +149,12 @@ function classifyIntent(query: string): {
   // "what is yesterday dinner", "what is monday dinner", "[day] [meal] menu"
   if (dayFocus && mealFocus && !q.includes('today')) {
     return { intent: 'day_menu', dayFocus, mealFocus: mealCapitalized };
+  }
+
+  if (/canteen/i.test(q)) {
+    const itemMatch = q.match(/is\s+((?!canteen)\w+(?:\s+\w+)?)\s+available/i) || q.match(/(?:is\s+there|do\s+you\s+have)\s+((?!canteen)\w+(?:\s+\w+)?)/i) || q.match(/(?:has|got|sell)\s+((?!canteen)\w+(?:\s+\w+)?)/i);
+    const searchItem = itemMatch?.[1]?.trim() || '';
+    return { intent: 'canteen_items', searchName: searchItem || undefined };
   }
   // "what was the menu on monday", "what is on monday for dinner"
   if (dayFocus && (/(?:menu|dinner|lunch|breakfast|snacks?|eat|food|serv)/i.test(q) || /what.*on|what.*for/i.test(q))) {
@@ -481,7 +489,8 @@ async function fetchDataForIntent(
       };
     }
 
-    // ── Day-specific menu ──
+    // ── Day-specific menu ──   }
+
     case 'day_menu': {
       if (dayFocus === '__all__') {
         // Fetch all days and filter by meal type if specified
@@ -606,6 +615,12 @@ async function fetchDataForIntent(
         ? allSuggestions.filter((s) => s.timestamp >= cutoff)
         : allSuggestions;
       return { context: 'Suggestions Data', data: { suggestions: filtered, total: allSuggestions.length, timeframe: timeframe || 'all' } };
+    }
+
+    case 'canteen_items': {
+      const items = await fetchCanteenItems();
+      const filtered = searchName ? items.filter(i => i.name.toLowerCase().includes(searchName.toLowerCase())) : items;
+      return { context: 'Canteen Items', data: { items: filtered, all: items, searchName } };
     }
 
     case 'suggestion_dishes': {
@@ -1183,7 +1198,20 @@ function generateLocalAnswer(intent: Intent, data: any, query: string, complaint
       return '📋 **' + dayName + ' Menu** — ' + total + ' items';
     }
 
-        // ── General / Fallback ───────────────────────────────────────────────
+    case 'canteen_items': {
+      const items = data.items || [];
+      const searchName = data.searchName;
+      if (searchName) {
+        if (items.length === 0) return '❌ **' + searchName.charAt(0).toUpperCase() + searchName.slice(1) + '** is not available in the canteen.';
+        const item = items[0];
+        const avail = item.isAvailable !== false;
+        return (avail ? '✅' : '❌') + ' **' + item.name.charAt(0).toUpperCase() + item.name.slice(1) + '** ' + (avail ? 'is available' : 'is currently unavailable') + ' in the canteen' + (item.price ? ' at ₹' + item.price : '') + '.';
+      }
+      if (items.length === 0) return '📭 No canteen items found.';
+      return '🍽️ **Canteen** — ' + items.length + ' items available';
+    }
+
+    // ── General / Fallback ───────────────────────────────────────────────
     case 'general_analysis': {
       const u = data.userStats;
       const s = data.feedbackStats;
@@ -1907,6 +1935,30 @@ function generateChartData(intent: Intent, data: any, _query: string): ChartConf
     }
 
     // ── Day Menu (weekly overview) ──
+    case 'canteen_items': {
+      const items = data.items || [];
+      if (items.length > 0) {
+        const rows = items.map(i => ({
+          item: i.name || '—',
+          price: i.price ? '₹' + i.price : '—',
+          category: i.category || '—',
+          status: i.isAvailable !== false ? '✅' : '❌',
+        }));
+        charts.push({
+          kind: 'table',
+          title: 'Canteen Items',
+          columns: [
+            { key: 'item', label: 'Item' },
+            { key: 'price', label: 'Price' },
+            { key: 'category', label: 'Category' },
+            { key: 'status', label: 'Avail' },
+          ],
+          rows,
+        });
+      }
+      break;
+    }
+
     case 'day_menu': {
       const menuData = data.menu;
       const dayFocus = data.dayFocus;
