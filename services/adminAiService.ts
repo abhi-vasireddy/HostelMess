@@ -46,7 +46,12 @@ export interface ChartDataPoint {
   color?: string;
 }
 
-export type ChartKind = 'bar' | 'horizontalBar' | 'pie';
+export type ChartKind = 'bar' | 'horizontalBar' | 'pie' | 'table';
+
+export interface TableColumn {
+  key: string;
+  label: string;
+}
 
 export interface ChartConfig {
   kind: ChartKind;
@@ -54,6 +59,9 @@ export interface ChartConfig {
   data: ChartDataPoint[];
   /** Optional secondary dataset for grouped/comparison bars */
   secondaryData?: ChartDataPoint[];
+  /** Table rows for 'table' kind */
+  columns?: TableColumn[];
+  rows?: Record<string, string>[];
 }
 
 export interface ChatMessage {
@@ -93,6 +101,9 @@ type Intent =
   | 'monthly_report'
   | 'week_comparison'
   | 'day_menu'
+  | 'suggestions_count'
+  | 'suggestion_dishes'
+  | 'feedback_count'
   | 'general_analysis'
   | 'unknown';
 
@@ -172,6 +183,7 @@ function classifyIntent(query: string): {
   };
 
   const dishPatterns = [
+    /whenis\s+(\w+(?:\s+\w+)?)/i,                    // "whenis chicken" (no space)
     /when\s+is\s+(\w+(?:\s+\w+)?)\s+in\s+/i,
     /when\s+is\s+(\w+(?:\s+\w+)?)\s*$/i,           // "when is chicken" (end of input)
     /on\s+which\s+date\s+(?:did|was|is|does)\s+(?:the\s+)?(\w+(?:\s+\w+)?)/i,  // "on which date did Gravy come"
@@ -353,6 +365,31 @@ function classifyIntent(query: string): {
     }
   }
 
+  // ── "based on suggestions which dish", "suggestions saying to change" — cross-ref with dish names ──
+  if (/suggestion.*(?:dish|change|improve|replace|remove|fix|modify|which)|(?:dish|item).*suggestion/i.test(q))
+    return { intent: 'suggestion_dishes' };
+
+  // ── Suggestions count — "how many suggestions", "suggestions in past week", etc. ──
+  if (/suggestion/i.test(q)) {
+    const hasWeek = /\bweek\b/i.test(q);
+    const hasMonth = /\bmonth\b|\b30\s*day/i.test(q);
+    const hasDay = /\b(?:24\s*hr|today|yesterday)\b/i.test(q);
+    const hasPast = /\b(past|last|previous)\b/i.test(q);
+    const hasNumber = /\b\d+\b/.test(q);
+    const timeframe = hasMonth ? 'month' : hasDay ? 'day' : hasWeek && (hasPast || hasNumber) ? 'week' : hasWeek ? 'week' : 'all';
+    return { intent: 'suggestions_count', timeframe };
+  }
+
+  // ── Feedback count with timeframe — "how many feedback in past week", "feedback from 1 week" ──
+  if (/feedback/i.test(q) && /(?:how many|count|total|number|past|last|week|month)/i.test(q)) {
+    const hasWeek = /\bweek\b|\b7\s*day/i.test(q);
+    const hasMonth = /\bmonth\b|\b30\s*day/i.test(q);
+    const hasDay = /\b(?:24\s*hr|today|yesterday)\b/i.test(q);
+    const hasPast = /\b(past|last|previous)\b/i.test(q);
+    const timeframe = hasMonth ? 'month' : hasDay ? 'day' : hasWeek && (hasPast || /\b\d+\b/.test(q)) ? 'week' : hasWeek ? 'week' : 'all';
+    return { intent: 'feedback_count', timeframe };
+  }
+
   // ── "per dish", "per item", "for each", "each dish" — per-dish breakdown ──
   if (/per\s+(dish|item)|for\s+each|each\s+(dish|item)|dish\s+level|by\s+dish|item.?wise|dish.?wise/i.test(q))
     return { intent: 'top_dishes' };
@@ -372,7 +409,8 @@ async function fetchDataForIntent(
   mealFocus?: string,
   dayFocus?: string,
   searchName?: string,
-  searchDish?: string
+  searchDish?: string,
+  timeframe?: string
 ): Promise<{ context: string; data: any }> {
   switch (intent) {
     // ── Dish / menu item search ──
@@ -551,6 +589,95 @@ async function fetchDataForIntent(
     case 'week_comparison': {
       const comparison = await fetchWeekComparison();
       return { context: 'Week-over-Week Comparison', data: comparison };
+    }
+
+    case 'suggestions_count': {
+      const allSuggestions = await fetchSuggestions();
+      const now = Date.now();
+      const cutoff =
+        timeframe === 'week'
+          ? now - 7 * 24 * 60 * 60 * 1000
+          : timeframe === 'month'
+          ? now - 30 * 24 * 60 * 60 * 1000
+          : timeframe === 'day'
+          ? now - 24 * 60 * 60 * 1000
+          : 0;
+      const filtered = cutoff > 0
+        ? allSuggestions.filter((s) => s.timestamp >= cutoff)
+        : allSuggestions;
+      return { context: 'Suggestions Data', data: { suggestions: filtered, total: allSuggestions.length, timeframe: timeframe || 'all' } };
+    }
+
+    case 'suggestion_dishes': {
+      const [allSuggestions, weeklyMenu, feedback] = await Promise.all([
+        fetchSuggestions(),
+        fetchWeeklyMenu(),
+        fetchAllFeedback(),
+      ]);
+      const menuDishNames = new Set<string>();
+      const mealKeys = ['breakfast', 'lunch', 'snacks', 'dinner', 'Breakfast', 'Lunch', 'Snacks', 'Dinner'];
+      for (const day of weeklyMenu) {
+        for (const key of mealKeys) {
+          const dishes = (day as any)[key] || [];
+          for (const d of dishes) {
+            if (d.name) menuDishNames.add(d.name.toLowerCase());
+          }
+        }
+      }
+      for (const f of feedback) {
+        if (f.dishName) menuDishNames.add(f.dishName.toLowerCase());
+      }
+      const POSITIVE_WORDS = ['good', 'great', 'nice', 'love', 'delicious', 'amazing', 'best', 'super', 'yummy', 'tasty', 'wonderful', 'fantastic', 'excellent', 'awesome', 'perfect'];
+      const NEGATIVE_WORDS = ['change', 'improve', 'bad', 'worse', 'terrible', 'remove', 'replace', 'fix', 'avoid', 'hate', 'poor', 'awful', 'boring', 'bland'];
+      const mentionedDishes = new Map<string, { count: number; texts: string[]; positive: number; negative: number }>();
+      for (const sg of allSuggestions) {
+        if (!sg.text) continue;
+        const textLower = sg.text.toLowerCase();
+        for (const dishName of menuDishNames) {
+          if (textLower.includes(dishName)) {
+            if (!mentionedDishes.has(dishName)) {
+              mentionedDishes.set(dishName, { count: 0, texts: [], positive: 0, negative: 0 });
+            }
+            const entry = mentionedDishes.get(dishName)!;
+            entry.count++;
+            if (entry.texts.length < 3) {
+              entry.texts.push(sg.text);
+            }
+            const hasPos = POSITIVE_WORDS.some((w) => textLower.includes(w));
+            const hasNeg = NEGATIVE_WORDS.some((w) => textLower.includes(w));
+            if (hasPos && !hasNeg) entry.positive++;
+            else if (hasNeg && !hasPos) entry.negative++;
+          }
+        }
+      }
+      const dishResults = [...mentionedDishes.entries()]
+        .map(([name, info]) => ({ name, ...info }))
+        .sort((a, b) => b.count - a.count);
+      return {
+        context: 'Suggestion Dish Analysis',
+        data: { dishResults, totalSuggestions: allSuggestions.length },
+      };
+    }
+
+    case 'feedback_count': {
+      const allFeedbacks = await fetchAllFeedback();
+      const now = Date.now();
+      const cutoff =
+        timeframe === 'week'
+          ? now - 7 * 24 * 60 * 60 * 1000
+          : timeframe === 'month'
+          ? now - 30 * 24 * 60 * 60 * 1000
+          : timeframe === 'day'
+          ? now - 24 * 60 * 60 * 1000
+          : 0;
+      const todayStr = new Date().toISOString().split('T')[0];
+      const cutoffDate = cutoff > 0
+        ? new Date(cutoff).toISOString().split('T')[0]
+        : '2000-01-01';
+      const filtered = cutoff > 0
+        ? allFeedbacks.filter((f) => f.date >= cutoffDate && f.date <= todayStr)
+        : allFeedbacks;
+      return { context: 'Feedback Data', data: { feedbacks: filtered, total: allFeedbacks.length, timeframe: timeframe || 'all' } };
     }
 
     case 'general_analysis': {
@@ -1107,7 +1234,69 @@ function generateLocalAnswer(intent: Intent, data: any, query: string, complaint
       return lines.join('\n').trimEnd();
     }
 
-    // ── General / Fallback ───────────────────────────────────────────────
+    // ── Suggestions Count ──────────────────────────────────────────────
+    case 'suggestions_count': {
+      const s = data.suggestions || [];
+      const count = s.length;
+      const tfLabel =
+        data.timeframe === 'week'
+          ? 'the past week'
+          : data.timeframe === 'month'
+          ? 'the past month'
+          : data.timeframe === 'day'
+          ? 'the past 24 hours'
+          : 'all time';
+      if (count === 0) {
+        return "📭 No suggestions were submitted in " + tfLabel + ".";
+      }
+      const lines = ["💡 **" + count + " suggestion" + (count === 1 ? "" : "s") + "** submitted in " + tfLabel + "."];
+      s.slice(0, 10).forEach((sg, i) => {
+        const d = sg.timestamp ? new Date(sg.timestamp) : null;
+        const dateStr = d ? d.getDate() + " " + d.toLocaleString('en-US', { month: 'short' }) : "";
+        lines.push("" + (i + 1) + ". **" + (sg.userName || 'Anonymous') + "**" + (dateStr ? " (" + dateStr + ")" : "") + ': "' + sg.text.replace(/"/g, "'") + '"');
+      });
+      if (s.length > 10) lines.push("*...and " + (s.length - 10) + " more*");
+      return lines.join('\n');
+    }
+
+    // ── Suggestion Dish Analysis ─────────────────────────────────────
+        case 'suggestion_dishes': {
+      const dishResults = data.dishResults || [];
+      const total = data.totalSuggestions || 0;
+      if (dishResults.length === 0) {
+        return "📭 No suggestions mention specific dishes by name.";
+      }
+      const sorted = [...dishResults].sort((a, b) => (b.positive || 0) - (a.positive || 0));
+      const lines = ["📋 **Dishes mentioned in student suggestions** (" + total + " suggestions scanned)"];
+      sorted.slice(0, 10).forEach((d, i) => {
+        const quote = d.texts[0] ? ' — "' + d.texts[0].replace(/"/g, "'") + '"' : '';
+        const sentiment = (d.positive || 0) > (d.negative || 0) ? '✅' : (d.negative || 0) > 0 ? '⚠️' : '📋';
+        lines.push((i + 1) + '. ' + sentiment + ' **' + d.name.charAt(0).toUpperCase() + d.name.slice(1) + '** (mentioned ' + d.count + ' time' + (d.count === 1 ? ')' : 's)') + quote);
+      });
+      return lines.join('\n');
+    }
+
+    
+
+    // ── Feedback Count ──────────────────────────────────────────────────
+    case 'feedback_count': {
+      const fb = data.feedbacks || [];
+      const count = fb.length;
+      const tfLabel =
+        data.timeframe === 'week'
+          ? 'the past week'
+          : data.timeframe === 'month'
+          ? 'the past month'
+          : data.timeframe === 'day'
+          ? 'the past 24 hours'
+          : 'all time';
+      if (count === 0) {
+        return "📭 No feedback was submitted in " + tfLabel + ".";
+      }
+      return "📊 **" + count + " feedback** submission" + (count === 1 ? "" : "s") + " in " + tfLabel + ".";
+    }
+
+        // ── General / Fallback ───────────────────────────────────────────────
     case 'general_analysis': {
       const u = data.userStats;
       const s = data.feedbackStats;
@@ -1196,23 +1385,10 @@ function generateLocalAnswer(intent: Intent, data: any, query: string, complaint
         }
       }
 
-      // Show feedback dates if found
+      // Show feedback dates if found (chart handles visual representation)
       if (hasFeedback) {
-        if (hasMenu) lines.push('');
-        lines.push(`📅 **Rated by students on these dates:**\n`);
-        // Show unique dates with ratings
-        const dateMap = new Map<string, { ratings: number[]; users: string[] }>();
-        for (const fb of feedbackHits) {
-          if (!dateMap.has(fb.date)) dateMap.set(fb.date, { ratings: [], users: [] });
-          const entry = dateMap.get(fb.date)!;
-          entry.ratings.push(fb.rating);
-          if (fb.userName && !entry.users.includes(fb.userName)) entry.users.push(fb.userName);
-        }
-        const sortedDates = [...dateMap.entries()].sort((a, b) => a[0].localeCompare(b[0]));
-        for (const [date, info] of sortedDates) {
-          const avgRating = (info.ratings.reduce((a, b) => a + b, 0) / info.ratings.length).toFixed(1);
-          lines.push(`• **${date}** — ${'⭐'.repeat(Math.round(Number(avgRating)))} ${avgRating}/5 (${info.ratings.length} rating${info.ratings.length === 1 ? '' : 's'})`);
-        }
+        if (!hasMenu) lines.push('');
+        lines.push(`📊 See the rating trend chart below for the feedback dates.`);
       }
 
       return lines.join('\n').trimEnd();
@@ -1678,6 +1854,89 @@ function generateChartData(intent: Intent, data: any, _query: string): ChartConf
       break;
     }
 
+    // ── Suggestions Count ──
+    case 'suggestions_count':
+    case 'suggestion_dishes': {
+      const dishResults = (intent === 'suggestion_dishes' ? data.dishResults : null) || [];
+      if (dishResults.length > 0) {
+        const sorted = [...dishResults].sort((a, b) => (b.positive || 0) - (a.positive || 0));
+        charts.push({
+          kind: 'horizontalBar',
+          title: 'Dishes Mentioned in Suggestions',
+          data: sorted.slice(0, 8).map((d, i) => ({
+            label: d.name.charAt(0).toUpperCase() + d.name.slice(1),
+            value: d.count,
+            color: (d.positive || 0) > (d.negative || 0) ? CHART_EMERALD : (d.negative || 0) > 0 ? '#ef4444' : CHART_COLORS[i % CHART_COLORS.length],
+          })),
+        });      }
+      break;
+    }
+
+    // ── Feedback Count ──
+    case 'feedback_count': {
+      const fb = data.feedbacks || [];
+      if (fb.length > 0) {
+        const byDate = new Map();
+        fb.forEach((f) => {
+          const key = f.date || 'unknown';
+          byDate.set(key, (byDate.get(key) || 0) + 1);
+        });
+        const sorted = [...byDate.entries()].sort(([a], [b]) => a.localeCompare(b));
+        let chartData;
+        if (sorted.length > 14) {
+          const recent = sorted.slice(-14);
+          chartData = recent.map(([date, count], i) => {
+            const d = new Date(date + 'T00:00:00');
+            const label = isNaN(d.getTime())
+              ? date
+              : d.getDate() + ' ' + d.toLocaleString('en-US', { month: 'short' });
+            return { label, value: count, color: CHART_COLORS[i % CHART_COLORS.length] };
+          });
+        } else {
+          chartData = sorted.map(([date, count], i) => {
+            const d = new Date(date + 'T00:00:00');
+            const label = isNaN(d.getTime())
+              ? date
+              : d.getDate() + ' ' + d.toLocaleString('en-US', { month: 'short' });
+            return { label, value: count, color: CHART_COLORS[i % CHART_COLORS.length] };
+          });
+        }
+        charts.push({
+          kind: 'bar',
+          title: 'Feedback per Day',
+          data: chartData,
+        });
+        // Data table with individual entries
+        const rows = fb.slice(0, 50).map((f: any) => {
+          const d = f.date ? new Date(f.date + 'T00:00:00') : null;
+          const dateStr = d && !isNaN(d.getTime())
+            ? d.getDate() + ' ' + d.toLocaleString('en-US', { month: 'short' })
+            : f.date || '—';
+          const stars = f.rating ? '★'.repeat(f.rating) : '—';
+          return {
+            date: dateStr,
+            user: f.userName || 'Anonymous',
+            dish: f.dishName || '—',
+            rating: stars,
+          };
+        });
+        if (rows.length > 0) {
+          charts.push({
+            kind: 'table',
+            title: 'Feedback Details',
+            columns: [
+              { key: 'date', label: 'Date' },
+              { key: 'user', label: 'User' },
+              { key: 'dish', label: 'Dish' },
+              { key: 'rating', label: 'Rating' },
+            ],
+            rows,
+          });
+        }
+      }
+      break;
+    }
+
     // ── General Analysis ───────────────────────────────────────────────
     case 'general_analysis': {
       // Rating distribution
@@ -1733,7 +1992,35 @@ function generateChartData(intent: Intent, data: any, _query: string): ChartConf
     }
 
     default:
-      // No charts for unknown, user_search, dish_search, day_menu, unusual_trends
+          // ── Dish Search ──
+    case 'dish_search': {
+      const fbHits = data.feedbackHits || [];
+      if (fbHits.length > 0) {
+        const byDate = new Map();
+        fbHits.forEach((h) => {
+          const key = h.date || 'unknown';
+          if (!byDate.has(key)) byDate.set(key, { sum: 0, count: 0 });
+          const e = byDate.get(key);
+          e.sum += h.rating;
+          e.count++;
+        });
+        const sorted = [...byDate.entries()].sort(([a], [b]) => a.localeCompare(b));
+        charts.push({
+          kind: 'bar',
+          title: 'Rating Trend - ' + (data.query || ''),
+          data: sorted.map(([date, info]) => {
+            const d = new Date(date + 'T00:00:00');
+            const label = isNaN(d.getTime())
+              ? date
+              : d.getDate() + ' ' + d.toLocaleString('en-US', { month: 'short' });
+            return { label, value: info.count > 0 ? info.sum / info.count : 0, color: CHART_ORANGE };
+          }),
+        });
+      }
+      break;
+    }
+
+    // No charts for unknown, user_search, dish_search, day_menu, unusual_trends
       break;
   }
 
@@ -1924,11 +2211,10 @@ export async function processQuery(
   }
 
   try {
-    const { intent, mealFocus, dayFocus, searchName, searchDish, complaintDetail } = classifyIntent(_query);
+    const { intent, mealFocus, dayFocus, searchName, searchDish, complaintDetail, timeframe } = classifyIntent(_query);
 
     // Fetch only what's needed from Firebase
-    const { context, data } = await fetchDataForIntent(intent, mealFocus, dayFocus, searchName, searchDish);
-
+    const { context, data } = await fetchDataForIntent(intent, mealFocus, dayFocus, searchName, searchDish, timeframe);
     // Generate a local answer first (always works)
     const localAnswer = generateLocalAnswer(intent, data, _query, complaintDetail);
 

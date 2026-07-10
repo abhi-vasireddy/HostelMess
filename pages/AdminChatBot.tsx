@@ -90,9 +90,11 @@ function renderMarkdown(text: string): string {
     .replace(
       /(<thead>.*?<\/thead>)?(<tr>.*?<\/tr>)+/gs,
       (match) => {
-        if (match.includes('<thead>'))
-          return `<table class="w-full border-collapse my-2 rounded-xl overflow-hidden shadow-sm">${match}</table>`;
-        return `<table class="w-full border-collapse my-2 rounded-xl overflow-hidden shadow-sm"><tbody>${match}</tbody></table>`;
+        // Strip newlines inside table markup so step 11 doesn't inject <br /> into the table
+        const clean = match.replace(/\n/g, '');
+        if (clean.includes('<thead>'))
+          return `<table class="w-full border-collapse my-2 rounded-xl overflow-hidden shadow-sm">${clean}</table>`;
+        return `<table class="w-full border-collapse my-2 rounded-xl overflow-hidden shadow-sm"><tbody>${clean}</tbody></table>`;
       }
     )
     .replace(/\n/g, '<br />');
@@ -108,13 +110,26 @@ interface AdminChatBotProps {
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
+const STORAGE_KEY = 'admin-ai-chat-history';
+const MAX_SAVED_MSGS = 100;
+
+function loadSavedMessages(): ChatMessage[] {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+    }
+  } catch {}
+  return [{ role: 'assistant' as const, text: "👋 **How Can I help you**" }];
+}
+
 const AdminChatBot: React.FC<AdminChatBotProps> = ({ externalHistory, onHistoryChange }) => {
-  const [internalMessages, setInternalMessages] = useState<ChatMessage[]>([
-    {
-      role: 'assistant',
-      text: "👋 **How Can I help you**",
-    },
-  ]);
+  const [internalMessages, setInternalMessages] = useState<ChatMessage[]>(() =>
+    externalHistory
+      ? [{ role: 'assistant', text: "👋 **How Can I help you**" }]
+      : loadSavedMessages()
+  );
 
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -125,9 +140,27 @@ const AdminChatBot: React.FC<AdminChatBotProps> = ({ externalHistory, onHistoryC
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const saveTimerRef = useRef<ReturnType<typeof setTimeout>>();
 
   const messages = externalHistory || internalMessages;
   const setMessages = onHistoryChange || setInternalMessages;
+
+  // ── Persist chat to localStorage (debounced, strip charts) ──
+  useEffect(() => {
+    if (externalHistory) return; // parent manages state, skip save
+    if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+    saveTimerRef.current = setTimeout(() => {
+      try {
+        // Strip chart data and limit to keep storage tiny
+        const lean = messages
+          .slice(-MAX_SAVED_MSGS)
+          .map(({ role, text }) => ({ role, text } as ChatMessage));
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(lean));
+      } catch {
+        // localStorage full or unavailable — silently skip
+      }
+    }, 400);
+  }, [messages, externalHistory]);
 
   const scrollToBottom = useCallback(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -215,6 +248,11 @@ const AdminChatBot: React.FC<AdminChatBotProps> = ({ externalHistory, onHistoryC
     setShowSuggestions(true);
     setError(null);
     setInput('');
+    try {
+      localStorage.removeItem(STORAGE_KEY);
+    } catch {
+      // ignore
+    }
   };
 
   const handleCopy = async (text: string, index: number) => {

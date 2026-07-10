@@ -20,7 +20,7 @@ import {
   Cell,
   Legend,
 } from 'recharts';
-import type { ChartConfig, ChartDataPoint } from '../services/adminAiService';
+import type { ChartConfig, ChartDataPoint, TableColumn } from '../services/adminAiService';
 
 // ─── Theme-aware colors ─────────────────────────────────────────────────────
 
@@ -325,6 +325,69 @@ function ChartIcon({ kind }: { kind: string }) {
   );
 }
 
+// ─── Table Chart ────────────────────────────────────────────────────────────
+
+function TableChartCard({ config }: { config: ChartConfig }) {
+  const dark = isDark();
+  const cols = config.columns || [];
+  const rows = config.rows || [];
+
+  if (!cols.length || !rows.length) return null;
+
+  return (
+    <div className="w-full overflow-x-auto overflow-y-auto" style={{ maxHeight: '580px', minHeight: 0 }}>
+      <table className="w-full border-collapse text-xs">
+        <thead className="sticky top-0 z-10">
+          <tr>
+            {cols.map((col) => (
+              <th
+                key={col.key}
+                className={`px-3 py-2 text-left font-semibold border-b-2 ${
+                  dark
+                    ? 'text-slate-300 border-slate-600 bg-slate-800'
+                    : 'text-slate-700 border-slate-300 bg-slate-50'
+                }`}
+              >
+                {col.label}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((row, idx) => (
+            <tr
+              key={idx}
+              className={
+                dark
+                  ? idx % 2 === 0 ? 'bg-slate-800/40' : 'bg-slate-800/10'
+                  : idx % 2 === 0 ? 'bg-slate-100/60' : 'bg-white/40'
+              }
+            >
+              {cols.map((col) => (
+                <td
+                  key={col.key}
+                  className={`px-3 py-2 border-b ${
+                    dark ? 'border-slate-700/50' : 'border-slate-200/60'
+                  } ${
+                    dark ? 'text-slate-400' : 'text-slate-600'
+                  }`}
+                >
+                  {row[col.key] || '—'}
+                </td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      {config.rows && config.rows.length > 50 && (
+        <p className={`text-[10px] mt-1.5 text-center ${dark ? 'text-slate-500' : 'text-slate-400'}`}>
+          Showing 50 of {config.rows.length} entries
+        </p>
+      )}
+    </div>
+  );
+}
+
 // ─── Chart Container — consistent card for every chart ──────────────────────
 
 function SingleChart({ config }: { config: ChartConfig }) {
@@ -352,7 +415,9 @@ function SingleChart({ config }: { config: ChartConfig }) {
       </div>
 
       {/* Chart body */}
-      {config.kind === 'pie' ? (
+      {config.kind === 'table' ? (
+        <TableChartCard config={config} />
+      ) : config.kind === 'pie' ? (
         <PieChartCard config={config} />
       ) : config.kind === 'horizontalBar' ? (
         <HorizontalBarChartCard config={config} />
@@ -380,7 +445,7 @@ const AIChatCharts: React.FC<AIChatChartsProps> = ({ charts }) => {
         // Make the last chart full-width when odd count
         const fullWidth = isOddCount && idx === charts.length - 1;
         return (
-          <div key={idx} className={fullWidth ? 'md:col-span-2' : ''}>
+          <div key={idx} className={`${fullWidth ? 'md:col-span-2 ' : ''}h-full min-h-0`}>
             <SingleChart config={chart} />
           </div>
         );
