@@ -130,8 +130,27 @@ function classifyIntent(query: string): {
   // Extract any mentioned day name or day reference
   const dayNames = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
   const dayNamePattern = dayNames.join('|');
-  const dayMatch = q.match(new RegExp(`\\b(${dayNamePattern}|yesterday)\\b`));
   let dayFocus: string | undefined;
+
+  // "day after tomorrow" — 2 days ahead
+  const dayAfterMatch = (typeof q === 'string' && q.match(/day\s+after\s+tom+o?r+o?w?/i));
+  if (dayAfterMatch) {
+    const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    const d = new Date();
+    d.setDate(d.getDate() + 2);
+    dayFocus = days[d.getDay()];
+  }
+
+  // "day before yesterday" — 2 days back
+  const dayBeforeMatch = (typeof q === 'string' && q.match(/day\s+before\s+yesterda?y?/i));
+  if (dayBeforeMatch) {
+    const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    const d = new Date();
+    d.setDate(d.getDate() - 2);
+    dayFocus = days[d.getDay()];
+  }
+
+    const dayMatch = !dayBeforeMatch && !dayAfterMatch && q.match(new RegExp(`\\b(${dayNamePattern}|yesterday)\\b`));
   if (dayMatch) {
     const raw = dayMatch[1];
     if (raw === 'yesterday') {
@@ -221,7 +240,14 @@ function classifyIntent(query: string): {
   }
 
   // ── Meal list for the entire week — "give me snacks list of the week", "list of dinner this week" ──
-  if (mealFocus && (/list|items|menu|schedule|what.*this week/i.test(q))) {
+  // ── Today's menu for a specific meal — "what is today's dinner menu", "today breakfast" ──
+  if (/today/i.test(q) && mealFocus && /menu/i.test(q)) {
+    const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    const todayName = days[new Date().getDay()];
+    return { intent: 'day_menu', dayFocus: todayName, mealFocus: mealCapitalized };
+  }
+
+    if (mealFocus && (/list|items|menu|schedule|what.*this week/i.test(q))) {
     return { intent: 'day_menu', dayFocus: '__all__', mealFocus: mealCapitalized };
   }
 
@@ -1173,11 +1199,20 @@ function generateLocalAnswer(intent: Intent, data: any, query: string, complaint
         if (!menuData || !Array.isArray(menuData) || menuData.length === 0) {
           return '📭 No weekly menu data available.';
         }
-        const count = menuData.reduce((acc, d) => {
+        if (mealName) {
+          const mealKey = mealName.toLowerCase();
+          const cappedKey = mealName.charAt(0).toUpperCase() + mealName.slice(1).toLowerCase();
+          let cnt = 0;
+          for (const day of menuData) {
+            cnt += ((day as any)[mealKey] || (day)[cappedKey] || []).length;
+          }
+          return '📋 **' + mealName + ' Menu** — ' + cnt + ' items across ' + menuData.length + ' days.';
+        }
+        const cnt = menuData.reduce((acc, d) => {
           const keys = ['breakfast', 'lunch', 'snacks', 'dinner', 'Breakfast', 'Lunch', 'Snacks', 'Dinner'];
           return acc + keys.reduce((sum, k) => sum + ((d)[k]?.length || 0), 0);
         }, 0);
-        return '📋 **Weekly Menu** — ' + count + ' items across ' + menuData.length + ' days.';
+        return '📋 **Weekly Menu** — ' + cnt + ' items across ' + menuData.length + ' days.';
       }
 
       if (!menuData || !menuData.dishes || !menuData.dishes.length) {
@@ -1971,9 +2006,11 @@ function generateChartData(intent: Intent, data: any, _query: string): ChartConf
         const sorted = [...menuData].sort((a, b) => dayOrder.indexOf(a.day) - dayOrder.indexOf(b.day));
         for (const day of sorted) {
           for (const mk of mealKeys) {
-            const items = (day as any)[mk] || (day)[mk.charAt(0).toUpperCase() + mk.slice(1)] || [];
+            const mLower = data.mealFocus ? data.mealFocus.toLowerCase() : '';
+            const mCapped = data.mealFocus ? data.mealFocus.charAt(0).toUpperCase() + data.mealFocus.slice(1).toLowerCase() : '';
+            const items = (day as any)[mk] || (day as any)[mk.charAt(0).toUpperCase() + mk.slice(1)] || [];
             for (const dish of items) {
-              if (dish && dish.name) {
+              if (dish && dish.name && (!data.mealFocus || mk === mLower || mk.charAt(0).toUpperCase() + mk.slice(1) === mCapped)) {
                 rows.push({ day: day.day || '—', meal: mealLabels[mk] || mk, dish: dish.name });
               }
             }
@@ -1993,7 +2030,7 @@ function generateChartData(intent: Intent, data: any, _query: string): ChartConf
         }
       } else if (menuData && menuData.dishes) {
         for (const dish of menuData.dishes) {
-          if (dish && dish.name) {
+          if (dish && dish.name && (!data.mealFocus || (dish.mealType && dish.mealType.toLowerCase() === data.mealFocus.toLowerCase()))) {
             rows.push({ day: dayFocus || menuData.day || '—', meal: mealLabels[dish.mealType && dish.mealType.toLowerCase()] || dish.mealType || '—', dish: dish.name });
           }
         }
