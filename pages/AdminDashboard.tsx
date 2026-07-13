@@ -829,46 +829,46 @@ export const AdminDashboard: React.FC = () => {
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 min-w-0 overflow-y-auto custom-scrollbar">
+      <main className="flex-1 min-w-0 overflow-y-auto custom-scrollbar pb-16 lg:pb-0">
         
         {/* --- DASHBOARD TAB --- */}
         {activeTab === 'dashboard' && (
           <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
             {/* Stats Grid */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-               <div className="relative bg-white dark:bg-slate-900 p-5 rounded-xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden group hover:shadow-md hover:border-orange-200 dark:hover:border-orange-800 transition-all">
-                  <div className="absolute top-0 right-0 w-20 h-20 bg-gradient-to-bl from-blue-500/10 to-transparent rounded-bl-full" />
-                  <div className="flex items-start justify-between mb-2">
-                    <div className="w-10 h-10 rounded-xl bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center text-blue-600 dark:text-blue-400 ring-1 ring-blue-100 dark:ring-blue-800">
-                      <Users size={20} />
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 md:gap-4">
+               <div className="relative bg-white dark:bg-slate-900 p-4 md:p-5 rounded-2xl shadow-sm border border-slate-200/70 dark:border-slate-800/70 overflow-hidden group hover:shadow-md hover:border-orange-200 dark:hover:border-orange-800 transition-all duration-300">
+                  <div className="absolute -top-6 -right-6 w-24 h-24 bg-gradient-to-bl from-blue-500/8 to-transparent rounded-full" />
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white shadow-sm">
+                      <Users size={18} />
                     </div>
                   </div>
-                  <p className="text-sm font-medium text-slate-500 dark:text-slate-400">Total Users</p>
-                  <p className="text-3xl font-bold text-slate-900 dark:text-white mt-1">{users.length}</p>
+                  <p className="text-xs font-medium text-slate-400 dark:text-slate-500 uppercase tracking-wider">Total Users</p>
+                  <p className="text-2xl md:text-3xl font-bold text-slate-900 dark:text-white mt-0.5">{users.length}</p>
                </div>
-               <div className="relative bg-white dark:bg-slate-900 p-5 rounded-xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden group hover:shadow-md hover:border-orange-200 dark:hover:border-orange-800 transition-all">
-                  <div className="absolute top-0 right-0 w-20 h-20 bg-gradient-to-bl from-orange-500/10 to-transparent rounded-bl-full" />
-                  <div className="flex items-start justify-between mb-2">
-                    <div className="w-10 h-10 rounded-xl bg-orange-50 dark:bg-orange-900/20 flex items-center justify-center text-orange-600 dark:text-orange-400 ring-1 ring-orange-100 dark:ring-orange-800">
-                      <MessageSquare size={20} />
+               <div className="relative bg-white dark:bg-slate-900 p-4 md:p-5 rounded-2xl shadow-sm border border-slate-200/70 dark:border-slate-800/70 overflow-hidden group hover:shadow-md hover:border-orange-200 dark:hover:border-orange-800 transition-all duration-300">
+                  <div className="absolute -top-6 -right-6 w-24 h-24 bg-gradient-to-bl from-orange-500/8 to-transparent rounded-full" />
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-orange-500 to-amber-600 flex items-center justify-center text-white shadow-sm">
+                      <MessageSquare size={18} />
                     </div>
                   </div>
-                  <p className="text-sm font-medium text-slate-500 dark:text-slate-400">Feedback Today</p>
-                  <p className="text-3xl font-bold text-orange-600 dark:text-orange-400 mt-1">{todayFeedback.length}</p>
+                  <p className="text-xs font-medium text-slate-400 dark:text-slate-500 uppercase tracking-wider">Feedback Today</p>
+                  <p className="text-2xl md:text-3xl font-bold text-orange-600 dark:text-orange-400 mt-0.5">{todayFeedback.length}</p>
                </div>
-               <div className="relative bg-white dark:bg-slate-900 p-5 rounded-xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden group hover:shadow-md hover:border-orange-200 dark:hover:border-orange-800 transition-all">
-                  <div className="absolute top-0 right-0 w-20 h-20 bg-gradient-to-bl from-emerald-500/10 to-transparent rounded-bl-full" />
-                  <div className="flex items-start justify-between mb-2">
-                    <div className="w-10 h-10 rounded-xl bg-emerald-50 dark:bg-emerald-900/20 flex items-center justify-center text-emerald-600 dark:text-emerald-400 ring-1 ring-emerald-100 dark:ring-emerald-800">
-                      <TrendingUp size={20} />
+               <div className="relative bg-white dark:bg-slate-900 p-4 md:p-5 rounded-2xl shadow-sm border border-slate-200/70 dark:border-slate-800/70 overflow-hidden group hover:shadow-md hover:border-orange-200 dark:hover:border-orange-800 transition-all duration-300">
+                  <div className="absolute -top-6 -right-6 w-24 h-24 bg-gradient-to-bl from-emerald-500/8 to-transparent rounded-full" />
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-600 flex items-center justify-center text-white shadow-sm">
+                      <TrendingUp size={18} />
                     </div>
                   </div>
-                  <p className="text-sm font-medium text-slate-500 dark:text-slate-400">Avg Rating Today</p>
-                  <div className="flex items-end gap-2 mt-1">
-                     <p className="text-3xl font-bold text-emerald-600 dark:text-emerald-400">
+                  <p className="text-xs font-medium text-slate-400 dark:text-slate-500 uppercase tracking-wider">Avg Rating Today</p>
+                  <div className="flex items-baseline gap-1.5 mt-0.5">
+                     <p className="text-2xl md:text-3xl font-bold text-emerald-600 dark:text-emerald-400">
                         {(todayFeedback.reduce((a, b) => a + b.rating, 0) / (todayFeedback.length || 1)).toFixed(1)}
                      </p>
-                     <span className="text-sm text-slate-400 mb-1 font-medium">/ 5.0</span>
+                     <span className="text-sm text-slate-400 font-medium">/5</span>
                   </div>
                </div>
             </div>
@@ -1996,6 +1996,32 @@ export const AdminDashboard: React.FC = () => {
           </div>
         )}
       </main>
+
+      {/* ── Mobile Bottom Navigation ── */}
+      <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border-t border-slate-200/70 dark:border-slate-800/70 pb-1">
+        <div className="flex items-center justify-around px-1 py-0.5">
+              <button onClick={() => setActiveTab('dashboard')} className={'flex flex-col items-center gap-0.5 py-1.5 px-3 rounded-xl transition-all min-w-[56px] ' + (activeTab === 'dashboard' ? 'text-orange-600 dark:text-orange-400' : 'text-slate-400 dark:text-slate-500')}>
+                <div className={'w-9 h-9 rounded-xl flex items-center justify-center transition-all ' + (activeTab === 'dashboard' ? 'bg-orange-50 dark:bg-orange-900/20' : '')}><TrendingUp size={20} className={activeTab === 'dashboard' ? 'text-orange-500' : ''} /></div>
+                <span className="text-[10px] font-medium">Home</span>
+              </button>
+              <button onClick={() => setActiveTab('ai-assistant')} className={'flex flex-col items-center gap-0.5 py-1.5 px-3 rounded-xl transition-all min-w-[56px] ' + (activeTab === 'ai-assistant' ? 'text-orange-600 dark:text-orange-400' : 'text-slate-400 dark:text-slate-500')}>
+                <div className={'w-9 h-9 rounded-xl flex items-center justify-center transition-all ' + (activeTab === 'ai-assistant' ? 'bg-orange-50 dark:bg-orange-900/20' : '')}><Sparkles size={20} className={activeTab === 'ai-assistant' ? 'text-orange-500' : ''} /></div>
+                <span className="text-[10px] font-medium">AI</span>
+              </button>
+              <button onClick={() => setActiveTab('broadcast')} className={'flex flex-col items-center gap-0.5 py-1.5 px-3 rounded-xl transition-all min-w-[56px] ' + (activeTab === 'broadcast' ? 'text-orange-600 dark:text-orange-400' : 'text-slate-400 dark:text-slate-500')}>
+                <div className={'w-9 h-9 rounded-xl flex items-center justify-center transition-all ' + (activeTab === 'broadcast' ? 'bg-orange-50 dark:bg-orange-900/20' : '')}><Bell size={20} className={activeTab === 'broadcast' ? 'text-orange-500' : ''} /></div>
+                <span className="text-[10px] font-medium">Alerts</span>
+              </button>
+              <button onClick={() => setActiveTab('menu')} className={'flex flex-col items-center gap-0.5 py-1.5 px-3 rounded-xl transition-all min-w-[56px] ' + (activeTab === 'menu' ? 'text-orange-600 dark:text-orange-400' : 'text-slate-400 dark:text-slate-500')}>
+                <div className={'w-9 h-9 rounded-xl flex items-center justify-center transition-all ' + (activeTab === 'menu' ? 'bg-orange-50 dark:bg-orange-900/20' : '')}><MenuIcon size={20} className={activeTab === 'menu' ? 'text-orange-500' : ''} /></div>
+                <span className="text-[10px] font-medium">Menu</span>
+              </button>
+              <button onClick={() => setActiveTab('feedback')} className={'flex flex-col items-center gap-0.5 py-1.5 px-3 rounded-xl transition-all min-w-[56px] ' + (activeTab === 'feedback' ? 'text-orange-600 dark:text-orange-400' : 'text-slate-400 dark:text-slate-500')}>
+                <div className={'w-9 h-9 rounded-xl flex items-center justify-center transition-all ' + (activeTab === 'feedback' ? 'bg-orange-50 dark:bg-orange-900/20' : '')}><MessageSquare size={20} className={activeTab === 'feedback' ? 'text-orange-500' : ''} /></div>
+                <span className="text-[10px] font-medium">Feedback</span>
+              </button>
+        </div>
+      </nav>
 
       {/* --- Modals --- */}
       {selectedFeedback && (

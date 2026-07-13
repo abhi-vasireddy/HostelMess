@@ -121,14 +121,18 @@ function classifyIntent(query: string): {
   const q = query.toLowerCase().trim();
 
   // Extract any mentioned meal type for sub-routing
-  const mealMatch = q.match(/\b(breakfast|lunch|snacks?|dinner)\b/);
-  const mealFocus = mealMatch ? mealMatch[1].replace(/snack$/, 'Snacks') : undefined;
+  const mealRegexMatch = q.match(/\b(breakfast|lunch|snacks?|dinner)\b/i);
+  const breakFastMatch = !mealRegexMatch && q.match(/\bbreak\s+fast\b/i);
+  const mealMatch = mealRegexMatch || breakFastMatch;
+  const mealFocus = mealMatch
+    ? breakFastMatch ? 'breakfast' : mealMatch[1].replace(/snack$/, 'Snacks')
+    : undefined;
   const mealCapitalized = mealFocus
     ? mealFocus.charAt(0).toUpperCase() + mealFocus.slice(1)
     : undefined;
 
   // Extract any mentioned day name or day reference
-  const dayNames = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+  const dayNames = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday', 'tomorrow'];
   const dayNamePattern = dayNames.join('|');
   let dayFocus: string | undefined;
 
@@ -139,6 +143,17 @@ function classifyIntent(query: string): {
     const d = new Date();
     d.setDate(d.getDate() + 2);
     dayFocus = days[d.getDay()];
+  }
+
+  // "tomorrow" (with common typos) — 1 day ahead
+  if (!dayFocus) {
+    const tommMatch = (typeof q === 'string') && q.match(/\btom+o?r+o?w\b/i);
+    if (tommMatch) {
+      const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+      const d = new Date();
+      d.setDate(d.getDate() + 1);
+      dayFocus = days[d.getDay()];
+    }
   }
 
   // "day before yesterday" — 2 days back
