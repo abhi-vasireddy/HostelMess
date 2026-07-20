@@ -9,6 +9,7 @@ import { MockDB } from '../services/mockDb';
 import { Button } from '../components/Button';
 import { getTodayDateString } from '../services/timeUtils';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
+import TimePicker from '../components/TimePicker';
 
 export const SportsDashboard = ({ user }: { user: User }) => {
   const navigate = useNavigate();
@@ -23,13 +24,13 @@ export const SportsDashboard = ({ user }: { user: User }) => {
   const [loading, setLoading] = useState(true);
   
   // Theme State
-  const [themeGradient, setThemeGradient] = useState('from-orange-500 to-amber-500'); 
-  const [themeColorHex, setThemeColorHex] = useState('#f97316'); 
+  const [themeGradient, setThemeGradient] = useState('from-sky-500 to-cyan-500'); 
+  const [themeColorHex, setThemeColorHex] = useState('#0ea5e9'); 
 
   // Forms
   const [showBookingModal, setShowBookingModal] = useState(false);
   const [selectedItem, setSelectedItem] = useState<SportsEquipment | null>(null);
-  const [bookingTime, setBookingTime] = useState({ start: '', end: '' });
+  const [bookingTime, setBookingTime] = useState<{date: string; start: string; end: string}>({ date: getTodayDateString(), start: '', end: '' });
 
   const [showTeamModal, setShowTeamModal] = useState(false);
   const [newTeam, setNewTeam] = useState({ sport: 'Cricket', playersNeeded: 1, time: '', description: '' });
@@ -77,7 +78,7 @@ export const SportsDashboard = ({ user }: { user: User }) => {
     const booking: SportsBooking = {
        id: '', equipmentId: selectedItem.id, equipmentName: selectedItem.name,
        userId: user.uid, userName: user.displayName || 'Student',
-       date: today, startTime: bookingTime.start, endTime: bookingTime.end, status: 'Active'
+       date: bookingTime.date, startTime: bookingTime.start, endTime: bookingTime.end, status: 'Active'
     };
     await MockDB.bookSportItem(booking);
     setShowBookingModal(false);
@@ -452,12 +453,14 @@ export const SportsDashboard = ({ user }: { user: User }) => {
                </div>
                <form onSubmit={handleBook} className="space-y-5">
                   <div>
-                     <label className="text-xs font-bold text-slate-500 uppercase ml-1">Start Time</label>
-                     <input type="time" className="w-full mt-1 p-3 bg-slate-50 dark:bg-slate-950 border-none rounded-xl font-medium outline-none focus:ring-2 focus:ring-orange-500 dark:text-white" required onChange={e => setBookingTime({...bookingTime, start: e.target.value})} />
+                     <label className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase ml-1">Date</label>
+                     <input type="date" className="w-full mt-1 p-3 bg-slate-50 dark:bg-slate-950 border-none rounded-xl font-medium outline-none focus:ring-2 focus:ring-sky-500/40 dark:text-white" value={bookingTime.date} required onChange={e => setBookingTime({...bookingTime, date: e.target.value})} />
                   </div>
                   <div>
-                     <label className="text-xs font-bold text-slate-500 uppercase ml-1">End Time</label>
-                     <input type="time" className="w-full mt-1 p-3 bg-slate-50 dark:bg-slate-950 border-none rounded-xl font-medium outline-none focus:ring-2 focus:ring-orange-500 dark:text-white" required onChange={e => setBookingTime({...bookingTime, end: e.target.value})} />
+                     <TimePicker value={bookingTime.start} onChange={(v) => setBookingTime({...bookingTime, start: v})} label="Start Time" placeholder="e.g. 3:42 PM" />
+                  </div>
+                  <div>
+                     <TimePicker value={bookingTime.end} onChange={(v) => setBookingTime({...bookingTime, end: v})} label="End Time" placeholder="e.g. 5:00 PM" />
                   </div>
                   <Button fullWidth type="submit" className={`py-3 rounded-xl bg-gradient-to-r ${themeGradient} border-none text-white`}>Confirm Booking</Button>
                </form>

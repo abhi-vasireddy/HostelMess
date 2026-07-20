@@ -647,7 +647,7 @@ export async function fetchMonthlyReportData(): Promise<{
   };
 }
 
-export async function fetchCanteenItems() {
+export async function fetchCanteenItems(): Promise<any[]> {
   const cached = getCached('canteen');
   if (cached) return cached;
   try {

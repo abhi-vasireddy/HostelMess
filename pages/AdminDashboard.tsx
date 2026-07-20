@@ -39,7 +39,7 @@ export const AdminDashboard: React.FC = () => {
   const navigate = useNavigate();
   
   // 👇 Added 'broadcast' to the activeTab type
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'menu' | 'users' | 'announcements' | 'feedback' | 'canteen' | 'todos' | 'notes' | 'suggestions' | 'services' | 'broadcast'>(
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'menu' | 'users' | 'announcements' | 'feedback' | 'canteen' | 'todos' | 'notes' | 'suggestions' | 'services' | 'broadcast' | 'ai-assistant'>(
     user?.role === UserRole.CANTEEN_STAFF ? 'canteen' : 'dashboard'
   );
   
@@ -737,23 +737,10 @@ export const AdminDashboard: React.FC = () => {
   return (
     <div className="flex flex-col lg:flex-row gap-6 flex-1 h-screen min-h-0">
       {/* Sidebar - Collapsible on Mobile, Sticky on Desktop */}
-      <aside className="w-full lg:w-56 2xl:w-64 flex-shrink-0 sticky top-0 self-start max-h-screen z-40 transition-all duration-300">
+      <aside className="hidden md:block w-full lg:w-56 2xl:w-64 flex-shrink-0 sticky top-0 self-start max-h-screen z-40 transition-all duration-300">
         
-        {/* Mobile Toggle Header (Visible only on mobile) */}
-        <div className="md:hidden flex justify-between items-center bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl p-4 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 mb-4 transition-all duration-300">
-            <span className="font-bold text-slate-800 dark:text-white flex items-center gap-2">
-                <Settings className="w-5 h-5 text-orange-500"/> Admin Panel
-            </span>
-            <button 
-                onClick={() => setIsSidebarOpen(!isSidebarOpen)} 
-                className="p-2 bg-slate-100 dark:bg-slate-800 rounded-lg text-slate-600 dark:text-slate-300 active:scale-95 transition-transform"
-            >
-                {isSidebarOpen ? <X size={20}/> : <MenuIcon size={20}/>}
-            </button>
-        </div>
-
         {/* Sidebar Content (Hidden on mobile unless open) */}
-        <div className={`${isSidebarOpen ? 'block' : 'hidden'} md:block space-y-6 animate-in slide-in-from-top-4 duration-300 md:animate-none max-h-[80vh] overflow-y-auto md:max-h-none md:overflow-visible custom-scrollbar`}>
+        <div className="space-y-6 animate-in slide-in-from-top-4 duration-300 md:animate-none max-h-[80vh] overflow-y-auto md:max-h-none md:overflow-visible custom-scrollbar">
             <div className="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden">
               <button 
                 onClick={() => navigate('/')}
@@ -810,7 +797,7 @@ export const AdminDashboard: React.FC = () => {
             </div>
             <div className="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-slate-200 dark:border-slate-800 p-4">
               <h4 className="text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-3">Quick Settings</h4>
-               <div className="flex items-center justify-between">
+               <div className="hidden md:flex items-center justify-between">
                   <div className="flex items-center gap-2.5">
                     <div className="w-7 h-7 rounded-lg bg-purple-50 dark:bg-purple-900/20 flex items-center justify-center text-purple-500">
                       <Video size={14} />
@@ -829,91 +816,131 @@ export const AdminDashboard: React.FC = () => {
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 min-w-0 overflow-y-auto custom-scrollbar pb-16 lg:pb-0">
+      {/* Mobile Back Button (visible only on mobile) */}
+      <div className="md:hidden flex items-center px-4 pt-3 pb-0">
+        <button onClick={() => navigate('/')} className="flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition-colors">
+          <ArrowLeft size={16} /> Back
+        </button>
+      </div>
+
+            <main className="flex-1 min-w-0 overflow-y-auto custom-scrollbar pb-16 lg:pb-0">
         
         {/* --- DASHBOARD TAB --- */}
         {activeTab === 'dashboard' && (
-          <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+          <div className="space-y-4 md:space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+            {/* Welcome Header */}
+            <div className="hidden md:flex items-center justify-between">
+              <div>
+                <h1 className="text-xl md:text-2xl font-bold text-slate-900 dark:text-white">
+                  Welcome back{user?.displayName ? ', ' + user.displayName.split(' ')[0] : ''}
+                </h1>
+                <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">
+                  {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
+                </p>
+              </div>
+              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-orange-500 to-amber-600 flex items-center justify-center text-white shadow-md shadow-orange-500/20">
+                <span className="font-bold text-sm">{user?.displayName?.charAt(0)?.toUpperCase() || 'A'}</span>
+              </div>
+            </div>
+
             {/* Stats Grid */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 md:gap-4">
-               <div className="relative bg-white dark:bg-slate-900 p-4 md:p-5 rounded-2xl shadow-sm border border-slate-200/70 dark:border-slate-800/70 overflow-hidden group hover:shadow-md hover:border-orange-200 dark:hover:border-orange-800 transition-all duration-300">
+            <div className="grid grid-cols-3 gap-2 md:gap-4">
+               <div className="relative bg-white dark:bg-slate-900 p-3 md:p-5 rounded-2xl shadow-sm border border-slate-200/70 dark:border-slate-800/70 overflow-hidden group hover:shadow-md hover:border-orange-200 dark:hover:border-orange-800 transition-all duration-300">
                   <div className="absolute -top-6 -right-6 w-24 h-24 bg-gradient-to-bl from-blue-500/8 to-transparent rounded-full" />
-                  <div className="flex items-center gap-3 mb-3">
-                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white shadow-sm">
-                      <Users size={18} />
+                  <div className="flex items-center gap-2 md:gap-3 mb-2 md:mb-3">
+                    <div className="w-8 md:w-10 h-8 md:h-10 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white shadow-sm">
+                      <Users size={16} />
                     </div>
                   </div>
-                  <p className="text-xs font-medium text-slate-400 dark:text-slate-500 uppercase tracking-wider">Total Users</p>
-                  <p className="text-2xl md:text-3xl font-bold text-slate-900 dark:text-white mt-0.5">{users.length}</p>
+                  <p className="text-[10px] md:text-xs font-medium text-slate-400 dark:text-slate-500 uppercase tracking-wider">Total Users</p>
+                  <p className="text-lg md:text-3xl font-bold text-slate-900 dark:text-white mt-0.5">{users.length}</p>
                </div>
                <div className="relative bg-white dark:bg-slate-900 p-4 md:p-5 rounded-2xl shadow-sm border border-slate-200/70 dark:border-slate-800/70 overflow-hidden group hover:shadow-md hover:border-orange-200 dark:hover:border-orange-800 transition-all duration-300">
                   <div className="absolute -top-6 -right-6 w-24 h-24 bg-gradient-to-bl from-orange-500/8 to-transparent rounded-full" />
                   <div className="flex items-center gap-3 mb-3">
-                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-orange-500 to-amber-600 flex items-center justify-center text-white shadow-sm">
-                      <MessageSquare size={18} />
+                    <div className="w-8 md:w-10 h-8 md:h-10 rounded-xl bg-gradient-to-br from-orange-500 to-amber-600 flex items-center justify-center text-white shadow-sm">
+                      <MessageSquare size={16} />
                     </div>
                   </div>
-                  <p className="text-xs font-medium text-slate-400 dark:text-slate-500 uppercase tracking-wider">Feedback Today</p>
-                  <p className="text-2xl md:text-3xl font-bold text-orange-600 dark:text-orange-400 mt-0.5">{todayFeedback.length}</p>
+                  <p className="text-[10px] md:text-xs font-medium text-slate-400 dark:text-slate-500 uppercase tracking-wider">Feedback Today</p>
+                  <p className="text-lg md:text-3xl font-bold text-orange-600 dark:text-orange-400 mt-0.5">{todayFeedback.length}</p>
                </div>
                <div className="relative bg-white dark:bg-slate-900 p-4 md:p-5 rounded-2xl shadow-sm border border-slate-200/70 dark:border-slate-800/70 overflow-hidden group hover:shadow-md hover:border-orange-200 dark:hover:border-orange-800 transition-all duration-300">
                   <div className="absolute -top-6 -right-6 w-24 h-24 bg-gradient-to-bl from-emerald-500/8 to-transparent rounded-full" />
                   <div className="flex items-center gap-3 mb-3">
-                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-600 flex items-center justify-center text-white shadow-sm">
-                      <TrendingUp size={18} />
+                    <div className="w-8 md:w-10 h-8 md:h-10 rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-600 flex items-center justify-center text-white shadow-sm">
+                      <TrendingUp size={16} />
                     </div>
                   </div>
-                  <p className="text-xs font-medium text-slate-400 dark:text-slate-500 uppercase tracking-wider">Avg Rating Today</p>
+                  <p className="text-[10px] md:text-xs font-medium text-slate-400 dark:text-slate-500 uppercase tracking-wider">Avg Rating Today</p>
                   <div className="flex items-baseline gap-1.5 mt-0.5">
-                     <p className="text-2xl md:text-3xl font-bold text-emerald-600 dark:text-emerald-400">
+                     <p className="text-lg md:text-3xl font-bold text-emerald-600 dark:text-emerald-400">
                         {(todayFeedback.reduce((a, b) => a + b.rating, 0) / (todayFeedback.length || 1)).toFixed(1)}
                      </p>
-                     <span className="text-sm text-slate-400 font-medium">/5</span>
+                     <span className="text-xs md:text-sm text-slate-400 font-medium">/5</span>
                   </div>
                </div>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Quick Actions */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 md:gap-3">
+              {[
+                { icon: Bell, label: 'Broadcast', tab: 'broadcast', color: 'text-purple-600', bg: 'bg-purple-50 dark:bg-purple-900/20' },
+                { icon: CheckSquare, label: 'To-Dos', tab: 'todos', color: 'text-emerald-600', bg: 'bg-emerald-50 dark:bg-emerald-900/20' },
+                { icon: AlertTriangle, label: 'Issues', tab: 'announcements', color: 'text-red-600', bg: 'bg-red-50 dark:bg-red-900/20' },
+                { icon: LayoutGrid, label: 'Services', tab: 'services', color: 'text-blue-600', bg: 'bg-blue-50 dark:bg-blue-900/20' },
+              ].map(action => (
+                <button key={action.tab} onClick={() => setActiveTab(action.tab as any)}
+                  className="flex items-center gap-2.5 p-3 md:p-4 bg-white dark:bg-slate-900 rounded-xl border border-slate-200/70 dark:border-slate-800/70 shadow-sm hover:shadow-md hover:border-orange-200 dark:hover:border-orange-800 transition-all duration-300 active:scale-[0.98]"
+                >
+                  <div className={'w-9 h-9 rounded-lg flex items-center justify-center shrink-0 ' + action.bg}>
+                    <action.icon size={18} className={action.color} />
+                  </div>
+                  <span className="text-sm font-medium text-slate-700 dark:text-slate-300 truncate">{action.label}</span>
+                </button>
+              ))}
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
               {/* Chart */}
-              <div className="bg-white dark:bg-slate-900 p-5 rounded-xl shadow-sm border border-slate-200 dark:border-slate-800">
-                 <div className="flex items-center gap-3 mb-5 pb-3 border-b border-slate-100 dark:border-slate-800">
-                    <div className="w-9 h-9 rounded-xl bg-orange-50 dark:bg-orange-900/20 flex items-center justify-center text-orange-600 dark:text-orange-400 ring-1 ring-orange-100 dark:ring-orange-800">
-                      <TrendingUp size={18} />
+              <div className="bg-white dark:bg-slate-900 p-4 md:p-5 rounded-2xl shadow-sm border border-slate-200/70 dark:border-slate-800/70">
+                 <div className="flex items-center gap-3 mb-4 pb-3 border-b border-slate-100 dark:border-slate-800">
+                    <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-orange-500 to-amber-600 flex items-center justify-center text-white shadow-sm">
+                      <TrendingUp size={16} />
                     </div>
                     <div>
-                      <h3 className="font-bold text-slate-900 dark:text-white">Meal Ratings Overview</h3>
-                      <p className="text-xs text-slate-500 dark:text-slate-400">Today's average per meal type</p>
+                      <h3 className="font-bold text-slate-900 dark:text-white text-sm">Meal Ratings Overview</h3>
+                      <p className="text-xs text-slate-400">Today's average per meal type</p>
                     </div>
                  </div>
-                 <div className="h-64 w-full">
+                 <div className="h-52 md:h-64 w-full">
                    <ResponsiveContainer width="100%" height="100%">
                      <BarChart data={chartData}>
                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" opacity={0.5} />
-                       <XAxis dataKey="name" tick={{fill: '#64748b', fontSize: 12}} axisLine={false} tickLine={false} />
-                       <YAxis domain={[0, 5]} tick={{fill: '#64748b', fontSize: 12}} axisLine={false} tickLine={false} />
-                       <Tooltip 
-                          cursor={{fill: 'transparent'}}
-                          contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                       <XAxis dataKey="name" tick={{fill: '#64748b', fontSize: 11}} axisLine={false} tickLine={false} />
+                       <YAxis domain={[0, 5]} tick={{fill: '#64748b', fontSize: 11}} axisLine={false} tickLine={false} width={25} />
+                       <Tooltip cursor={{fill: 'transparent'}}
+                         contentStyle={{ borderRadius: '10px', border: '1px solid #e2e8f0', boxShadow: '0 4px 12px rgba(0,0,0,0.08)' }}
                        />
-                       <Bar dataKey="rating" fill="#f97316" radius={[6, 6, 0, 0]} barSize={40} />
+                       <Bar dataKey="rating" fill="#f97316" radius={[6, 6, 0, 0]} barSize={32} />
                      </BarChart>
                    </ResponsiveContainer>
                  </div>
               </div>
 
               {/* AI Section */}
-              <div className="bg-gradient-to-br from-orange-500 via-orange-600 to-amber-700 p-5 rounded-xl shadow-md text-white relative overflow-hidden">
+              <div className="bg-gradient-to-br from-orange-500 via-orange-600 to-amber-700 p-4 md:p-5 rounded-2xl shadow-md text-white relative overflow-hidden">
                 <div className="absolute top-0 right-0 w-40 h-40 bg-white opacity-5 rounded-full -mr-10 -mt-10 blur-3xl"></div>
                 <div className="absolute bottom-0 left-0 w-32 h-32 bg-yellow-300 opacity-5 rounded-full -ml-10 -mb-10 blur-3xl"></div>
                 
-                <div className="relative z-10 h-full flex flex-col">
+                <div className="relative z-10 flex flex-col h-full">
                   <div className="flex items-start justify-between mb-4">
                       <div className="flex items-center gap-3">
                         <div className="w-10 h-10 rounded-xl bg-white/15 flex items-center justify-center backdrop-blur-sm ring-1 ring-white/20">
                           <Sparkles className="w-5 h-5 text-yellow-200" />
                         </div>
                         <div>
-                          <h3 className="font-bold text-white text-base">AI Insights</h3>
+                          <h3 className="font-bold text-white text-sm">AI Insights</h3>
                           <p className="text-orange-200 text-xs mt-0.5">Student sentiment analysis</p>
                         </div>
                       </div>
@@ -922,30 +949,30 @@ export const AdminDashboard: React.FC = () => {
                         size="sm" 
                         onClick={handleGenerateAI} 
                         disabled={aiLoading}
-                        className="bg-white/15 text-white border-white/20 hover:bg-white/25 backdrop-blur-sm shadow-none"
+                        className="bg-white/15 text-white border-white/20 hover:bg-white/25 backdrop-blur-sm shadow-none text-xs px-3 py-1.5 h-auto"
                       >
-                        {aiLoading ? 'Thinking...' : 'Generate Report'}
+                        {aiLoading ? 'Thinking...' : 'Generate'}
                       </Button>
                   </div>
                   
                   {aiInsights ? (
-                    <div className="bg-white/10 backdrop-blur-md p-4 rounded-xl border border-white/15 flex-1 overflow-y-auto custom-scrollbar">
+                    <div className="bg-white/10 backdrop-blur-md p-3 md:p-4 rounded-xl border border-white/15 flex-1 overflow-y-auto custom-scrollbar max-h-[200px]">
                        <h4 className="font-bold text-yellow-200 text-xs uppercase tracking-wider mb-2">Summary</h4>
-                       <p className="text-sm mb-4 leading-relaxed text-orange-50">{aiInsights.summary}</p>
+                       <p className="text-sm mb-3 leading-relaxed text-orange-50">{aiInsights.summary}</p>
                        <h4 className="font-bold text-emerald-200 text-xs uppercase tracking-wider mb-2">Suggestions</h4>
-                       <ul className="space-y-2">
+                       <ul className="space-y-1.5">
                          {aiInsights.suggestions.map((s, i) => (
                            <li key={i} className="text-sm leading-relaxed flex items-start gap-2">
-                             <span className="text-emerald-300 mt-1.5">•</span>
-                             <span>{s}</span>
+                             <span className="text-emerald-300 mt-1">•</span>
+                             <span className="text-orange-50">{s}</span>
                            </li>
                          ))}
                        </ul>
                     </div>
                   ) : (
-                    <div className="flex-1 flex flex-col items-center justify-center text-orange-100/70 text-sm rounded-xl bg-white/5">
+                    <div className="flex-1 flex flex-col items-center justify-center text-orange-100/70 text-sm rounded-xl bg-white/5 py-8">
                       <Sparkles className="w-8 h-8 text-orange-200/50 mb-2" />
-                      <p>Click <strong>Generate Report</strong> to analyze feedback data</p>
+                      <p>Tap <strong>Generate</strong> to analyze feedback</p>
                     </div>
                   )}
                 </div>
@@ -1998,28 +2025,37 @@ export const AdminDashboard: React.FC = () => {
       </main>
 
       {/* ── Mobile Bottom Navigation ── */}
-      <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border-t border-slate-200/70 dark:border-slate-800/70 pb-1">
-        <div className="flex items-center justify-around px-1 py-0.5">
-              <button onClick={() => setActiveTab('dashboard')} className={'flex flex-col items-center gap-0.5 py-1.5 px-3 rounded-xl transition-all min-w-[56px] ' + (activeTab === 'dashboard' ? 'text-orange-600 dark:text-orange-400' : 'text-slate-400 dark:text-slate-500')}>
-                <div className={'w-9 h-9 rounded-xl flex items-center justify-center transition-all ' + (activeTab === 'dashboard' ? 'bg-orange-50 dark:bg-orange-900/20' : '')}><TrendingUp size={20} className={activeTab === 'dashboard' ? 'text-orange-500' : ''} /></div>
-                <span className="text-[10px] font-medium">Home</span>
+      <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border-t border-slate-200/70 dark:border-slate-800/70">
+        <div className="flex items-center overflow-x-auto overflow-y-hidden custom-scrollbar px-1 py-1 gap-0.5 scrollbar-hide" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+          {[
+            { id: 'dashboard', icon: TrendingUp, label: 'Home' },
+            { id: 'ai-assistant', icon: Sparkles, label: 'AI' },
+            { id: 'broadcast', icon: Bell, label: 'Alerts' },
+            { id: 'menu', icon: MenuIcon, label: 'Menu' },
+            { id: 'canteen', icon: UtensilsCrossed, label: 'Canteen' },
+            { id: 'users', icon: Users, label: 'Users' },
+            { id: 'feedback', icon: MessageSquare, label: 'Feedback' },
+            { id: 'suggestions', icon: Lightbulb, label: 'Ideas' },
+            { id: 'announcements', icon: AlertTriangle, label: 'Alerts' },
+            { id: 'todos', icon: CheckSquare, label: 'Tasks' },
+            { id: 'notes', icon: StickyNote, label: 'Notes' },
+            { id: 'services', icon: LayoutGrid, label: 'More' },
+          ].filter(item => {
+            if (user?.role === UserRole.CANTEEN_STAFF) return item.id === 'canteen';
+            return true;
+          }).map(item => {
+            const isActive = activeTab === item.id;
+            return (
+              <button key={item.id} onClick={() => { setActiveTab(item.id as any); setIsSidebarOpen(false); }}
+                className={'flex flex-col items-center justify-center gap-0 py-1.5 px-2.5 rounded-xl transition-all shrink-0 ' + (isActive ? 'text-orange-600 dark:text-orange-400' : 'text-slate-400 dark:text-slate-500')}
+              >
+                <div className={'w-8 h-8 rounded-xl flex items-center justify-center transition-all ' + (isActive ? 'bg-orange-50 dark:bg-orange-900/20 shadow-sm' : '')}>
+                  <item.icon size={18} className={isActive ? 'text-orange-500' : ''} />
+                </div>
+                <span className={'text-[9px] leading-tight whitespace-nowrap ' + (isActive ? 'font-semibold' : 'font-medium')}>{item.label}</span>
               </button>
-              <button onClick={() => setActiveTab('ai-assistant')} className={'flex flex-col items-center gap-0.5 py-1.5 px-3 rounded-xl transition-all min-w-[56px] ' + (activeTab === 'ai-assistant' ? 'text-orange-600 dark:text-orange-400' : 'text-slate-400 dark:text-slate-500')}>
-                <div className={'w-9 h-9 rounded-xl flex items-center justify-center transition-all ' + (activeTab === 'ai-assistant' ? 'bg-orange-50 dark:bg-orange-900/20' : '')}><Sparkles size={20} className={activeTab === 'ai-assistant' ? 'text-orange-500' : ''} /></div>
-                <span className="text-[10px] font-medium">AI</span>
-              </button>
-              <button onClick={() => setActiveTab('broadcast')} className={'flex flex-col items-center gap-0.5 py-1.5 px-3 rounded-xl transition-all min-w-[56px] ' + (activeTab === 'broadcast' ? 'text-orange-600 dark:text-orange-400' : 'text-slate-400 dark:text-slate-500')}>
-                <div className={'w-9 h-9 rounded-xl flex items-center justify-center transition-all ' + (activeTab === 'broadcast' ? 'bg-orange-50 dark:bg-orange-900/20' : '')}><Bell size={20} className={activeTab === 'broadcast' ? 'text-orange-500' : ''} /></div>
-                <span className="text-[10px] font-medium">Alerts</span>
-              </button>
-              <button onClick={() => setActiveTab('menu')} className={'flex flex-col items-center gap-0.5 py-1.5 px-3 rounded-xl transition-all min-w-[56px] ' + (activeTab === 'menu' ? 'text-orange-600 dark:text-orange-400' : 'text-slate-400 dark:text-slate-500')}>
-                <div className={'w-9 h-9 rounded-xl flex items-center justify-center transition-all ' + (activeTab === 'menu' ? 'bg-orange-50 dark:bg-orange-900/20' : '')}><MenuIcon size={20} className={activeTab === 'menu' ? 'text-orange-500' : ''} /></div>
-                <span className="text-[10px] font-medium">Menu</span>
-              </button>
-              <button onClick={() => setActiveTab('feedback')} className={'flex flex-col items-center gap-0.5 py-1.5 px-3 rounded-xl transition-all min-w-[56px] ' + (activeTab === 'feedback' ? 'text-orange-600 dark:text-orange-400' : 'text-slate-400 dark:text-slate-500')}>
-                <div className={'w-9 h-9 rounded-xl flex items-center justify-center transition-all ' + (activeTab === 'feedback' ? 'bg-orange-50 dark:bg-orange-900/20' : '')}><MessageSquare size={20} className={activeTab === 'feedback' ? 'text-orange-500' : ''} /></div>
-                <span className="text-[10px] font-medium">Feedback</span>
-              </button>
+            );
+          })}
         </div>
       </nav>
 

@@ -57,7 +57,7 @@ export interface TableColumn {
 export interface ChartConfig {
   kind: ChartKind;
   title: string;
-  data: ChartDataPoint[];
+  data?: ChartDataPoint[];
   /** Optional secondary dataset for grouped/comparison bars */
   secondaryData?: ChartDataPoint[];
   /** Table rows for 'table' kind */
@@ -111,7 +111,7 @@ type Intent =
 
 function classifyIntent(query: string): {
   intent: Intent;
-  timeframe?: 'today' | 'week' | 'month' | 'all';
+  timeframe?: 'today' | 'week' | 'month' | 'day' | 'all';
   mealFocus?: string;
   dayFocus?: string;
   searchName?: string;
@@ -653,7 +653,7 @@ async function fetchDataForIntent(
           ? now - 24 * 60 * 60 * 1000
           : 0;
       const filtered = cutoff > 0
-        ? allSuggestions.filter((s) => s.timestamp >= cutoff)
+        ? allSuggestions.filter((s: any) => s.timestamp >= cutoff)
         : allSuggestions;
       return { context: 'Suggestions Data', data: { suggestions: filtered, total: allSuggestions.length, timeframe: timeframe || 'all' } };
     }
