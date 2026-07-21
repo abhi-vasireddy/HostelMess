@@ -648,7 +648,7 @@ export async function fetchMonthlyReportData(): Promise<{
 }
 
 export async function fetchCanteenItems(): Promise<any[]> {
-  const cached = getCached('canteen');
+  const cached = getCached<any[]>('canteen');
   if (cached) return cached;
   try {
     const snapshot = await getDocs(collection(db, 'canteen'));

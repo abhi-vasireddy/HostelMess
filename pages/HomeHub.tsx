@@ -1,15 +1,24 @@
 import React, { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Navigate, useNavigate } from "react-router-dom";
 import { LogOut, Lock, ExternalLink, Eye, EyeOff } from "lucide-react";
 
 import { useAuth } from "../App";
 import { MockDB } from "../services/mockDb";
-import { ServiceModule } from "../types";
+import type { ServiceModule, User } from "../types";
 import { ICON_MAP } from "../services/iconMap";
 
 export const HomeHub = () => {
   const navigate = useNavigate();
-  const { user, logout } = useAuth();
+  let user: User | null = null;
+  let logout: () => Promise<void>;
+  try {
+    const auth = useAuth();
+    user = auth.user;
+    logout = auth.logout;
+  } catch {
+    // Auth context not available — redirect to login
+    return <Navigate to="/login" replace />;
+  }
 
   const [services, setServices] = useState<ServiceModule[]>([]);
   const [loading, setLoading] = useState(true);

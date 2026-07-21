@@ -2,13 +2,14 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   ArrowLeft, Trophy, Users, Calendar, Plus, Clock, MapPin, Search, 
-  Pencil, Trash2, X, LayoutDashboard, Dumbbell, ChevronRight, CheckCircle2 
+  Pencil, Trash2, X, LayoutDashboard, Dumbbell, ChevronRight, CheckCircle2, Activity 
 } from 'lucide-react';
 import { User, SportsEquipment, SportsBooking, TeamRequest, UserRole } from '../types';
 import { MockDB } from '../services/mockDb';
 import { Button } from '../components/Button';
 import { getTodayDateString } from '../services/timeUtils';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
+import { CricketScoring } from '../components/CricketScoring';
 import TimePicker from '../components/TimePicker';
 
 export const SportsDashboard = ({ user }: { user: User }) => {
@@ -17,7 +18,7 @@ export const SportsDashboard = ({ user }: { user: User }) => {
   const today = getTodayDateString();
 
   // --- STATE ---
-  const [activeTab, setActiveTab] = useState<'overview' | 'equipment' | 'teams'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'scoring' | 'equipment' | 'teams'>('overview');
   const [equipment, setEquipment] = useState<SportsEquipment[]>([]);
   const [bookings, setBookings] = useState<SportsBooking[]>([]);
   const [teamRequests, setTeamRequests] = useState<TeamRequest[]>([]);
@@ -30,7 +31,7 @@ export const SportsDashboard = ({ user }: { user: User }) => {
   // Forms
   const [showBookingModal, setShowBookingModal] = useState(false);
   const [selectedItem, setSelectedItem] = useState<SportsEquipment | null>(null);
-  const [bookingTime, setBookingTime] = useState<{date: string; start: string; end: string}>({ date: getTodayDateString(), start: '', end: '' });
+  const [bookingTime, setBookingTime] = useState<{date: string; start: string; end: string; teams: {name: string; captain: string}[]}>({ date: getTodayDateString(), start: '', end: '', teams: [{name: '', captain: ''}] });
 
   const [showTeamModal, setShowTeamModal] = useState(false);
   const [newTeam, setNewTeam] = useState({ sport: 'Cricket', playersNeeded: 1, time: '', description: '' });
@@ -78,7 +79,7 @@ export const SportsDashboard = ({ user }: { user: User }) => {
     const booking: SportsBooking = {
        id: '', equipmentId: selectedItem.id, equipmentName: selectedItem.name,
        userId: user.uid, userName: user.displayName || 'Student',
-       date: bookingTime.date, startTime: bookingTime.start, endTime: bookingTime.end, status: 'Active'
+       date: bookingTime.date, startTime: bookingTime.start, endTime: bookingTime.end, teams: bookingTime.teams, status: 'Active'
     };
     await MockDB.bookSportItem(booking);
     setShowBookingModal(false);
@@ -135,6 +136,7 @@ export const SportsDashboard = ({ user }: { user: User }) => {
   const navItems = [
     { id: 'overview', label: 'Overview', icon: LayoutDashboard },
     { id: 'equipment', label: 'Courts & Gear', icon: Dumbbell },
+    { id: 'scoring', label: 'Cricket', icon: Activity },
     { id: 'teams', label: 'Teammates', icon: Users }
   ];
 
@@ -268,7 +270,7 @@ export const SportsDashboard = ({ user }: { user: User }) => {
                                     <div className={`p-2 rounded-lg bg-slate-200 dark:bg-slate-700`} style={{ color: themeColorHex }}><Clock size={14}/></div>
                                     <div>
                                        <p className="text-xs font-bold text-slate-700 dark:text-slate-300">{b.equipmentName}</p>
-                                       <p className="text-[10px] text-slate-500">{b.startTime} - {b.endTime}</p>
+                                       <p className="text-[10px] text-slate-500">{b.startTime} - {b.endTime}{b.teams?.length ? " \u2022 " + b.teams.map((t:any) => t.name).filter(Boolean).join(" vs ") : ""}</p>
                                     </div>
                                  </div>
                                  <div className="text-[10px] font-bold bg-green-100 text-green-700 px-2 py-1 rounded">Confirmed</div>
@@ -335,7 +337,7 @@ export const SportsDashboard = ({ user }: { user: User }) => {
                               </div>
                            ) : (
                               // 🟢 FIXED: Explicit white text for gradient button
-                              <Button size="sm" onClick={() => { setSelectedItem(item); setShowBookingModal(true); }} className={`bg-gradient-to-r ${themeGradient} border-none text-white`}>Book</Button>
+                              <Button size="sm" onClick={() => { const count = item.defaultTeams || 1; setSelectedItem(item); setShowBookingModal(true); setBookingTime((prev: any) => ({...prev, teams: Array.from({length: count}, () => ({name: '', captain: ''}))})); }} className={`bg-gradient-to-r ${themeGradient} border-none text-white`}>Book</Button>
                            )}
                         </div>
                      ))}
@@ -347,6 +349,12 @@ export const SportsDashboard = ({ user }: { user: User }) => {
          {/* ======================= */}
          {/* TAB: TEAMS           */}
          {/* ======================= */}
+         {activeTab === 'scoring' && (
+            <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+               <CricketScoring user={user} />
+            </div>
+         )}
+
          {activeTab === 'teams' && (
             <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
                <div className="flex justify-between items-center mb-4">
@@ -452,7 +460,18 @@ export const SportsDashboard = ({ user }: { user: User }) => {
                   <button onClick={() => setShowBookingModal(false)}><X size={20} className="text-slate-400 hover:text-slate-600"/></button>
                </div>
                <form onSubmit={handleBook} className="space-y-5">
-                  <div>
+{selectedItem?.defaultTeams && selectedItem.defaultTeams > 0 && (
+                  <div className="bg-slate-50 dark:bg-slate-950 rounded-xl p-4 border border-slate-200 dark:border-slate-800">
+                    <p className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-3">Teams ({selectedItem.defaultTeams})</p>
+                    {bookingTime.teams.map((t, i) => (
+                      <div key={i} className="grid grid-cols-2 gap-2 mb-2 last:mb-0">
+                        <input placeholder={'Team ' + (i + 1) + ' name'} className="w-full px-3 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-sm outline-none focus:ring-2 focus:ring-sky-500/40 dark:text-white" value={t.name} required onChange={(e) => { const up = [...bookingTime.teams]; up[i] = {...up[i], name: e.target.value}; setBookingTime({...bookingTime, teams: up}); }} />
+                        <input placeholder={'Captain ' + (i + 1)} className="w-full px-3 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-sm outline-none focus:ring-2 focus:ring-sky-500/40 dark:text-white" value={t.captain} required onChange={(e) => { const up = [...bookingTime.teams]; up[i] = {...up[i], captain: e.target.value}; setBookingTime({...bookingTime, teams: up}); }} />
+                      </div>
+                    ))}
+                  </div>
+                )}
+                                    <div>
                      <label className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase ml-1">Date</label>
                      <input type="date" className="w-full mt-1 p-3 bg-slate-50 dark:bg-slate-950 border-none rounded-xl font-medium outline-none focus:ring-2 focus:ring-sky-500/40 dark:text-white" value={bookingTime.date} required onChange={e => setBookingTime({...bookingTime, date: e.target.value})} />
                   </div>

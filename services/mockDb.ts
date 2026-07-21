@@ -32,7 +32,10 @@ import {
   ServiceModule,
   SportsEquipment,
   SportsBooking,
-  TeamRequest
+  TeamRequest,
+  CricketTeam,
+  CricketMatch,
+  CricketTournament
 } from '../types';
 
 export const MockDB = {
@@ -464,6 +467,55 @@ export const MockDB = {
 
   deleteSportsEquipment: async (id: string): Promise<void> => {
      await deleteDoc(doc(db, 'sports_equipment', id));
+  },
+
+  // ── Cricket Scoring ──
+
+  createCricketTeam: async (team: CricketTeam): Promise<void> => {
+     const { id, ...data } = team;
+     if (id && id.length > 10) await updateDoc(doc(db, 'cricket_teams', id), data as any);
+     else await addDoc(collection(db, 'cricket_teams'), data);
+  },
+
+  getCricketTeams: async (): Promise<CricketTeam[]> => {
+     const snap = await getDocs(collection(db, 'cricket_teams'));
+     return snap.docs.map(d => ({...d.data(), id: d.id} as CricketTeam));
+  },
+
+  deleteCricketTeam: async (id: string): Promise<void> => {
+     await deleteDoc(doc(db, 'cricket_teams', id));
+  },
+
+  createCricketMatch: async (match: CricketMatch): Promise<string> => {
+     const { id, ...data } = match;
+     const docRef = await addDoc(collection(db, 'cricket_matches'), data);
+     return docRef.id;
+  },
+
+  getCricketMatches: async (): Promise<CricketMatch[]> => {
+     const snap = await getDocs(collection(db, 'cricket_matches'));
+     return snap.docs.map(d => ({...d.data(), id: d.id} as CricketMatch));
+  },
+
+  getCricketMatch: async (id: string): Promise<CricketMatch | null> => {
+     const snap = await getDocs(collection(db, 'cricket_matches'));
+     const match = snap.docs.find(d => d.id === id);
+     return match ? ({...match.data(), id: match.id} as CricketMatch) : null;
+  },
+
+  updateCricketMatch: async (id: string, data: Partial<CricketMatch>): Promise<void> => {
+     await updateDoc(doc(db, 'cricket_matches', id), data as any);
+  },
+
+  createCricketTournament: async (t: CricketTournament): Promise<void> => {
+     const { id, ...data } = t;
+     if (id && id.length > 10) await updateDoc(doc(db, 'cricket_tournaments', id), data as any);
+     else await addDoc(collection(db, 'cricket_tournaments'), data);
+  },
+
+  getCricketTournaments: async (): Promise<CricketTournament[]> => {
+     const snap = await getDocs(collection(db, 'cricket_tournaments'));
+     return snap.docs.map(d => ({...d.data(), id: d.id} as CricketTournament));
   },
 
   getBookings: async (date: string): Promise<SportsBooking[]> => {
